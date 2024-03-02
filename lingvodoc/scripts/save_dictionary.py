@@ -1753,9 +1753,8 @@ class Save_Context(object):
                         func.jsonb_object_agg(
                             TranslationAtom.locale_id,
                             TranslationAtom.content)
-                        .label('name'),
 
-                        DictionaryPerspectiveToField.position)
+                            .label('name'))
 
                     .filter(
                         DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
@@ -1771,12 +1770,37 @@ class Save_Context(object):
 
                     .group_by(
                         Field.client_id,
-                        Field.object_id,
-                        DictionaryPerspectiveToField.position)
+                        Field.object_id)
 
                     .order_by(
                         Field.client_id,
                         Field.object_id)
+
+                    .all())
+
+            text_field_position_list = (
+
+                self.session
+
+                    .query(
+                        DictionaryPerspectiveToField.field_client_id,
+                        DictionaryPerspectiveToField.field_object_id,
+                        DictionaryPerspectiveToField.position)
+
+                    .filter(
+                        DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
+                        DictionaryPerspectiveToField.parent_object_id == perspective.object_id,
+                        DictionaryPerspectiveToField.marked_for_deletion == False,
+                        DictionaryPerspectiveToField.field_id.in_(
+                            sqlalchemy.text('select * from text_field_id_view')))
+
+                    .group_by(
+                        DictionaryPerspectiveToField.field_client_id,
+                        DictionaryPerspectiveToField.field_object_id,
+                        DictionaryPerspectiveToField.position)
+
+                    .order_by(
+                        DictionaryPerspectiveToField.position)
 
                     .all())
 
@@ -1795,7 +1819,7 @@ class Save_Context(object):
             sound_fid = None
             markup_fid = None
 
-            for field_cid, field_oid, name_dict, _ in field_name_info_list:
+            for field_cid, field_oid, name_dict in field_name_info_list:
 
                 if field_cid == 66 and field_oid == 8:
                     transcription_fid = (field_cid, field_oid)
@@ -1825,7 +1849,7 @@ class Save_Context(object):
                 ru_snd_fid = None
                 ru_mrkp_fid = None
 
-                for field_cid, field_oid, name_dict, _ in field_name_info_list:
+                for field_cid, field_oid, name_dict in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1894,7 +1918,7 @@ class Save_Context(object):
                 ru_snd_fid = None
                 ru_mrkp_fid = None
 
-                for field_cid, field_oid, name_dict, _ in field_name_info_list:
+                for field_cid, field_oid, name_dict in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1959,7 +1983,7 @@ class Save_Context(object):
                 ru_xcript_fid = None
                 ru_xlat_fid = None
 
-                for field_cid, field_oid, name_dict, _ in field_name_info_list:
+                for field_cid, field_oid, name_dict in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1997,9 +2021,10 @@ class Save_Context(object):
             if transcription_fid is None or translation_fid is None:
 
                 cognate_description_fids = [None, None, ('null', 'null')]
-                for field_cid, field_oid, _, position in field_name_info_list:
-                    if position <= 3:
-                        cognate_description_fids[position - 1] = (field_cid, field_oid)
+                for index, (field_cid, field_oid, _) in enumerate(text_field_position_list):
+                    if index > 2:
+                        break
+                    cognate_description_fids[index] = (field_cid, field_oid)
 
                 # Ok, failed to get three fields, we should remember it.
                 if not all(cognate_description_fids):
