@@ -1754,7 +1754,7 @@ class Save_Context(object):
                             TranslationAtom.locale_id,
                             TranslationAtom.content)
 
-                        .label('name'))
+                            .label('name'))
 
                     .filter(
                         DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
