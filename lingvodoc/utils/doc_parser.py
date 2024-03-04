@@ -26,7 +26,7 @@ def print_to_str(*args, **kwargs):
 
 
 span_id_counter = 0
-def generate_html_wrap(word, ana_tag_list, lang=""):
+def generate_html_wrap(word, ana_tag_list, lang="", state='unverified'):
 
     json_list = list()
     for ana_tag in ana_tag_list:
@@ -42,7 +42,7 @@ def generate_html_wrap(word, ana_tag_list, lang=""):
 
     global span_id_counter
     span_id_counter += 1
-    wrap = "<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">"
+    wrap = f"<span class=\"{state}\"" + " id=" + str(span_id_counter) + ">"
     for attr_json in json_list:
         span_id_counter += 1
         encoded_attrs = ((json.dumps(attr_json, ensure_ascii=False)).encode('utf8')).decode()
@@ -70,8 +70,10 @@ def insert_parser_output_to_text(text, parser_output, lang=""):
             if text[match_index-len(ESC_PAT):match_index] == ESC_PAT and text[match_index+len(word):match_index+len(word)+len(ESC_PAT)] == ESC_PAT:
                 continue
         result_list.append(text[search_start_index:match_index])
-        if (len(w_tag.contents) > 1):
-            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1], lang=lang))
+        if len(w_tag.contents) > 1:
+            state = 'unverified broken' if any([a.get('gr') == 'Unknown'
+                                                for a in w_tag.find_all('ana')]) else 'unverified'
+            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1], lang=lang, state=state))
         search_start_index = match_index + len(word)
     result_list.append(text[search_start_index:])
     result = "".join(result_list)
