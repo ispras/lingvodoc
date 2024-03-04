@@ -26,7 +26,7 @@ def print_to_str(*args, **kwargs):
 
 
 span_id_counter = 0
-def generate_html_wrap(word, ana_tag_list, lang="", state='unverified'):
+def generate_html_wrap(word, ana_tag_list, lang="", extra_state=""):
 
     json_list = list()
     for ana_tag in ana_tag_list:
@@ -42,16 +42,16 @@ def generate_html_wrap(word, ana_tag_list, lang="", state='unverified'):
 
     global span_id_counter
     span_id_counter += 1
-    wrap = f"<span class=\"{state}\"" + " id=" + str(span_id_counter) + ">"
+    wrap = f"<span class=\"unverified {extra_state}\"" + " id=" + str(span_id_counter) + ">"
     for attr_json in json_list:
         span_id_counter += 1
         encoded_attrs = ((json.dumps(attr_json, ensure_ascii=False)).encode('utf8')).decode()
-        wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs + "</span>"
+        wrap += f"<span class=\"result {extra_state}\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs + "</span>"
 
         if lang == 'udm' and 'nom' in encoded_attrs:
             flag = True
             span_id_counter += 1
-            wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs.replace('nom', 'acc0') + "</span>"
+            wrap += f"<span class=\"result {extra_state}\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs.replace('nom', 'acc0') + "</span>"
 
     wrap += word + "</span>"
     return wrap
@@ -71,9 +71,8 @@ def insert_parser_output_to_text(text, parser_output, lang=""):
                 continue
         result_list.append(text[search_start_index:match_index])
         if len(w_tag.contents) > 1:
-            state = 'unverified broken' if any([a.get('gr') == 'Unknown'
-                                                for a in w_tag.find_all('ana')]) else 'unverified'
-            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1], lang=lang, state=state))
+            extra_state = "broken" if any([a.get('gr') == "Unknown" for a in w_tag.find_all('ana')]) else ""
+            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1], lang=lang, extra_state=extra_state))
         search_start_index = match_index + len(word)
     result_list.append(text[search_start_index:])
     result = "".join(result_list)
@@ -414,7 +413,7 @@ def hfst_parser(dedoc_output, lang, debug_flag=False):
                     else:
                         xln = "Unknown"
 
-                    section += f"<ana lex={lex} gr={gr} trans_ru={xln}></ana>"
+                    section += f'<ana lex={lex} gr={gr} parts="" gloss="" trans_ru={xln}></ana>'
                 section += f"{w}</w>'"
                 parser_list.append(section)
             else:
