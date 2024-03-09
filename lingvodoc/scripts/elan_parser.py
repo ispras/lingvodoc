@@ -237,15 +237,10 @@ class Elan:
         for text_an in ans:
             complex_list = []
             raw_dict = collections.OrderedDict()
-            cur_tier = "translation"
-            for data in self.get_annotation_data_between_times(cur_tier, text_an[0], text_an[1]):
+            top_tier = "translation"
+            for data in self.get_annotation_data_between_times(top_tier, text_an[0], text_an[1]):
                 time_tup = (data[0], data[1])
                 translation_data = data[2]
-
-                # Dictionary of Words with real tier names
-
-                if raw_list := [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]:
-                    raw_dict[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = raw_list
 
                 transcription_data = ""
                 word_data = ""
@@ -256,43 +251,49 @@ class Elan:
                     word_data = res[translation_data][1]
 
                 tr_text = hyphen_to_dash(self.word[translation_data])
+                mark = re.search('[-.][\dA-Z]+', tr_text) if type(tr_text) is str else None
 
-                if type(tr_text) is str:
-                    mark = re.search('[-.][\dA-Z]+', tr_text)
-                    if (mark and not re.search("[-]INF", tr_text)
-                             and not re.search("[-]SG.NOM", tr_text)
-                             and not re.search("[-]NOM", tr_text)):
+                if (mark and not re.search("[-]INF", tr_text)
+                         and not re.search("[-]SG.NOM", tr_text)
+                         and not re.search("[-]NOM", tr_text)):
 
-                        tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
+                    tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
 
-                        # Collect single words in the following tiers
-                        # to print them along with rich text afterwards
-                        if tag and tr_text != tag.group(0) or not tag:
-                            mixed_list = []
-                            if word_data:
-                                mixed_list.append([Word(word_data,
-                                                             self.word[word_data],
-                                                             "synthetic word",
-                                                             (time_tup[0], time_tup[1])) ])
-                            if transcription_data:
-                                for cur_tier in 'text', 'other text', 'synthetic transcription':
-                                    mixed_list.append([Word(transcription_data,
-                                                                 self.word[transcription_data],
-                                                                 cur_tier,
-                                                                 (time_tup[0], time_tup[1])) ])
-                            if translation_data:
-                                mixed_list.append([Word(translation_data,
-                                                             self.word[translation_data],
-                                                             "literary translation",
-                                                             (time_tup[0], time_tup[1])) ])
+                    # Collect single words in the following tiers
+                    # to print them along with rich text afterwards
+                    if tag and tr_text != tag.group(0) or not tag:
+                        mixed_list = []
+                        if word_data:
+                            mixed_list.append([Word(word_data,
+                                                    self.word[word_data],
+                                                    "synthetic word",
+                                                    (time_tup[0], time_tup[1])) ])
+                        if transcription_data:
+                            for cur_tier in 'text', 'other text', 'synthetic transcription':
+                                mixed_list.append([Word(transcription_data,
+                                                        self.word[transcription_data],
+                                                        cur_tier,
+                                                        (time_tup[0], time_tup[1])) ])
+                        if translation_data:
+                            mixed_list.append([Word(translation_data,
+                                                    self.word[translation_data],
+                                                    "literary translation",
+                                                    (time_tup[0], time_tup[1])) ])
 
-                            # 'perspectives' list additional element if marker is found:
-                            #
-                            # [ [Word_synthetic_word],
-                            #   [Word_synthetic_transcription(/text/other_text)],
-                            #   [Word_synthetic_translation(literary_translation)] ]
-                            #
-                            perspectives.append(mixed_list)
+                        perspectives.append(mixed_list)
+
+                        # 'perspectives' list additional element if marker is found:
+                        #
+                        # [ [Word_synthetic_word],
+                        #   [Word_synthetic_transcription(/text/other_text)],
+                        #   [Word_synthetic_translation(literary_translation)] ]
+                        #
+
+                # Dictionary of Words with real tier names
+                if raw_list := [Word(i, self.word[i], self.word_tier[i],
+                                (time_tup[0], time_tup[1])) for i in res[translation_data]]:
+                    raw_dict[Word(translation_data, self.word[translation_data], top_tier,
+                             (time_tup[0], time_tup[1]))] = raw_list
 
             # 'perspectives' list regular element:
             #
@@ -305,6 +306,7 @@ class Elan:
             #   ] }
             # ]
             #
+
             complex_list.append([
                 Word(i[2], self.word[i[2]], 'text', (i[0], i[1]))
                 for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1])])
