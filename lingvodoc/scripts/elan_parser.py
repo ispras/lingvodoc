@@ -237,8 +237,8 @@ class Elan:
         for text_an in ans:
             complex_list = []
             raw_dict = collections.OrderedDict()
-            cur_tier = "translation"
-            for data in self.get_annotation_data_between_times(cur_tier, text_an[0], text_an[1]):
+            top_tier = "translation"
+            for data in self.get_annotation_data_between_times(top_tier, text_an[0], text_an[1]):
                 time_tup = (data[0], data[1])
                 translation_data = data[2]
 
@@ -292,7 +292,7 @@ class Elan:
                 # Dictionary of Words with real tier names
                 if raw_list := [Word(i, self.word[i], self.word_tier[i],
                                 (time_tup[0], time_tup[1])) for i in res[translation_data]]:
-                    raw_dict[Word(translation_data, self.word[translation_data], cur_tier,
+                    raw_dict[Word(translation_data, self.word[translation_data], top_tier,
                              (time_tup[0], time_tup[1]))] = raw_list
 
             # 'perspectives' list regular element:
