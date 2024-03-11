@@ -1617,11 +1617,11 @@ def convert_five_tiers(
 
                         # Create an entry with affix and its meaning
                         # for each affix+meaning variant
-                        for n in range(len(afx_text)):
+                        for n, afx in enumerate(afx_text):
                             # Clean the affix of any non-alnum symbols after it
                             # \u0301 is an accent mark
-                            afx = afx_text[n].replace(u'\u0301', '')
-                            afx = re.split(r'[\W]', afx.strip())[0]
+                            # afx = afx.replace(u'\u0301', '')
+                            afx = re.split(r'[^\w.]', afx.strip())[0]
                             mrk = mrk_text[n] if n < len(mrk_text) else None
 
                             if not afx or not mrk:
