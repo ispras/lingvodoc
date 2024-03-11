@@ -68,6 +68,8 @@ from lingvodoc.utils.creation import (
     create_gists_with_atoms
 )
 
+from lingvodoc.schema.gql_parserresult import diacritic_signs
+
 DEFAULT_EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
@@ -345,6 +347,8 @@ def convert_five_tiers(
     morphology,
     custom_eaf_tiers,
     debug_flag=False):
+
+    delimiter_re = re.compile('[^\\w\'.' + diacritic_signs + ']')
 
     EAF_TIERS = {tier: column for tier, column in DEFAULT_EAF_TIERS.items() if column not in custom_eaf_tiers}
     for column, tier in custom_eaf_tiers.items():
@@ -1621,7 +1625,7 @@ def convert_five_tiers(
                             # Clean the affix of any non-alnum symbols after it
                             # \u0301 is an accent mark
                             # afx = afx.replace(u'\u0301', '')
-                            afx = re.split(r'[^\w.]', afx.strip())[0]
+                            afx = re.split(delimiter_re, afx.strip())[0]
                             mrk = mrk_text[n] if n < len(mrk_text) else None
 
                             if not afx or not mrk:
