@@ -440,7 +440,7 @@ def sound_into_pitch_frame(
 
     leftSample = (t - x1) // dx  # +1?
     rightSample = leftSample + 1
-    A()
+
     for channel in range(ny):
         '''
         Compute the local mean; look one longest period to both sides.
@@ -468,7 +468,7 @@ def sound_into_pitch_frame(
             frame[channel][j] = (z[channel][j + startSample] - localMean[channel]) * window[j]
         for j in range(nsamp_window, nsampFFT):
             frame[channel][j] = 0.0
-
+    A()
     '''
     Compute the local peak; look half a longest period to both sides.
     '''
@@ -603,7 +603,6 @@ def sound_into_pitch_frame(
 
 def sound_into_pitch(arg):
     def f(arg, firstFrame, lastFrame, x1, dx, frames, **rest):
-        A()
         for iframe in range(firstFrame, lastFrame):
             sound_into_pitch_frame(pitch_frame := frames[iframe],
                                    t := x1 + iframe * dx,
@@ -1559,7 +1558,8 @@ class AudioPraatLike(object):
         duration = nx / fq  # duration of frames to compute in sec
 
         ny = self.intensity_sound.channels  # number of channels
-        plain_z = self.intensity_sound.get_array_of_samples()  # samples of all the channels
+        plain_z = [ smp / self.intensity_sound.max_possible_amplitude
+                    for smp in self.intensity_sound.get_array_of_samples() ]  # samples of all the channels
         assert nx * ny <= len(plain_z)
 
         # lay out samples by channels
