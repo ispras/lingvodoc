@@ -421,10 +421,8 @@ def pitch_path_finder(
             frame['candidates'][0], frame['candidates'][place] = frame['candidates'][place], frame['candidates'][0]
             place = psi[iframe][place]
 
-        A()
-
     except:
-        raise RuntimeError("path not found.")
+        raise RuntimeError(frames, ": path not found.")
 
 
 # Compute pitch frames
@@ -442,6 +440,7 @@ def sound_into_pitch_frame(
 
     leftSample = (t - x1) // dx  # +1?
     rightSample = leftSample + 1
+    A()
     for channel in range(ny):
         '''
         Compute the local mean; look one longest period to both sides.
@@ -530,6 +529,7 @@ def sound_into_pitch_frame(
     '''
     imax[0] = 0
     for i in range(2, min(maximumLag, brent_ixmax)):
+        #A()
         if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:  # maximum?
             place = None
             '''
@@ -559,6 +559,7 @@ def sound_into_pitch_frame(
                 while len(pitchFrame['candidates']) < pitchFrame['nCandidates']:
                     pitchFrame['candidates'].append(pitchFrame['candidates'][-1].copy())
                 place = pitchFrame['nCandidates'] - 1
+                #A()
             else:
                 '''
                 Try the place of the weakest candidate so far.
@@ -577,6 +578,7 @@ def sound_into_pitch_frame(
                 If this maximum is weaker than the weakest candidate so far, give it no place.
                 '''
                 if strengthOfMaximum - octaveCost * math.log2(pitchFloor / frequencyOfMaximum) <= weakest:
+                    #A()
                     place = None
             if place is not None:
                 pitchFrame['candidates'][place]['frequency'] = frequencyOfMaximum
@@ -587,6 +589,7 @@ def sound_into_pitch_frame(
     Second pass: for extra precision, maximize cubic spline interpolation.
     '''
     for i in range(1, pitchFrame['nCandidates']):
+        #A()
         offset = -brent_ixmax - 1
         # Get improved x and y of function maximum after cubic spline interpolation
         xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset)[0]
@@ -600,6 +603,7 @@ def sound_into_pitch_frame(
 
 def sound_into_pitch(arg):
     def f(arg, firstFrame, lastFrame, x1, dx, frames, **rest):
+        A()
         for iframe in range(firstFrame, lastFrame):
             sound_into_pitch_frame(pitch_frame := frames[iframe],
                                    t := x1 + iframe * dx,
@@ -1537,16 +1541,20 @@ class AudioPraatLike(object):
             sum(f1_list) / len(f1_list), sum(f2_list) / len(f2_list), sum(f3_list) / len(f3_list)]
 
 
-    def get_pitch(self, begin, end):
+    def get_pitch(self, begin=0, end=None):
         """
         Computes pitches of an audio sample.
         """
 
         x1 = max(0, begin)
+
+        if end is None:
+            end = int(self.intensity_sound.frame_count())
+
         assert end >= x1
 
         fq = self.intensity_sound.frame_rate  # frequency of frames (sampling)
-        nx = min(math.floor((end - x1) * fq), self.intensity_sound.frame_count())  # number of frames to compute
+        nx = min(math.floor((end - x1) * fq), int(self.intensity_sound.frame_count()))  # number of frames to compute
         dx = 1 / fq  # single frame duration in sec
         duration = nx / fq  # duration of frames to compute in sec
 
@@ -1742,7 +1750,6 @@ class AudioPraatLike(object):
         pool.close()
         pool.join()
         '''
-        #A()
 
         # Melder_progress equivalent in Python
         print("Sound to Pitch: path finder - 95% complete")
@@ -2276,9 +2283,13 @@ def process_sound(tier_data_list, sound):
             if len(interval_list) <= 0:
                 continue
 
+            '''
             pitch_list = [
                 sound.get_pitch(begin_sec, end_sec)
                     for begin_sec, end_sec, _ in interval_list]
+            '''
+
+            pitch_list = sound.get_pitch()
 
             # Looking in particular at longest interval and interval with highest intensity, and at all
             # intervals in general.
