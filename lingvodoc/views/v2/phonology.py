@@ -327,12 +327,18 @@ def compute_formants(sample_list, nyquist_frequency):
     return formant_list
 
 
-def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
-                     octaveCost, octaveJumpCost, voicedUnvoicedCost, floor):
+def pitch_path_finder(
+        silenceThreshold,
+        voicingThreshold,
+        octaveCost,
+        octaveJumpCost,
+        voicedUnvoicedCost,
+        floor,
+        ceiling,
+        frames,
+        dx, nx,
+        **rest):
     try:
-        # Unpacking pitchFrame
-        for k, v in pitchFrame.items():
-            exec(f'{k} = {v}')
 
         maxnCandidates = max(map(lambda frame: frame['nCandidates'], frames))
 
@@ -401,11 +407,11 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
         Find the end of the most probable path.
         '''
         place = 0
-        maximum = delta[nx][place]
-        for icand in range(1, frames[nx]['nCandidates']):
-            if delta[nx][icand] > maximum:
+        maximum = delta[nx - 1][place]
+        for icand in range(1, frames[nx - 1]['nCandidates']):
+            if delta[nx - 1][icand] > maximum:
                 place = icand
-                maximum = delta[nx][place]
+                maximum = delta[nx - 1][place]
 
         '''
         Backtracking: follow the path backwards.
@@ -415,8 +421,10 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
             frame['candidates'][0], frame['candidates'][place] = frame['candidates'][place], frame['candidates'][0]
             place = psi[iframe][place]
 
+        A()
+
     except:
-        raise RuntimeError(pitchFrame, ": path not found.")
+        raise RuntimeError("path not found.")
 
 
 # Compute pitch frames
@@ -1724,7 +1732,7 @@ class AudioPraatLike(object):
             args.append(arg)
             sound_into_pitch(arg)  # debug
 
-            firstFrame = lastFrame + 1
+            firstFrame = lastFrame
             lastFrame += numberOfFramesPerThread
 
         '''
@@ -1734,12 +1742,12 @@ class AudioPraatLike(object):
         pool.close()
         pool.join()
         '''
-        A()
+        #A()
 
         # Melder_progress equivalent in Python
         print("Sound to Pitch: path finder - 95% complete")
-        pitch_path_finder(thee, silenceThreshold, voicingThreshold, octaveCost,
-                          octaveJumpCost, voicedUnvoicedCost, minimumPitch)
+        pitch_path_finder(silenceThreshold, voicingThreshold, octaveCost,
+                          octaveJumpCost, voicedUnvoicedCost, minimumPitch, **thee)
         return thee
 
 def find_max_interval_praat(sound, interval_list):
