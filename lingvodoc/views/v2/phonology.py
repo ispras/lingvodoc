@@ -451,7 +451,7 @@ def sound_into_pitch_frame(
         assert endSample < nx
 
         localMean[channel] = 0.0
-        for i in range(startSample, endSample):
+        for i in range(startSample, endSample + 1):
             localMean[channel] += z[channel][i]
         localMean[channel] /= 2 * nsamp_period
 
@@ -468,7 +468,7 @@ def sound_into_pitch_frame(
             frame[channel][j] = (z[channel][j + startSample] - localMean[channel]) * window[j]
         for j in range(nsamp_window, nsampFFT):
             frame[channel][j] = 0.0
-    A()
+
     '''
     Compute the local peak; look half a longest period to both sides.
     '''
@@ -529,7 +529,6 @@ def sound_into_pitch_frame(
     '''
     imax[0] = 0
     for i in range(2, min(maximumLag, brent_ixmax)):
-        #A()
         if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:  # maximum?
             place = None
             '''
@@ -584,12 +583,12 @@ def sound_into_pitch_frame(
                 pitchFrame['candidates'][place]['frequency'] = frequencyOfMaximum
                 pitchFrame['candidates'][place]['strength'] = strengthOfMaximum
                 imax[place] = i
+                A()
 
     '''
     Second pass: for extra precision, maximize cubic spline interpolation.
     '''
     for i in range(1, pitchFrame['nCandidates']):
-        #A()
         offset = -brent_ixmax - 1
         # Get improved x and y of function maximum after cubic spline interpolation
         xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset)[0]
@@ -599,6 +598,7 @@ def sound_into_pitch_frame(
         if ymid > 1.0:
             ymid = 1.0 / ymid
         pitchFrame['candidates'][i]['strength'] = ymid
+        A()
 
 
 def sound_into_pitch(arg):
@@ -1673,6 +1673,10 @@ class AudioPraatLike(object):
         windowR[nsampRFFT - 1] *= windowR[nsampRFFT - 1]  # Nyquist frequency
 
         windowR = numpy.fft.irfft(windowR)  # autocorrelation
+
+        import matplotlib.pyplot as plt
+        plt.plot(numpy.arange(nsampFFT), windowR)
+        plt.savefig('windowR.png')
 
         for i in range(1, nsamp_window):
             windowR[i] /= windowR[0]  # normalize
