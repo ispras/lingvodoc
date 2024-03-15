@@ -340,7 +340,7 @@ def pitch_path_finder(
         **rest):
     try:
 
-        maxnCandidates = max(map(lambda frame: frame['nCandidates'], frames))
+        maxnCandidates = max(frame['nCandidates'] for frame in frames)
 
         timeStepCorrection = 0.01 / dx
         octaveJumpCost *= timeStepCorrection
@@ -434,7 +434,7 @@ def sound_into_pitch_frame(
         maximumLag, nsampFFT,
         nsamp_period, halfnsamp_period,
         brent_ixmax, globalPeak,
-        window, windowR,frame,
+        window, windowR, frame,
         ac, r, imax, localMean,
         x1, dx, nx, ny, z, **rest):
 
@@ -477,7 +477,7 @@ def sound_into_pitch_frame(
     endSample = int(min(nsamp_window, halfnsamp_window + halfnsamp_period))
 
     for channel in range(ny):
-        for j in range(startSample, endSample):
+        for j in range(startSample, endSample + 1):
             value = math.fabs(frame[channel][j])
             if value > localPeak:
                 localPeak = value
@@ -488,10 +488,10 @@ def sound_into_pitch_frame(
     Compute the correlation into the array 'r'.
     The FFT of the autocorrelation is the power spectrum.
     '''
-
+    # Initially 'ac' consists of zeroes
     for channel in range(ny):
         nsampRFFT = nsampFFT // 2 + 1
-        frame[channel][:nsampRFFT] = numpy.fft.rfft(frame[channel])  # complex spectrum
+        frame[channel][:nsampRFFT] = [abs(a) for a in numpy.fft.rfft(frame[channel])]  # complex spectrum
 
         ac[0] += frame[channel][0] ** 2  # DC component
         for i in range(1, nsampRFFT - 2, 2):
@@ -516,11 +516,11 @@ def sound_into_pitch_frame(
 
     '''
     Register the first candidate, which is always present: voicelessness.
-    '''
     pitchFrame['nCandidates'] = 1
     del pitchFrame['candidates'][1:]  # maintain invariant; no memory allocations
     pitchFrame['candidates'][0]['frequency'] = 0.0  # voiceless: always present
     pitchFrame['candidates'][0]['strength'] = 0.0
+    '''
 
     '''
     Shortcut: absolute silence is always voiceless.
@@ -1638,7 +1638,7 @@ class AudioPraatLike(object):
                 'candidates': [{
                     'frequency': 0.0,
                     'strength': 0.0
-                } for _ in range(maxnCandidates)]
+                }]
             } for _ in range(numberOfFrames)]
         }
 
@@ -1682,12 +1682,6 @@ class AudioPraatLike(object):
         for i in range(1, nsamp_window):
             windowR[i] /= windowR[0]  # normalize
         windowR[0] = 1.0  # normalize
-
-        '''     
-        import matplotlib.pyplot as plt
-        plt.plot(numpy.arange(nsamp_window), windowR[:nsamp_window])
-        plt.savefig('windowR.png')
-        '''
 
         brent_ixmax = math.floor(nsamp_window * interpolation_depth)
 
@@ -1773,7 +1767,7 @@ class AudioPraatLike(object):
         pyplot.savefig('freq.png')
         '''
 
-        A()
+        #A()
         return thee
 
 def find_max_interval_praat(sound, interval_list):
