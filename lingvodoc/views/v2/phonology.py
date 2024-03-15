@@ -509,6 +509,12 @@ def sound_into_pitch_frame(
         r[-i] = r[i] = ac[i] / (ac[0] * windowR[i])
 
     '''
+    import matplotlib.pyplot as plt
+    plt.plot(numpy.arange(len(r)), r)
+    plt.savefig('r.png')
+    '''
+
+    '''
     Register the first candidate, which is always present: voicelessness.
     '''
     pitchFrame['nCandidates'] = 1
@@ -541,8 +547,9 @@ def sound_into_pitch_frame(
             offset = - brent_ixmax - 1
 
             # Use cubic spline to interpolete discrete values and get function for exact argument
-            r_offset_spline_func =  CubicSpline(numpy.arange(brent_ixmax - offset), r[offset:])
-            strengthOfMaximum = r_offset_spline_func(1.0 / dx / frequencyOfMaximum - offset)
+            r_offset_spline_func =  CubicSpline(numpy.arange(brent_ixmax - offset),
+                                                list(r[ offset + 1: ]) + list(r[ :- offset ]))
+            strengthOfMaximum = float(r_offset_spline_func(1.0 / dx / frequencyOfMaximum - offset))
 
             '''
             High values due to short windows are to be reflected around 1.
@@ -558,7 +565,6 @@ def sound_into_pitch_frame(
                 while len(pitchFrame['candidates']) < pitchFrame['nCandidates']:
                     pitchFrame['candidates'].append(pitchFrame['candidates'][-1].copy())
                 place = pitchFrame['nCandidates'] - 1
-                #A()
             else:
                 '''
                 Try the place of the weakest candidate so far.
@@ -569,7 +575,8 @@ def sound_into_pitch_frame(
                     High frequencies are to be favoured
 					if we want to analyze a perfectly periodic signal correctly.
                     '''
-                    localStrength = pitchFrame['candidates'][iweak]['strength'] - octaveCost * math.log2(pitchFloor / pitchFrame['candidates'][iweak]['frequency'])
+                    localStrength = (pitchFrame['candidates'][iweak]['strength'] -
+                                     octaveCost * math.log2(pitchFloor / pitchFrame['candidates'][iweak]['frequency']))
                     if localStrength < weakest:
                         weakest = localStrength
                         place = iweak
@@ -577,13 +584,12 @@ def sound_into_pitch_frame(
                 If this maximum is weaker than the weakest candidate so far, give it no place.
                 '''
                 if strengthOfMaximum - octaveCost * math.log2(pitchFloor / frequencyOfMaximum) <= weakest:
-                    #A()
                     place = None
+
             if place is not None:
                 pitchFrame['candidates'][place]['frequency'] = frequencyOfMaximum
                 pitchFrame['candidates'][place]['strength'] = strengthOfMaximum
                 imax[place] = i
-                A()
 
     '''
     Second pass: for extra precision, maximize cubic spline interpolation.
@@ -592,13 +598,12 @@ def sound_into_pitch_frame(
         offset = -brent_ixmax - 1
         # Get improved x and y of function maximum after cubic spline interpolation
         xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset)[0]
-        ymid = r_offset_spline_func(xmid)
+        ymid = float(r_offset_spline_func(xmid))
         xmid += offset
         pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
         if ymid > 1.0:
             ymid = 1.0 / ymid
         pitchFrame['candidates'][i]['strength'] = ymid
-        A()
 
 
 def sound_into_pitch(arg):
@@ -1662,7 +1667,7 @@ class AudioPraatLike(object):
         window = get_gaussian_window(nsamp_window)
         windowR = window + numpy.zeros(nsampFFT - nsamp_window).tolist()
 
-        windowR = numpy.fft.rfft(windowR)
+        windowR = [abs(a) for a in numpy.fft.rfft(windowR)]
         nsampRFFT = nsampFFT // 2 + 1  # RFFT computes such length
 
         # Change input windowR according to praat algorithms
@@ -1674,13 +1679,15 @@ class AudioPraatLike(object):
 
         windowR = numpy.fft.irfft(windowR)  # autocorrelation
 
-        import matplotlib.pyplot as plt
-        plt.plot(numpy.arange(nsampFFT), windowR)
-        plt.savefig('windowR.png')
-
         for i in range(1, nsamp_window):
             windowR[i] /= windowR[0]  # normalize
         windowR[0] = 1.0  # normalize
+
+        '''     
+        import matplotlib.pyplot as plt
+        plt.plot(numpy.arange(nsamp_window), windowR[:nsamp_window])
+        plt.savefig('windowR.png')
+        '''
 
         brent_ixmax = math.floor(nsamp_window * interpolation_depth)
 
@@ -1759,6 +1766,14 @@ class AudioPraatLike(object):
         print("Sound to Pitch: path finder - 95% complete")
         pitch_path_finder(silenceThreshold, voicingThreshold, octaveCost,
                           octaveJumpCost, voicedUnvoicedCost, minimumPitch, **thee)
+
+        '''
+        pyplot.plot(numpy.arange(len(thee['frames'])),
+                    [frame['candidates'][1]['frequency'] for frame in thee['frames']])
+        pyplot.savefig('freq.png')
+        '''
+
+        A()
         return thee
 
 def find_max_interval_praat(sound, interval_list):
