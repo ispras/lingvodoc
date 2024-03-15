@@ -1631,10 +1631,9 @@ class AudioPraatLike(object):
             'dx': dt,
             'x1': t1,
             'ceiling': maximumPitch,
-            #'maxnCandidates': maxnCandidates,
             'frames': [{
                 'intensity': 0.0,
-                'nCandidates': maxnCandidates,
+                'nCandidates': 1,
                 'candidates': [{
                     'frequency': 0.0,
                     'strength': 0.0
