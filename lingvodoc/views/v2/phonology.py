@@ -488,15 +488,17 @@ def sound_into_pitch_frame(
     Compute the correlation into the array 'r'.
     The FFT of the autocorrelation is the power spectrum.
     '''
+
+    nsampRFFT = nsampFFT // 2 + 1
+
     # Initially 'ac' consists of zeroes
     for channel in range(ny):
-        nsampRFFT = nsampFFT // 2 + 1
-        frame[channel][:nsampRFFT] = [abs(a) for a in numpy.fft.rfft(frame[channel])]  # complex spectrum
+        frame_view = numpy.fft.rfft(frame[channel]).view('float')  # complex spectrum
 
-        ac[0] += frame[channel][0] ** 2  # DC component
-        for i in range(1, nsampRFFT - 2, 2):
-            ac[i] += frame[channel][i] ** 2 + frame[channel][i+1] ** 2  # power spectrum
-        ac[nsampRFFT - 1] += frame[channel][nsampRFFT - 1] ** 2  # Nyquist frequency
+        ac[0] += frame_view[0] ** 2  # DC component
+        for i in range(2, nsampFFT, 2):
+            ac[i // 2] += frame_view[i] ** 2 + frame_view[i + 1] ** 2  # power spectrum
+        ac[nsampRFFT - 1] += frame_view[nsampFFT] ** 2  # Nyquist frequency
 
     ac[:] = numpy.fft.irfft(ac[:nsampRFFT])  # autocorrelation
 
@@ -1666,21 +1668,31 @@ class AudioPraatLike(object):
         window = get_gaussian_window(nsamp_window)
         windowR = window + numpy.zeros(nsampFFT - nsamp_window).tolist()
 
-        windowR = [abs(a) for a in numpy.fft.rfft(windowR)]
-        nsampRFFT = nsampFFT // 2 + 1  # RFFT computes such length
+        windowR = numpy.fft.rfft(windowR)
+
+        windowR_view = windowR.view('float')
 
         # Change input windowR according to praat algorithms
-        windowR[0] *= windowR[0]  # DC component
-        for i in range(1, nsampRFFT - 2, 2):
-            windowR[i] = windowR[i] ** 2 + windowR[i + 1] ** 2
-            windowR[i + 1] = 0.0  # power spectrum: square and zero
-        windowR[nsampRFFT - 1] *= windowR[nsampRFFT - 1]  # Nyquist frequency
+        windowR_view[0] *= windowR_view[0]  # DC component
+        for i in range(2, nsampFFT, 2):
+            windowR_view[i] = windowR_view[i] ** 2 + windowR_view[i + 1] ** 2
+            windowR_view[i + 1] = 0.0  # power spectrum: square and zero
+        windowR_view[nsampFFT] *= windowR_view[nsampFFT]  # Nyquist frequency
 
         windowR = numpy.fft.irfft(windowR)  # autocorrelation
 
         for i in range(1, nsamp_window):
             windowR[i] /= windowR[0]  # normalize
         windowR[0] = 1.0  # normalize
+
+        '''
+        import matplotlib.pyplot as plt
+        plt.plot(numpy.arange(nsamp_window), window[:nsamp_window])
+        plt.savefig('window.png')
+        plt.clf()
+        plt.plot(numpy.arange(nsamp_window), windowR[:nsamp_window])
+        plt.savefig('windowR.png')
+        '''
 
         brent_ixmax = math.floor(nsamp_window * interpolation_depth)
 
