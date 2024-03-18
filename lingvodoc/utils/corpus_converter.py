@@ -743,6 +743,7 @@ def convert_five_tiers(
         dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?/|]*)')
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
+        affix_re = re.compile('[-][\w]+')
 
         # Checking text data of all existing lexical entries.
 
@@ -1838,15 +1839,11 @@ def convert_five_tiers(
                                     all(x.content != text or x.field_id != field_id
                                         for x in match_dict[max_sim])):
 
-                                    create_entity(
-                                        extra_client,
-                                        p1_lexical_entry_id,
-                                        field_id,
-                                        field_data_type_dict[field_id],
-                                        text)
+                                    if (text := text.strip()) and merge_by_meaning_all:
 
-                                    if (merge_by_meaning_all and
-                                        (text := text .strip())):
+                                        if field_id == le_fields['translation']:
+                                            if mark_search := re.search(dash_re, text):
+                                                text = text[: mark_search.start()].strip()
 
                                         le_check_dict = (
                                             le_word_dict if field_id == le_fields['word'] else
@@ -1854,7 +1851,18 @@ def convert_five_tiers(
                                             None)
 
                                         if le_check_dict is not None:
+
+                                            if affix_search := re.search(affix_re, text):
+                                                text = text[: affix_search.start()].strip()
+
                                             le_check_dict[p1_lexical_entry_id].add(text.lower())
+
+                                    create_entity(
+                                        extra_client,
+                                        p1_lexical_entry_id,
+                                        field_id,
+                                        field_data_type_dict[field_id],
+                                        text)
 
                         # If we check lexical entry identity only by meaning, we should add to it any
                         # transcriptions and words it doesn't have.
@@ -1876,6 +1884,9 @@ def convert_five_tiers(
                                         le_xcript_dict[p1_lexical_entry_id])
                                 else:
                                     continue
+
+                                if affix_search := re.search(affix_re, text):
+                                    text = text[: affix_search.start()].strip()
 
                                 text_key = text.lower()
 
@@ -2171,9 +2182,11 @@ def convert_five_tiers(
                     le_entry_id not in word_le_set):
 
                     for pa_word in pa_word_dict[pa_entry_id]:
-                        word_key = (
-                            (pa_word := pa_word.strip())
-                                .lower())
+
+                        if affix_search := re.search(affix_re, pa_word):
+                            pa_word = pa_word[: affix_search.start()].strip()
+
+                        word_key = pa_word.lower()
 
                         le_word_set = (
                             le_word_dict[le_entry_id])
@@ -2191,9 +2204,11 @@ def convert_five_tiers(
                     le_entry_id not in xcript_le_set):
 
                     for pa_xcript in pa_xcript_dict[pa_entry_id]:
-                        xcript_key = (
-                            (pa_xcript := pa_xcript.strip())
-                                .lower())
+
+                        if affix_search := re.search(affix_re, pa_xcript):
+                            pa_xcript = pa_xcript[: affix_search.start()].strip()
+
+                        xcript_key = pa_xcript.lower()
 
                         le_xcript_set = (
                             le_xcript_dict[le_entry_id])
