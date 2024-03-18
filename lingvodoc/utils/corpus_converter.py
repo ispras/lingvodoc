@@ -2186,7 +2186,7 @@ def convert_five_tiers(
                         if affix_search := re.search(affix_re, pa_word):
                             pa_word = pa_word[: affix_search.start()].strip()
 
-                        word_key = pa_word.lower()
+                        word_key = pa_word.strip().lower()
 
                         le_word_set = (
                             le_word_dict[le_entry_id])
@@ -2208,7 +2208,7 @@ def convert_five_tiers(
                         if affix_search := re.search(affix_re, pa_xcript):
                             pa_xcript = pa_xcript[: affix_search.start()].strip()
 
-                        xcript_key = pa_xcript.lower()
+                        xcript_key = pa_xcript.strip().lower()
 
                         le_xcript_set = (
                             le_xcript_dict[le_entry_id])
