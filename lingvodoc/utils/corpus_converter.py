@@ -348,7 +348,8 @@ def convert_five_tiers(
     custom_eaf_tiers,
     debug_flag=False):
 
-    delimiter_re = re.compile('[^\\w\'.' + diacritic_signs + ']')
+    apostrophes = "\u02D9" + "\u0027"
+    delimiter_re = re.compile("[^\\w." + apostrophes + diacritic_signs + "]")
 
     EAF_TIERS = {tier: column for tier, column in DEFAULT_EAF_TIERS.items() if column not in custom_eaf_tiers}
     for column, tier in custom_eaf_tiers.items():
