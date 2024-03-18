@@ -592,6 +592,11 @@ def sound_into_pitch_frame(
                 pitchFrame['candidates'][place]['frequency'] = frequencyOfMaximum
                 pitchFrame['candidates'][place]['strength'] = strengthOfMaximum
                 imax[place] = i
+                '''
+                if pitchFloor < frequencyOfMaximum < 600:
+                    with open('result.txt', 'a') as f:
+                        print(f'frequency: {frequencyOfMaximum} | strength: {strengthOfMaximum}', file=f)
+                '''
 
     '''
     Second pass: for extra precision, maximize cubic spline interpolation.
