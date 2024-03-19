@@ -5060,7 +5060,9 @@ class MorphCognateAnalysis(graphene.Mutation):
         meaning_to_links = {}
         result_pool = {}
         tiny_dicts = set()
-        clean_meaning_re = re.compile('[.\dA-Z]+')
+        meaning_re = re.compile('[.\dA-Z]+')
+        meaning_with_comment_re = re.compile('[.\dA-Z]+ *\([.\d\w ]+\)')
+
         for index, (perspective_id, affix_field_id, meaning_field_id) in \
                 enumerate(perspective_info_list):
 
@@ -5150,8 +5152,10 @@ class MorphCognateAnalysis(graphene.Mutation):
                 affix = list(map(lambda a: a.strip(), affix_list))
                 meaning = []
                 for m in meaning_list:
-                    if clean_m := re.search(clean_meaning_re, m):
-                        meaning.append(clean_m.group(0))
+                    if ((meaning_search := re.search(meaning_with_comment_re, m)) or
+                            (meaning_search := re.search(meaning_re, m))):
+                        meaning_value = meaning_search.group(0)
+                        meaning.append(" ".join(meaning_value.split()))
 
                 if not meaning:
                     continue
