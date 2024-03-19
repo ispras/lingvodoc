@@ -1829,8 +1829,9 @@ def convert_five_tiers(
                                 p1_lexical_entry_id)
 
                             for other_word in column:
-                                text = other_word.text
-                                if not text or other_word.tier not in EAF_TIERS:
+                                if (not (text := other_word.text) or
+                                        not (text := text.strip()) or
+                                        other_word.tier not in EAF_TIERS):
                                     continue
 
                                 field_id = get_field_id(EAF_TIERS[other_word.tier])
@@ -1839,11 +1840,11 @@ def convert_five_tiers(
                                     all(x.content != text or x.field_id != field_id
                                         for x in match_dict[max_sim])):
 
-                                    if (text := text.strip()) and merge_by_meaning_all:
+                                    if merge_by_meaning_all:
 
-                                        if field_id == le_fields['translation']:
-                                            if mark_search := re.search(dash_re, text):
-                                                text = text[: mark_search.start()].strip()
+                                        if (field_id == le_fields['translation'] and
+                                                (mark_search := re.search(dash_re, text))):
+                                            text = text[: mark_search.start()].strip()
 
                                         le_check_dict = (
                                             le_word_dict if field_id == le_fields['word'] else
@@ -2179,11 +2180,12 @@ def convert_five_tiers(
 
             if additional_entries:
                 if (additional_entries_all or
-                    le_entry_id not in word_le_set):
+                        le_entry_id not in word_le_set):
 
                     for pa_word in pa_word_dict[pa_entry_id]:
 
-                        if affix_search := re.search(affix_re, pa_word):
+                        if (merge_by_meaning and
+                                (affix_search := re.search(affix_re, pa_word))):
                             pa_word = pa_word[: affix_search.start()].strip()
 
                         word_key = pa_word.strip().lower()
@@ -2192,7 +2194,9 @@ def convert_five_tiers(
                             le_word_dict[le_entry_id])
 
                         if word_key not in le_word_set:
+
                             le_word_set.add(word_key)
+
                             create_entity(
                                 extra_client,
                                 le_entry_id,
@@ -2201,11 +2205,12 @@ def convert_five_tiers(
                                 pa_word)
 
                 if (additional_entries_all or
-                    le_entry_id not in xcript_le_set):
+                        le_entry_id not in xcript_le_set):
 
                     for pa_xcript in pa_xcript_dict[pa_entry_id]:
 
-                        if affix_search := re.search(affix_re, pa_xcript):
+                        if (merge_by_meaning and
+                                (affix_search := re.search(affix_re, pa_xcript))):
                             pa_xcript = pa_xcript[: affix_search.start()].strip()
 
                         xcript_key = pa_xcript.strip().lower()
@@ -2214,6 +2219,7 @@ def convert_five_tiers(
                             le_xcript_dict[le_entry_id])
 
                         if xcript_key not in le_xcript_set:
+
                             le_xcript_set.add(xcript_key)
 
                             create_entity(
