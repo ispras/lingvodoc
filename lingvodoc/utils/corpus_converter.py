@@ -215,16 +215,16 @@ def create_nested_field(
 
     if contains is not None:
 
-        for sub_position, sub_field_info in enumerate(contains, position):
+        for sub_field_info in contains:
 
-            create_nested_field(
-                sub_field_info,
-                perspective,
-                client,
-                upper_level = field,
-                position = sub_position)
-
-        position = sub_position + 1
+            position = (
+                create_nested_field(
+                    sub_field_info,
+                    perspective,
+                    client,
+                    upper_level = field,
+                    position = position)
+            )
 
     return position
 
