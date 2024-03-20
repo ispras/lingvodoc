@@ -209,12 +209,13 @@ def create_nested_field(
         field.link_object_id = link_info['object_id']
 
     DBSession.add(field)
+    position += 1
 
     contains = field_info.get('contains')
 
     if contains is not None:
 
-        for sub_position, sub_field_info in enumerate(contains, 1):
+        for sub_position, sub_field_info in enumerate(contains, position):
 
             create_nested_field(
                 sub_field_info,
@@ -223,6 +224,9 @@ def create_nested_field(
                 upper_level = field,
                 position = sub_position)
 
+        position = sub_position + 1
+
+    return position
 
 def object_file_path(entity_dict, base_path, folder_name, filename):
 
@@ -971,13 +975,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    le_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        le_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Creating fields of the second perspective, if required.
 
@@ -1012,13 +1019,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    pa_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        pa_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Creating fields of the third perspective, if required.
 
@@ -1044,13 +1054,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    mo_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        mo_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Creating fields of the fourth perspective, if required.
 
@@ -1074,13 +1087,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    mp_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        mp_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Getting field data types.
 
