@@ -216,7 +216,6 @@ def create_nested_field(
     if contains is not None:
 
         for sub_field_info in contains:
-
             position = (
                 create_nested_field(
                     sub_field_info,
