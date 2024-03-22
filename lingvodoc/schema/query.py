@@ -344,6 +344,7 @@ from lingvodoc.views.v2.utils import (
     storage_file,
     view_field_from_object)
 
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -7042,6 +7043,83 @@ class BidirectionalLinks(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
+class ReorderColumns(graphene.Mutation):
+    class Arguments:
+
+        perspective_id = LingvodocID(required = True)
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        debug_flag = False):
+
+        sqlalchemy_url = info.context.request.registry.settings["sqlalchemy.url"]
+        engine = create_engine(sqlalchemy_url)
+        DBSession.configure(bind=engine)
+
+        with transaction.manager:
+
+            try:
+                client_id = info.context.client_id
+                log.debug(f"client_id: {client_id}")
+
+                client = DBSession.query(Client).filter_by(id = client_id).first()
+
+                if not client or client.user_id != 1:
+                    return ResponseError('Only administrator can reorder columns.')
+
+                column_list = (
+                    DBSession
+                        .query(
+                            dbColumn.position,
+                            dbColumn.client_id,
+                            dbColumn.object_id,
+                            dbColumn.created_at)
+                        .filter_by(
+                            parent_id = perspective_id,
+                            marked_for_deletion = 'false')
+                        .order_by(
+                            dbColumn.position,
+                            dbColumn.client_id,
+                            dbColumn.object_id,
+                            dbColumn.created_at)
+                        .all()
+                ) or []
+
+                for i in range(1, len(column_list)):
+                    if column_list[i][0] <= column_list[i-1][0]:
+                        column = list(column_list[i])
+                        column[0] = column_list[i-1][0] + 1
+                        column_list[i] = tuple(column)
+                #A()
+
+                transaction.commit()
+                DBSession.flush()
+
+                return ReorderColumns(triumph = True)
+
+            except Exception as exception:
+
+                traceback_string = (
+
+                    ''.join(
+                        traceback.format_exception(
+                            exception, exception, exception.__traceback__))[:-1])
+
+                log.warning('columns_reordering: exception')
+                log.warning(traceback_string)
+
+                return (
+
+                    ResponseError(
+                        'Exception:\n' + traceback_string))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -7109,6 +7187,7 @@ class MyMutations(graphene.ObjectType):
     create_column = CreateColumn.Field()
     update_column = UpdateColumn.Field()
     delete_column = DeleteColumn.Field()
+    reorder_columns = ReorderColumns.Field()
     create_grant = CreateGrant.Field()
     update_grant = UpdateGrant.Field()
     # delete_grant = DeleteGrant.Field()
