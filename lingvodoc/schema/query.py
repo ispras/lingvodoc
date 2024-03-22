@@ -7048,7 +7048,6 @@ class ReorderColumns(graphene.Mutation):
     class Arguments:
 
         perspective_id = LingvodocID()
-        auto = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -7057,23 +7056,20 @@ class ReorderColumns(graphene.Mutation):
     def mutate(
         root,
         info,
-        perspective_id,
-        auto = False,
+        perspective_id = None,
         debug_flag = False):
 
         try:
             client_id = info.context.client_id
-            log.debug(f"client_id: {client_id}")
+            if debug_flag:
+                log.debug(f"client_id: {client_id}")
 
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client or client.user_id != 1:
                 return ResponseError('Only administrator can reorder columns.')
 
-            if not auto and type(perspective_id) is not LingvodocID:
-                return ResponseError("Please set correct 'perspective_id' or 'auto' value.")
-
-            perspective_list = [perspective_id] if not auto else (
+            perspective_list = [perspective_id] if perspective_id else (
                 DBSession
                     .query(
                         dbColumn.parent_client_id,
@@ -7088,7 +7084,7 @@ class ReorderColumns(graphene.Mutation):
                         func.count(func.distinct(dbColumn.position)) > 0)
                     .all()) or []
 
-            for per_id in perspective_list[:10]:
+            for per_id in perspective_list:
                 column_list = (
                     DBSession
                         .query(dbColumn)
@@ -7102,11 +7098,17 @@ class ReorderColumns(graphene.Mutation):
                             dbColumn.created_at)
                         .all()) or []
 
+                if debug_flag:
+                    log.debug(f'Processing {per_id} ...')
+
                 for i in range(1, len(column_list)):
                     if column_list[i].position <= column_list[i-1].position:
                         column_list[i].position = column_list[i-1].position + 1
 
-                print(f'Processed: {per_id}')
+                        if debug_flag:
+                            log.debug(f">> Changed {i}'th")
+            if debug_flag:
+                log.debug(f"Total processed {len(perspective_list)} perspectives.")
 
             return ReorderColumns(triumph = True)
 
