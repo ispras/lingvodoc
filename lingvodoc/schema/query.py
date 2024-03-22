@@ -60,7 +60,8 @@ from sqlalchemy import (
     func,
     or_,
     tuple_,
-    union)
+    union,
+    desc)
 
 import sqlalchemy.dialects.postgresql as postgresql
 
@@ -7046,7 +7047,8 @@ class BidirectionalLinks(graphene.Mutation):
 class ReorderColumns(graphene.Mutation):
     class Arguments:
 
-        perspective_id = LingvodocID(required = True)
+        perspective_id = LingvodocID()
+        auto = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -7056,68 +7058,73 @@ class ReorderColumns(graphene.Mutation):
         root,
         info,
         perspective_id,
+        auto = False,
         debug_flag = False):
 
-        sqlalchemy_url = info.context.request.registry.settings["sqlalchemy.url"]
-        engine = create_engine(sqlalchemy_url)
-        DBSession.configure(bind=engine)
+        try:
+            client_id = info.context.client_id
+            log.debug(f"client_id: {client_id}")
 
-        with transaction.manager:
+            client = DBSession.query(Client).filter_by(id = client_id).first()
 
-            try:
-                client_id = info.context.client_id
-                log.debug(f"client_id: {client_id}")
+            if not client or client.user_id != 1:
+                return ResponseError('Only administrator can reorder columns.')
 
-                client = DBSession.query(Client).filter_by(id = client_id).first()
+            if not auto and type(perspective_id) is not LingvodocID:
+                return ResponseError("Please set correct 'perspective_id' or 'auto' value.")
 
-                if not client or client.user_id != 1:
-                    return ResponseError('Only administrator can reorder columns.')
+            perspective_list = [perspective_id] if not auto else (
+                DBSession
+                    .query(
+                        dbColumn.parent_client_id,
+                        dbColumn.parent_object_id)
+                    .filter_by(
+                        marked_for_deletion= 'false')
+                    .group_by(
+                        dbColumn.parent_client_id,
+                        dbColumn.parent_object_id)
+                    .having(
+                        func.count(dbColumn.position) -
+                        func.count(func.distinct(dbColumn.position)) > 0)
+                    .all()) or []
 
+            for per_id in perspective_list[:10]:
                 column_list = (
                     DBSession
-                        .query(
-                            dbColumn.position,
-                            dbColumn.client_id,
-                            dbColumn.object_id,
-                            dbColumn.created_at)
+                        .query(dbColumn)
                         .filter_by(
-                            parent_id = perspective_id,
+                            parent_id = per_id,
                             marked_for_deletion = 'false')
                         .order_by(
                             dbColumn.position,
                             dbColumn.client_id,
                             dbColumn.object_id,
                             dbColumn.created_at)
-                        .all()
-                ) or []
+                        .all()) or []
 
                 for i in range(1, len(column_list)):
-                    if column_list[i][0] <= column_list[i-1][0]:
-                        column = list(column_list[i])
-                        column[0] = column_list[i-1][0] + 1
-                        column_list[i] = tuple(column)
-                #A()
+                    if column_list[i].position <= column_list[i-1].position:
+                        column_list[i].position = column_list[i-1].position + 1
 
-                transaction.commit()
-                DBSession.flush()
+                print(f'Processed: {per_id}')
 
-                return ReorderColumns(triumph = True)
+            return ReorderColumns(triumph = True)
 
-            except Exception as exception:
+        except Exception as exception:
 
-                traceback_string = (
+            traceback_string = (
 
-                    ''.join(
-                        traceback.format_exception(
-                            exception, exception, exception.__traceback__))[:-1])
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
 
-                log.warning('columns_reordering: exception')
-                log.warning(traceback_string)
+            log.warning('columns_reordering: exception')
+            log.warning(traceback_string)
 
-                return (
+            return (
 
-                    ResponseError(
-                        'Exception:\n' + traceback_string))
+                ResponseError(
+                    'Exception:\n' + traceback_string))
 
 
 class MyMutations(graphene.ObjectType):
