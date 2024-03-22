@@ -7045,6 +7045,18 @@ class BidirectionalLinks(graphene.Mutation):
 
 
 class ReorderColumns(graphene.Mutation):
+    """
+    curl 'https://lingvodoc.ispras.ru/api/graphql' \
+    -H 'Content-Type: application/json' \
+    -H 'Cookie: locale_id=2; auth_tkt=$TOKEN!userid_type:int; client_id=$ID' \
+    --data-raw '{ "operationName": "reorder_columns", "variables": {"perspectiveId": null}, \
+    "query": "mutation reorder_columns($perspectiveId: LingvodocID) \
+    { reorder_columns(perspective_id: $perspectiveId, debug_flag: true) { triumph }}"}'
+
+    #! set perspectiveId to concrete LingvodocID for one perspective's positions reordering,
+    #! otherwise all perspectives with duplicated columns positions will be processed
+    """
+
     class Arguments:
 
         perspective_id = LingvodocID()
@@ -7107,6 +7119,7 @@ class ReorderColumns(graphene.Mutation):
 
                         if debug_flag:
                             log.debug(f">> Changed {i}'th")
+
             if debug_flag:
                 log.debug(f"Total processed {len(perspective_list)} perspectives.")
 
