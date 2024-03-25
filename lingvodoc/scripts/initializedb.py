@@ -6,10 +6,7 @@ import transaction
 
 from sqlalchemy import engine_from_config
 
-from lingvodoc.utils.creation import (create_perspective,
-                                      create_dbdictionary,
-                                      create_dictionary_persp_to_field,
-                                      edit_role,
+from lingvodoc.utils.creation import (edit_role,
                                       create_lexicalentry
                                       )
 from lingvodoc.utils.starling_converter import create_entity
