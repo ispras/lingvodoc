@@ -213,8 +213,8 @@ def csv_to_columns_excel(path, url):
 
     for row_index, row in enumerate(row_list[1:]):
 
-        for column_index, value in enumerate(row):
-            column_dict[f'{column_index}:{header_list[column_index]}'].append(value)
+        for column_index, (header, value) in enumerate(zip(header_list, row)):
+            column_dict[f'{column_index}:{header}'].append(value)
 
         column_dict['NUMBER'].append(row_index)
 
