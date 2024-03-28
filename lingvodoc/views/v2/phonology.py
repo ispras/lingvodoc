@@ -421,7 +421,8 @@ def pitch_path_finder(
             frame['candidates'][0], frame['candidates'][place] = frame['candidates'][place], frame['candidates'][0]
             place = psi[iframe][place]
 
-    except:
+    except Exception as e:
+        print(e)
         raise RuntimeError(frames, ": path not found.")
 
 
@@ -1564,10 +1565,10 @@ class AudioPraatLike(object):
 
         assert end >= x1
 
-        fq = self.intensity_sound.frame_rate  # frequency of frames (sampling)
-        nx = min(math.floor((end - x1) * fq), int(self.intensity_sound.frame_count()))  # number of frames to compute
-        dx = 1 / fq  # single frame duration in sec
-        duration = nx / fq  # duration of frames to compute in sec
+        fq = self.intensity_sound.frame_rate  # frequency of samples (sampling)
+        nx = min(math.floor((end - x1) * fq), int(self.intensity_sound.frame_count()))  # number of samples to compute
+        dx = 1 / fq  # single sample duration in sec
+        duration = nx / fq  # duration of samples to compute in sec
 
         ny = self.intensity_sound.channels  # number of channels
         plain_z = [ smp / self.intensity_sound.max_possible_amplitude
@@ -1584,7 +1585,7 @@ class AudioPraatLike(object):
         maximumPitch = 600
         periodsPerWindow = 3.0
         oversampling = 4
-        dt = periodsPerWindow / minimumPitch / oversampling
+        dt = 0.015 #periodsPerWindow / minimumPitch / oversampling
         assert minimumPitch >= periodsPerWindow / duration, \
             f"To analyse this Sound, 'pitch floor' must not be less than {periodsPerWindow / duration} Hz."
         maximumPitch = min(0.5 / dx, maximumPitch)
@@ -1625,6 +1626,7 @@ class AudioPraatLike(object):
 		We do this even for the forward cross-correlation method,
 		because that allows us to compare the two methods.
         '''
+        assert dt_window <= duration, f"{duration} is shorter than window length"
         numberOfFrames = math.floor((duration - dt_window) / dt) + 1
         ourMidTime = x1 + 0.5 * (duration - dx)
         thyDuration = numberOfFrames * dt
@@ -2312,14 +2314,22 @@ def process_sound(tier_data_list, sound):
             if len(interval_list) <= 0:
                 continue
 
-            '''
-            pitch_list = [
-                sound.get_pitch(begin_sec, end_sec)
-                    for begin_sec, end_sec, _ in interval_list]
-            '''
-
             pitch_list = sound.get_pitch()
-
+            #pitch_table = list()
+            cur = 0
+            with open('result.txt', 'w') as f:
+                for begin_sec, end_sec, text in interval_list:
+                    for iframe in range(cur, pitch_list['nx']):
+                        point = pitch_list['x1'] + pitch_list['dx'] * (iframe - 1)
+                        if begin_sec < point < end_sec:
+                            freq = pitch_list['frames'][iframe]['candidates'][0]['frequency']
+                            #pitch_table.append((text, point, freq))
+                            print(f"'{text}' | {point:.3f} sec | {freq:.3f} Hz", file=f)
+                        elif point >= end_sec:
+                            cur = iframe
+                            print(" --- ", file=f)
+                            break
+            A()
             # Looking in particular at longest interval and interval with highest intensity, and at all
             # intervals in general.
 
@@ -2403,17 +2413,28 @@ def process_sound(tier_data_list, sound):
                     (end - begin) / mean_interval_length,
                     [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                     list(map('{0:.3f}'.format, f_list)),
+                    list(map('{0:.3f}'.format, p_list)),
                     '+' if index == max_length_index else '-',
                     '+' if index == max_intensity_index else '-',
                     source_index)
 
                     for (
                         index,
-                            (interval_str, (_, i_min, i_max), f_list, (begin, end, text), source_index)) in
+                            (interval_str,
+                             (_, i_min, i_max),
+                             f_list,
+                             p_list,
+                             (begin, end, text),
+                             source_index)) in
 
                         enumerate(
                             zip(
-                                str_list, intensity_list, formant_list, interval_list, source_index_list))]
+                                str_list,
+                                intensity_list,
+                                formant_list,
+                                pitch_list,
+                                interval_list,
+                                source_index_list))]
 
             textgrid_result_list[-1][2].append(
 
@@ -3132,7 +3153,8 @@ def compile_workbook(
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
             'Longest',
-            'Highest intensity']
+            'Highest intensity',
+            'Pitch mean (Hz)']
 
     # Creating sets of worksheets for each result group, including the universal one.
 
@@ -3168,6 +3190,7 @@ def compile_workbook(
             worksheet_results.set_column(4, 6, 8)
             worksheet_results.set_column(7, 9, 10)
             worksheet_results.set_column(10, 12, 4)
+            worksheet_results.set_column(13, 13, 10)
 
         worksheet_dict[group] = (
 
@@ -3351,7 +3374,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            i_list, f_list, sign_longest, sign_highest, source_index) in (
+                            i_list, f_list, p_list, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -3375,6 +3398,7 @@ def compile_workbook(
 
                                 i_list +
                                 f_list +
+                                p_list +
 
                                 [', '.join(formant_reference(*f_list[:2])),
                                     sign_longest,
