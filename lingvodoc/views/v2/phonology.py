@@ -2222,11 +2222,11 @@ class Tier_Result(object):
             ([interval_str,
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
+                p_mean,
                 i_list,
-                f_list,
-                p_mean)
+                f_list)
 
-                for interval_str, r_length, i_list, f_list, p_mean, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -2409,9 +2409,9 @@ def process_sound(tier_data_list, sound):
 
                 (interval_str,
                     (end - begin) / mean_interval_length,
+                    f'{p_mean:.3f}',
                     [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                     list(map('{0:.3f}'.format, f_list)),
-                    f'{p_mean:.3f}',
                     '+' if index == max_length_index else '-',
                     '+' if index == max_intensity_index else '-',
                     source_index)
@@ -2419,18 +2419,18 @@ def process_sound(tier_data_list, sound):
                     for (
                         index,
                             (interval_str,
+                             p_mean,
                              (_, i_min, i_max),
                              f_list,
-                             p_mean,
                              (begin, end, text),
                              source_index)) in
 
                         enumerate(
                             zip(
                                 str_list,
+                                pitch_means,
                                 intensity_list,
                                 formant_list,
-                                pitch_means,
                                 interval_list,
                                 source_index_list))]
 
@@ -3129,9 +3129,9 @@ def compile_workbook(
 
             'Longest (seconds) interval',
             'Relative length',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
-            'Pitch mean (Hz)',
             'Table reference',
 
             'Highest intensity (dB) interval',
@@ -3148,9 +3148,9 @@ def compile_workbook(
 
             'Interval',
             'Relative length',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
-            'Pitch mean (Hz)',
             'Table reference',
             'Longest',
             'Highest intensity']
@@ -3173,23 +3173,22 @@ def compile_workbook(
 
             worksheet_results.set_column(0, 2, 20)
             worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 6, 8)
-            worksheet_results.set_column(7, 9, 10)
-            worksheet_results.set_column(10, 10, 4)
-            worksheet_results.set_column(11, 11, 20)
-            worksheet_results.set_column(12, 12, 8, format_percent)
-            worksheet_results.set_column(13, 15, 8)
-            worksheet_results.set_column(16, 18, 10)
-            worksheet_results.set_column(19, 20, 4)
+            worksheet_results.set_column(4, 7, 8)
+            worksheet_results.set_column(8, 10, 10)
+            worksheet_results.set_column(11, 11, 4)
+            worksheet_results.set_column(12, 12, 20)
+            worksheet_results.set_column(13, 13, 8, format_percent)
+            worksheet_results.set_column(14, 16, 8)
+            worksheet_results.set_column(17, 19, 10)
+            worksheet_results.set_column(20, 21, 4)
 
         else:
 
             worksheet_results.set_column(0, 2, 20)
             worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 6, 8)
-            worksheet_results.set_column(7, 9, 10)
-            worksheet_results.set_column(10, 12, 4)
-            worksheet_results.set_column(13, 13, 10)
+            worksheet_results.set_column(4, 7, 8)
+            worksheet_results.set_column(8, 10, 10)
+            worksheet_results.set_column(11, 13, 4)
 
         worksheet_dict[group] = (
 
@@ -3373,7 +3372,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            i_list, f_list, p_mean, sign_longest, sign_highest, source_index) in (
+                            p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -3395,9 +3394,9 @@ def compile_workbook(
                                     ' '.join([vowel] + interval_str.split()[1:]),
                                     round(interval_r_length, 4)] +
 
+                                [float(p_mean)] +
                                 i_list +
                                 f_list +
-                                [ p_mean ] +
 
                                 [', '.join(formant_reference(*f_list[:2])),
                                     sign_longest,
