@@ -518,14 +518,6 @@ def sound_into_pitch_frame(
     '''
 
     '''
-    Register the first candidate, which is always present: voicelessness.
-    pitchFrame['nCandidates'] = 1
-    del pitchFrame['candidates'][1:]  # maintain invariant; no memory allocations
-    pitchFrame['candidates'][0]['frequency'] = 0.0  # voiceless: always present
-    pitchFrame['candidates'][0]['strength'] = 0.0
-    '''
-
-    '''
     Shortcut: absolute silence is always voiceless.
 	We are done for this frame.
     '''
@@ -593,11 +585,6 @@ def sound_into_pitch_frame(
                 pitchFrame['candidates'][place]['frequency'] = frequencyOfMaximum
                 pitchFrame['candidates'][place]['strength'] = strengthOfMaximum
                 imax[place] = i
-                '''
-                if pitchFloor < frequencyOfMaximum < 600:
-                    with open('result.txt', 'a') as f:
-                        print(f'frequency: {frequencyOfMaximum} | strength: {strengthOfMaximum}', file=f)
-                '''
 
     '''
     Second pass: for extra precision, maximize cubic spline interpolation.
@@ -605,7 +592,7 @@ def sound_into_pitch_frame(
     for i in range(1, pitchFrame['nCandidates']):
         offset = -brent_ixmax - 1
         # Get improved x and y of function maximum after cubic spline interpolation
-        xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset)[0]
+        xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset, disp=False)[0]
         ymid = float(r_offset_spline_func(xmid))
         xmid += offset
         pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
@@ -1634,8 +1621,8 @@ class AudioPraatLike(object):
 
         # Create the resulting pitch contour.
         thee = {
-            'xmin': x1,
-            'xmax': x1 + duration,
+            #'xmin': x1,
+            #'xmax': x1 + duration,
             'nx': numberOfFrames,
             'dx': dt,
             'x1': t1,
@@ -2236,9 +2223,10 @@ class Tier_Result(object):
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
                 i_list,
-                f_list)
+                f_list,
+                p_mean)
 
-                for interval_str, r_length, i_list, f_list, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, i_list, f_list, p_mean, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -2315,21 +2303,31 @@ def process_sound(tier_data_list, sound):
                 continue
 
             pitch_list = sound.get_pitch()
-            #pitch_table = list()
-            cur = 0
-            with open('result.txt', 'w') as f:
+
+            # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
+            with open('pitch.log', 'w') as f:
+                cur_frame = 0
+                pitch_means = list()
                 for begin_sec, end_sec, text in interval_list:
-                    for iframe in range(cur, pitch_list['nx']):
-                        point = pitch_list['x1'] + pitch_list['dx'] * (iframe - 1)
-                        if begin_sec < point < end_sec:
+                    sum_fq = num_fq = 0
+                    for iframe in range(cur_frame, pitch_list['nx']):
+                        point = pitch_list['x1'] + pitch_list['dx'] * iframe
+                        if point <= begin_sec:
+                            continue
+                        elif begin_sec < point < end_sec:
                             freq = pitch_list['frames'][iframe]['candidates'][0]['frequency']
-                            #pitch_table.append((text, point, freq))
                             print(f"'{text}' | {point:.3f} sec | {freq:.3f} Hz", file=f)
-                        elif point >= end_sec:
-                            cur = iframe
-                            print(" --- ", file=f)
+                            sum_fq += freq
+                            num_fq += (freq > 0)
+                            continue
+                        else:
                             break
-            A()
+
+                    cur_frame = iframe
+                    mean = sum_fq / num_fq if num_fq > 0 else 0
+                    pitch_means.append(mean)
+                    print(f"Mean: {mean:.3f} Hz\n", file=f)
+
             # Looking in particular at longest interval and interval with highest intensity, and at all
             # intervals in general.
 
@@ -2413,7 +2411,7 @@ def process_sound(tier_data_list, sound):
                     (end - begin) / mean_interval_length,
                     [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                     list(map('{0:.3f}'.format, f_list)),
-                    list(map('{0:.3f}'.format, p_list)),
+                    f'{p_mean:.3f}',
                     '+' if index == max_length_index else '-',
                     '+' if index == max_intensity_index else '-',
                     source_index)
@@ -2423,7 +2421,7 @@ def process_sound(tier_data_list, sound):
                             (interval_str,
                              (_, i_min, i_max),
                              f_list,
-                             p_list,
+                             p_mean,
                              (begin, end, text),
                              source_index)) in
 
@@ -2432,7 +2430,7 @@ def process_sound(tier_data_list, sound):
                                 str_list,
                                 intensity_list,
                                 formant_list,
-                                pitch_list,
+                                pitch_means,
                                 interval_list,
                                 source_index_list))]
 
@@ -3133,6 +3131,7 @@ def compile_workbook(
             'Relative length',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+            'Pitch mean (Hz)',
             'Table reference',
 
             'Highest intensity (dB) interval',
@@ -3151,10 +3150,10 @@ def compile_workbook(
             'Relative length',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+            'Pitch mean (Hz)',
             'Table reference',
             'Longest',
-            'Highest intensity',
-            'Pitch mean (Hz)']
+            'Highest intensity']
 
     # Creating sets of worksheets for each result group, including the universal one.
 
@@ -3374,7 +3373,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            i_list, f_list, p_list, sign_longest, sign_highest, source_index) in (
+                            i_list, f_list, p_mean, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -3398,7 +3397,7 @@ def compile_workbook(
 
                                 i_list +
                                 f_list +
-                                p_list +
+                                [ p_mean ] +
 
                                 [', '.join(formant_reference(*f_list[:2])),
                                     sign_longest,
