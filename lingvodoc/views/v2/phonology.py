@@ -1694,7 +1694,7 @@ class AudioPraatLike(object):
         numberOfFramesPerThread = 20
         numberOfThreads = (numberOfFrames - 1) // numberOfFramesPerThread + 1
         numberOfProcessors = multiprocessing.cpu_count()
-        print(f"{numberOfProcessors} processors")
+        log.debug(f"{numberOfProcessors} processors")
         numberOfThreads = min(numberOfThreads, numberOfProcessors)
         numberOfThreads = max(1, min(numberOfThreads, 16))
         numberOfFramesPerThread = (numberOfFrames - 1) // numberOfThreads + 1
@@ -1761,8 +1761,7 @@ class AudioPraatLike(object):
         pool.join()
         '''
 
-        # Melder_progress equivalent in Python
-        print("Sound to Pitch: path finder - 95% complete")
+        log.debug("Sound to Pitch: path finder - 95% complete")
         pitch_path_finder(silenceThreshold, voicingThreshold, octaveCost,
                           octaveJumpCost, voicedUnvoicedCost, minimumPitch, **thee)
 
@@ -1771,8 +1770,6 @@ class AudioPraatLike(object):
                     [frame['candidates'][1]['frequency'] for frame in thee['frames']])
         pyplot.savefig('freq.png')
         '''
-
-        #A()
         return thee
 
 def find_max_interval_praat(sound, interval_list):
@@ -2305,7 +2302,7 @@ def process_sound(tier_data_list, sound):
             pitch_list = sound.get_pitch()
 
             # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
-            with open('pitch.log', 'w') as f:
+            with open('pitch.log', 'a') as f:
                 cur_frame = 0
                 pitch_means = list()
                 for begin_sec, end_sec, text in interval_list:
@@ -4876,6 +4873,9 @@ def perform_phonology(args, task_status, storage):
         args.use_fast_track,
         args.limit, args.limit_exception,
         args.limit_no_vowel, args.limit_result))
+
+    with open('pitch.log', 'w') as f:
+        print (datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S'), "\n", file=f)
 
     time_begin = time.time()
 
