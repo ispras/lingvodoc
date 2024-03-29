@@ -3129,7 +3129,6 @@ def compile_workbook(
 
             'Longest (seconds) interval',
             'Relative length',
-            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -3173,14 +3172,14 @@ def compile_workbook(
 
             worksheet_results.set_column(0, 2, 20)
             worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 7, 8)
-            worksheet_results.set_column(8, 10, 10)
-            worksheet_results.set_column(11, 11, 4)
-            worksheet_results.set_column(12, 12, 20)
-            worksheet_results.set_column(13, 13, 8, format_percent)
-            worksheet_results.set_column(14, 16, 8)
-            worksheet_results.set_column(17, 19, 10)
-            worksheet_results.set_column(20, 21, 4)
+            worksheet_results.set_column(4, 6, 8)
+            worksheet_results.set_column(7, 9, 10)
+            worksheet_results.set_column(10, 10, 4)
+            worksheet_results.set_column(11, 11, 20)
+            worksheet_results.set_column(12, 12, 8, format_percent)
+            worksheet_results.set_column(13, 15, 8)
+            worksheet_results.set_column(16, 18, 10)
+            worksheet_results.set_column(19, 20, 4)
 
         else:
 
