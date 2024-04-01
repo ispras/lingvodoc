@@ -1740,16 +1740,15 @@ class AudioPraatLike(object):
                 'ac': numpy.zeros(nsampFFT, dtype=float),
                 'imax': numpy.zeros(maxnCandidates, dtype=int),
                 'localMean': numpy.zeros(ny, dtype=float),
-                'r': numpy.zeros(brent_ixmax + 1)
+                'r': numpy.zeros(brent_ixmax * 2 + 1)
             }
+
+            args.append(arg)
+            firstFrame = lastFrame
+            lastFrame += numberOfFramesPerThread
 
             # single-thread
             sound_into_pitch(arg)
-
-            args.append(arg)
-
-            firstFrame = lastFrame
-            lastFrame += numberOfFramesPerThread
 
         '''
         # multi-thread
