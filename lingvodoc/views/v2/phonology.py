@@ -16,6 +16,7 @@ import math
 
 import os
 from os import makedirs, path
+import multiprocessing
 
 import pprint
 import re
@@ -64,6 +65,8 @@ from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFail
 from pyramid.view import view_config
 
 import scipy.linalg
+from scipy.interpolate import CubicSpline
+from scipy.optimize import fmin
 
 from sqlalchemy import and_, create_engine, func, tuple_
 from sqlalchemy.orm import aliased
@@ -94,6 +97,7 @@ from lingvodoc.queue.celery import celery
 from lingvodoc.utils import sanitize_worksheet_name
 from lingvodoc.views.v2.utils import anonymous_userid, as_storage_file, message, storage_file, unimplemented
 
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -323,6 +327,289 @@ def compute_formants(sample_list, nyquist_frequency):
     formant_list.sort()
 
     return formant_list
+
+
+def pitch_path_finder(
+        silenceThreshold,
+        voicingThreshold,
+        octaveCost,
+        octaveJumpCost,
+        voicedUnvoicedCost,
+        floor,
+        ceiling,
+        frames,
+        dx, nx,
+        **rest):
+    try:
+
+        maxnCandidates = max(frame['nCandidates'] for frame in frames)
+
+        timeStepCorrection = 0.01 / dx
+        octaveJumpCost *= timeStepCorrection
+        voicedUnvoicedCost *= timeStepCorrection
+
+        delta = numpy.zeros((nx, maxnCandidates), dtype=float)
+        psi = numpy.zeros((nx, maxnCandidates), dtype=int)
+
+        for iframe in range(nx):
+            frame = frames[iframe]
+            unvoicedStrength = (
+                0.0 if silenceThreshold <= 0 else 2.0 - frame['intensity'] /
+                (silenceThreshold / (1.0 + voicingThreshold))
+            )
+            unvoicedStrength = voicingThreshold + max(0.0, unvoicedStrength)
+            for icand in range(frame['nCandidates']):
+                candidate = frame['candidates'][icand]
+                voiceless = not (floor < candidate['frequency'] < ceiling)
+                delta[iframe][icand] = (
+                    unvoicedStrength if voiceless else candidate['strength'] -
+                    octaveCost * math.log2( ceiling / candidate['frequency'] )
+                )
+
+        '''
+        Look for the most probable path through the maxima.
+        There is a cost for the voiced/unvoiced transition,
+        and a cost for a frequency jump.
+        '''
+        for iframe in range(1, nx):
+            prevFrame = frames[iframe - 1]
+            curFrame = frames[iframe]
+            prevDelta = delta[iframe - 1]
+            curDelta = delta[iframe]
+            curPsi = psi[iframe]
+            for icand2 in range(curFrame['nCandidates']):
+                f2 = curFrame['candidates'][icand2]['frequency']
+                maximum = -1e30
+                place = None
+                for icand1 in range(prevFrame['nCandidates']):
+                    f1 = prevFrame['candidates'][icand1]['frequency']
+                    previousVoiceless = not (floor < f1 < ceiling)
+                    currentVoiceless = not (floor < f2 < ceiling)
+                    if currentVoiceless:
+                        if previousVoiceless:
+                            transitionCost = 0.0   # both voiceless
+                        else:
+                            transitionCost = voicedUnvoicedCost  # voiced-to-unvoiced transition
+                    else:
+                        if previousVoiceless:
+                            transitionCost = voicedUnvoicedCost  # unvoiced-to-voiced transition
+                        else:
+                            transitionCost = octaveJumpCost * math.fabs( math.log2(f1 / f2) )  # both voiced
+
+                    value = prevDelta[icand1] - transitionCost + curDelta[icand2]
+
+                    if value > maximum:
+                        maximum = value
+                        place = icand1
+
+                curDelta[icand2] = maximum
+                curPsi[icand2] = place
+
+        '''
+        Find the end of the most probable path.
+        '''
+        place = 0
+        maximum = delta[nx - 1][place]
+        for icand in range(1, frames[nx - 1]['nCandidates']):
+            if delta[nx - 1][icand] > maximum:
+                place = icand
+                maximum = delta[nx - 1][place]
+
+        '''
+        Backtracking: follow the path backwards.
+        '''
+        for iframe in range(nx - 1, -1, -1):
+            frame = frames[iframe]
+            frame['candidates'][0], frame['candidates'][place] = frame['candidates'][place], frame['candidates'][0]
+            place = psi[iframe][place]
+
+    except Exception as e:
+        print(e)
+        raise RuntimeError(frames, ": path not found.")
+
+
+# Compute pitch frames
+def sound_into_pitch_frame(
+        pitchFrame, t, pitchFloor,
+        maxnCandidates, voicingThreshold,
+        octaveCost, dt_window,
+        nsamp_window, halfnsamp_window,
+        maximumLag, nsampFFT,
+        nsamp_period, halfnsamp_period,
+        brent_ixmax, globalPeak,
+        window, windowR, frame,
+        ac, r, imax, localMean,
+        x1, dx, nx, ny, z, **rest):
+
+    leftSample = (t - x1) // dx  # +1?
+    rightSample = leftSample + 1
+
+    for channel in range(ny):
+        '''
+        Compute the local mean; look one longest period to both sides.
+        '''
+        startSample = int(rightSample - nsamp_period)
+        endSample = int(leftSample + nsamp_period)
+        assert startSample >= 0
+        assert endSample < nx
+
+        localMean[channel] = 0.0
+        for i in range(startSample, endSample + 1):
+            localMean[channel] += z[channel][i]
+        localMean[channel] /= 2 * nsamp_period
+
+        '''
+		Copy a window to a frame and subtract the local mean.
+		We are going to kill the DC component before windowing.
+        '''
+        startSample = int(rightSample - halfnsamp_window)
+        endSample = int(leftSample + halfnsamp_window)
+        assert startSample >= 0
+        assert endSample < nx
+
+        for j in range(nsamp_window):
+            frame[channel][j] = (z[channel][j + startSample] - localMean[channel]) * window[j]
+        for j in range(nsamp_window, nsampFFT):
+            frame[channel][j] = 0.0
+
+    '''
+    Compute the local peak; look half a longest period to both sides.
+    '''
+    localPeak = 0.0
+    startSample = int(max(0, halfnsamp_window - halfnsamp_period))
+    endSample = int(min(nsamp_window, halfnsamp_window + halfnsamp_period))
+
+    for channel in range(ny):
+        for j in range(startSample, endSample + 1):
+            value = math.fabs(frame[channel][j])
+            if value > localPeak:
+                localPeak = value
+
+    pitchFrame['intensity'] = 1.0 if localPeak > globalPeak else localPeak / globalPeak
+
+    '''
+    Compute the correlation into the array 'r'.
+    The FFT of the autocorrelation is the power spectrum.
+    '''
+
+    nsampRFFT = nsampFFT // 2 + 1
+
+    # Initially 'ac' consists of zeroes
+    for channel in range(ny):
+        frame_view = numpy.fft.rfft(frame[channel]).view('float')  # complex spectrum
+
+        ac[0] += frame_view[0] ** 2  # DC component
+        for i in range(2, nsampFFT, 2):
+            ac[i // 2] += frame_view[i] ** 2 + frame_view[i + 1] ** 2  # power spectrum
+        ac[nsampRFFT - 1] += frame_view[nsampFFT] ** 2  # Nyquist frequency
+
+    ac[:] = numpy.fft.irfft(ac[:nsampRFFT])  # autocorrelation
+
+    '''
+    Normalize the autocorrelation to the value with zero lag,
+	and divide it by the normalized autocorrelation of the window.
+    '''
+    r[0] = 1.0
+    for i in range(1, brent_ixmax + 1):
+        r[-i] = r[i] = ac[i] / (ac[0] * windowR[i])
+
+    '''
+    import matplotlib.pyplot as plt
+    plt.plot(numpy.arange(len(r)), r)
+    plt.savefig('r.png')
+    '''
+
+    '''
+    Shortcut: absolute silence is always voiceless.
+	We are done for this frame.
+    '''
+    if localPeak == 0.0:
+        return
+
+    '''
+	Find the strongest maxima of the correlation of this frame,
+	and register them as candidates.
+    '''
+    imax[0] = 0
+    for i in range(2, min(maximumLag, brent_ixmax)):
+        if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:  # maximum?
+            place = None
+            '''
+            Use parabolic interpolation for first estimate of frequency,
+			and cubic spline interpolation to compute the strength of this frequency.
+            '''
+            dr = 0.5 * (r[i+1] - r[i-1])
+            d2r = 2.0 * r[i] - r[i-1] - r[i+1]
+            frequencyOfMaximum = 1.0 / dx / (i + dr / d2r)
+            offset = - brent_ixmax - 1
+
+            # Use cubic spline to interpolete discrete values and get function for exact argument
+            r_offset_spline_func =  CubicSpline(numpy.arange(brent_ixmax - offset),
+                                                list(r[ offset + 1: ]) + list(r[ :- offset ]))
+            strengthOfMaximum = float(r_offset_spline_func(1.0 / dx / frequencyOfMaximum - offset))
+
+            '''
+            High values due to short windows are to be reflected around 1.
+            '''
+            if strengthOfMaximum > 1.0:
+                strengthOfMaximum = 1.0 / strengthOfMaximum
+
+            '''
+            Find a place for this maximum.
+            '''
+            if pitchFrame['nCandidates'] < maxnCandidates:
+                pitchFrame['nCandidates'] += 1
+                while len(pitchFrame['candidates']) < pitchFrame['nCandidates']:
+                    pitchFrame['candidates'].append(pitchFrame['candidates'][-1].copy())
+                place = pitchFrame['nCandidates'] - 1
+            else:
+                '''
+                Try the place of the weakest candidate so far.
+                '''
+                weakest = 2.0
+                for iweak in range(1, maxnCandidates):
+                    '''
+                    High frequencies are to be favoured
+					if we want to analyze a perfectly periodic signal correctly.
+                    '''
+                    localStrength = (pitchFrame['candidates'][iweak]['strength'] -
+                                     octaveCost * math.log2(pitchFloor / pitchFrame['candidates'][iweak]['frequency']))
+                    if localStrength < weakest:
+                        weakest = localStrength
+                        place = iweak
+                '''
+                If this maximum is weaker than the weakest candidate so far, give it no place.
+                '''
+                if strengthOfMaximum - octaveCost * math.log2(pitchFloor / frequencyOfMaximum) <= weakest:
+                    place = None
+
+            if place is not None:
+                pitchFrame['candidates'][place]['frequency'] = frequencyOfMaximum
+                pitchFrame['candidates'][place]['strength'] = strengthOfMaximum
+                imax[place] = i
+
+    '''
+    Second pass: for extra precision, maximize cubic spline interpolation.
+    '''
+    for i in range(1, pitchFrame['nCandidates']):
+        offset = -brent_ixmax - 1
+        # Get improved x and y of function maximum after cubic spline interpolation
+        xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset, disp=False)[0]
+        ymid = float(r_offset_spline_func(xmid))
+        xmid += offset
+        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
+        if ymid > 1.0:
+            ymid = 1.0 / ymid
+        pitchFrame['candidates'][i]['strength'] = ymid
+
+
+def sound_into_pitch(arg):
+    def f(arg, firstFrame, lastFrame, x1, dx, frames, **rest):
+        for iframe in range(firstFrame, lastFrame):
+            sound_into_pitch_frame(pitch_frame := frames[iframe],
+                                   t := x1 + iframe * dx,
+                                   **arg, **(arg.get('sound')))
+    f(arg, **arg, **(arg.get('pitch')))
 
 
 class AudioPraatLike(object):
@@ -1255,6 +1542,234 @@ class AudioPraatLike(object):
             sum(f1_list) / len(f1_list), sum(f2_list) / len(f2_list), sum(f3_list) / len(f3_list)]
 
 
+    def get_pitch(self, begin=0, end=None):
+        """
+        Computes pitches of an audio sample.
+        """
+
+        x1 = max(0, begin)
+
+        if end is None:
+            end = int(self.intensity_sound.frame_count())
+
+        assert end >= x1
+
+        fq = self.intensity_sound.frame_rate  # frequency of samples (sampling)
+        nx = min(math.floor((end - x1) * fq), int(self.intensity_sound.frame_count()))  # number of samples to compute
+        dx = 1 / fq  # single sample duration in sec
+        duration = nx / fq  # duration of samples to compute in sec
+
+        ny = self.intensity_sound.channels  # number of channels
+        plain_z = [ smp / self.intensity_sound.max_possible_amplitude
+                    for smp in self.intensity_sound.get_array_of_samples() ]  # samples of all the channels
+        assert nx * ny <= len(plain_z)
+
+        # lay out samples by channels
+        z = [[] for _ in range(ny)]
+        for channel in range(ny):
+            for frame in range(nx):
+                z[channel].append(plain_z[ny * frame + channel])  # signal
+
+        minimumPitch = 75
+        maximumPitch = 600
+        periodsPerWindow = 3.0
+        oversampling = 4
+        dt = 0.015 #periodsPerWindow / minimumPitch / oversampling
+        assert minimumPitch >= periodsPerWindow / duration, \
+            f"To analyse this Sound, 'pitch floor' must not be less than {periodsPerWindow / duration} Hz."
+        maximumPitch = min(0.5 / dx, maximumPitch)
+
+        maxnCandidates = 15
+        silenceThreshold = 0.03
+        voicingThreshold = 0.45
+        octaveCost = 0.01
+        octaveJumpCost = 0.35
+        voicedUnvoicedCost = 0.14
+
+        # for Gaussian
+        periodsPerWindow *= 2  # because Gaussian window is twice as long
+        #brent_depth = 4
+        interpolation_depth = 0.25  # because Gaussian window is twice as long
+
+        '''
+    	Determine the number of samples in the longest period.
+		We need this to compute the local mean of the sound (looking one period in both directions),
+		and to compute the local peak of the sound (looking half a period in both directions).
+        '''
+        nsamp_period = math.floor(1.0 / dx / minimumPitch)
+        halfnsamp_period = nsamp_period / 2 + 1
+
+        # Determine window duration in seconds and in samples.
+        dt_window = periodsPerWindow / minimumPitch
+        nsamp_window = math.floor(dt_window / dx)
+        halfnsamp_window = nsamp_window / 2 - 1
+        assert halfnsamp_window >= 2, "Analysis window too short."
+        nsamp_window = int(halfnsamp_window * 2)
+
+        #minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
+        maximumLag = min(math.floor(nsamp_window / periodsPerWindow) + 2, nsamp_window)
+
+        '''
+		Determine the number of frames.
+		Fit as many frames as possible symmetrically in the total duration.
+		We do this even for the forward cross-correlation method,
+		because that allows us to compare the two methods.
+        '''
+        assert dt_window <= duration, f"{duration} is shorter than window length"
+        numberOfFrames = math.floor((duration - dt_window) / dt) + 1
+        ourMidTime = x1 + 0.5 * (duration - dx)
+        thyDuration = numberOfFrames * dt
+        t1 = ourMidTime + 0.5 * (dt - thyDuration)
+
+        # Create the resulting pitch contour.
+        thee = {
+            #'xmin': x1,
+            #'xmax': x1 + duration,
+            'nx': numberOfFrames,
+            'dx': dt,
+            'x1': t1,
+            'ceiling': maximumPitch,
+            'frames': [{
+                'intensity': 0.0,
+                'nCandidates': 1,
+                'candidates': [{
+                    'frequency': 0.0,
+                    'strength': 0.0
+                }]
+            } for _ in range(numberOfFrames)]
+        }
+
+        # Compute the global absolute peak for determination of silence threshold.
+        globalPeak = 0.0
+        for ichan in range(ny):
+            mean = sum(z[ichan])/len(z[ichan])
+            for i in range(nx):
+                value = math.fabs(z[ichan][i] - mean)
+                if value > globalPeak:
+                    globalPeak = value
+
+        if globalPeak == 0.0:
+            return thee
+
+        '''
+        Compute the number of samples needed for doing FFT.
+        To avoid edge effects, we have to append zeroes to the window.
+        The maximum lag considered for maxima is maximumLag.
+        The maximum lag used in interpolation is nsamp_window * interpolation_depth.
+        '''
+        nsampFFT = 1
+        while nsampFFT < nsamp_window * (1 + interpolation_depth):
+            nsampFFT *= 2
+
+        window = get_gaussian_window(nsamp_window)
+        windowR = window + numpy.zeros(nsampFFT - nsamp_window).tolist()
+
+        windowR = numpy.fft.rfft(windowR)
+
+        windowR_view = windowR.view('float')
+
+        # Change input windowR according to praat algorithms
+        windowR_view[0] *= windowR_view[0]  # DC component
+        for i in range(2, nsampFFT, 2):
+            windowR_view[i] = windowR_view[i] ** 2 + windowR_view[i + 1] ** 2
+            windowR_view[i + 1] = 0.0  # power spectrum: square and zero
+        windowR_view[nsampFFT] *= windowR_view[nsampFFT]  # Nyquist frequency
+
+        windowR = numpy.fft.irfft(windowR)  # autocorrelation
+
+        for i in range(1, nsamp_window):
+            windowR[i] /= windowR[0]  # normalize
+        windowR[0] = 1.0  # normalize
+
+        '''
+        import matplotlib.pyplot as plt
+        plt.plot(numpy.arange(nsamp_window), window[:nsamp_window])
+        plt.savefig('window.png')
+        plt.clf()
+        plt.plot(numpy.arange(nsamp_window), windowR[:nsamp_window])
+        plt.savefig('windowR.png')
+        '''
+
+        brent_ixmax = math.floor(nsamp_window * interpolation_depth)
+
+        # Calculating threads number
+        numberOfFramesPerThread = 20
+        numberOfThreads = (numberOfFrames - 1) // numberOfFramesPerThread + 1
+        numberOfProcessors = multiprocessing.cpu_count()
+        log.debug(f"{numberOfProcessors} processors")
+        numberOfThreads = min(numberOfThreads, numberOfProcessors)
+        numberOfThreads = max(1, min(numberOfThreads, 16))
+        numberOfFramesPerThread = (numberOfFrames - 1) // numberOfThreads + 1
+
+        firstFrame = 0
+        lastFrame = numberOfFramesPerThread
+        #cancelled = [False]
+
+        # Gather parameters into 'sound'
+        sound = {}
+        for key in 'x1', 'dx', 'nx', 'ny', 'z':
+            sound[key] = locals()[key]
+
+        args = []
+        for ithread in range(numberOfThreads):
+            # Get the rest
+            if ithread == numberOfThreads - 1:
+                lastFrame = numberOfFrames
+
+            arg = {
+                'sound': sound,
+                'pitch': thee,
+                'firstFrame': firstFrame,
+                'lastFrame': lastFrame,
+                'pitchFloor': minimumPitch,
+                'maxnCandidates': maxnCandidates,
+                'voicingThreshold': voicingThreshold,
+                'octaveCost': octaveCost,
+                'dt_window': dt_window,
+                'nsamp_window': nsamp_window,
+                'halfnsamp_window': halfnsamp_window,
+                'maximumLag': maximumLag,
+                'nsampFFT': nsampFFT,
+                'nsamp_period': nsamp_period,
+                'halfnsamp_period': halfnsamp_period,
+                'brent_ixmax': brent_ixmax,
+                'globalPeak': globalPeak,
+                'window': window,
+                'windowR': windowR,
+                'frame': numpy.zeros((ny, nsampFFT)),
+                'ac': numpy.zeros(nsampFFT, dtype=float),
+                'imax': numpy.zeros(maxnCandidates, dtype=int),
+                'localMean': numpy.zeros(ny, dtype=float),
+                'r': numpy.zeros(brent_ixmax + 1)
+            }
+
+            # single-thread
+            sound_into_pitch(arg)
+
+            args.append(arg)
+
+            firstFrame = lastFrame
+            lastFrame += numberOfFramesPerThread
+
+        '''
+        # multi-thread
+        pool = multiprocessing.Pool(numberOfThreads)
+        pool.map(sound_into_pitch, args)
+        pool.close()
+        pool.join()
+        '''
+
+        log.debug("Sound to Pitch: path finder - 95% complete")
+        pitch_path_finder(silenceThreshold, voicingThreshold, octaveCost,
+                          octaveJumpCost, voicedUnvoicedCost, minimumPitch, **thee)
+
+        '''
+        pyplot.plot(numpy.arange(len(thee['frames'])),
+                    [frame['candidates'][1]['frequency'] for frame in thee['frames']])
+        pyplot.savefig('freq.png')
+        '''
+        return thee
+
 def find_max_interval_praat(sound, interval_list):
     """
     Given a sound recording and a list of intervals specified by boundaries in seconds, returns index of the
@@ -1658,11 +2173,13 @@ class Tier_Result(object):
         mean_interval_length,
         max_length_str,
         max_length_r_length,
+        max_length_p_mean,
         max_length_i_list,
         max_length_f_list,
         max_length_source_index,
         max_intensity_str,
         max_intensity_r_length,
+        max_intensity_p_mean,
         max_intensity_i_list,
         max_intensity_f_list,
         max_intensity_source_index,
@@ -1677,12 +2194,14 @@ class Tier_Result(object):
 
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
+        self.max_length_p_mean = max_length_p_mean
         self.max_length_i_list = max_length_i_list
         self.max_length_f_list = max_length_f_list
         self.max_length_source_index = max_length_source_index
 
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
+        self.max_intensity_p_mean = max_intensity_p_mean
         self.max_intensity_i_list = max_intensity_i_list
         self.max_intensity_f_list = max_intensity_f_list
         self.max_intensity_source_index = max_intensity_source_index
@@ -1702,10 +2221,11 @@ class Tier_Result(object):
             ([interval_str,
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
+                p_mean,
                 i_list,
                 f_list)
 
-                for interval_str, r_length, i_list, f_list, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -1810,6 +2330,41 @@ def process_sound(tier_data_list, sound):
                 sound.get_interval_formants(begin_sec, end_sec)
                     for begin_sec, end_sec, text in interval_list]
 
+            pitch_list = sound.get_pitch()
+
+            # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
+            with open('pitch.log', 'a') as f:
+
+                cur_frame = 0
+                pitch_means = list()
+                xl_p_mean = xi_p_mean = 0
+                for begin_sec, end_sec, text in interval_list:
+                    sum_fq = num_fq = 0
+                    for iframe in range(cur_frame, pitch_list['nx']):
+                        point = pitch_list['x1'] + pitch_list['dx'] * iframe
+                        if point <= begin_sec:
+                            continue
+                        elif begin_sec < point < end_sec:
+                            freq = pitch_list['frames'][iframe]['candidates'][0]['frequency']
+                            print(f"'{text}' | {point:.3f} sec | {freq:.3f} Hz", file=f)
+                            sum_fq += freq
+                            num_fq += (freq > 0)
+                            continue
+                        else:
+                            break
+
+                    cur_frame = iframe
+                    mean = sum_fq / num_fq if num_fq > 0 else 0
+                    pitch_means.append(mean)
+                    if begin_sec == max_length_interval[0]:
+                        xl_p_mean = mean
+                    if begin_sec == max_intensity_interval[0]:
+                        xi_p_mean = mean
+
+                    print(f"Mean: {mean:.3f} Hz\n", file=f)
+                print(f"XL Mean: {xl_p_mean:.3f} Hz", file=f)
+                print(f"XI Mean: {xi_p_mean:.3f} Hz\n", file=f)
+
             # Computing average sound interval length.
 
             total_interval_length = (
@@ -1862,6 +2417,7 @@ def process_sound(tier_data_list, sound):
 
                 (interval_str,
                     (end - begin) / mean_interval_length,
+                    f'{p_mean:.3f}',
                     [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                     list(map('{0:.3f}'.format, f_list)),
                     '+' if index == max_length_index else '-',
@@ -1870,11 +2426,21 @@ def process_sound(tier_data_list, sound):
 
                     for (
                         index,
-                            (interval_str, (_, i_min, i_max), f_list, (begin, end, text), source_index)) in
+                            (interval_str,
+                             p_mean,
+                             (_, i_min, i_max),
+                             f_list,
+                             (begin, end, text),
+                             source_index)) in
 
                         enumerate(
                             zip(
-                                str_list, intensity_list, formant_list, interval_list, source_index_list))]
+                                str_list,
+                                pitch_means,
+                                intensity_list,
+                                formant_list,
+                                interval_list,
+                                source_index_list))]
 
             textgrid_result_list[-1][2].append(
 
@@ -1884,11 +2450,13 @@ def process_sound(tier_data_list, sound):
                     mean_interval_length,
                     max_length_str,
                     max_length / mean_interval_length,
+                    f'{xl_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_length_i_list)),
                     list(map('{0:.3f}'.format, max_length_f_list)),
                     max_length_source_index,
                     max_intensity_str,
                     (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
+                    f'{xi_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_intensity_i_list)),
                     list(map('{0:.3f}'.format, max_intensity_f_list)),
                     max_intensity_source_index,
@@ -2023,7 +2591,7 @@ def process_sound_markup(
                 urllib.parse.urlparse(sound_url).path)[1]
 
             sound = None
-            with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix = extension, delete = (not __debug_flag__)) as temp_file:
 
                 if sound_bytes is None:
 
@@ -2571,12 +3139,14 @@ def compile_workbook(
 
             'Longest (seconds) interval',
             'Relative length',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
 
             'Highest intensity (dB) interval',
             'Relative length',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -2589,6 +3159,7 @@ def compile_workbook(
 
             'Interval',
             'Relative length',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -2613,22 +3184,22 @@ def compile_workbook(
 
             worksheet_results.set_column(0, 2, 20)
             worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 6, 8)
-            worksheet_results.set_column(7, 9, 10)
-            worksheet_results.set_column(10, 10, 4)
-            worksheet_results.set_column(11, 11, 20)
-            worksheet_results.set_column(12, 12, 8, format_percent)
-            worksheet_results.set_column(13, 15, 8)
-            worksheet_results.set_column(16, 18, 10)
-            worksheet_results.set_column(19, 20, 4)
+            worksheet_results.set_column(4, 7, 8)
+            worksheet_results.set_column(8, 10, 10)
+            worksheet_results.set_column(11, 11, 4)
+            worksheet_results.set_column(12, 12, 20)
+            worksheet_results.set_column(13, 13, 8, format_percent)
+            worksheet_results.set_column(14, 17, 8)
+            worksheet_results.set_column(18, 20, 10)
+            worksheet_results.set_column(21, 22, 4)
 
         else:
 
             worksheet_results.set_column(0, 2, 20)
             worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 6, 8)
-            worksheet_results.set_column(7, 9, 10)
-            worksheet_results.set_column(10, 12, 4)
+            worksheet_results.set_column(4, 7, 8)
+            worksheet_results.set_column(8, 10, 10)
+            worksheet_results.set_column(11, 13, 4)
 
         worksheet_dict[group] = (
 
@@ -2756,6 +3327,7 @@ def compile_workbook(
                                 ' '.join([vowel_a] + text_a_list[1:]),
                                 round(tier_result.max_length_r_length, 4)] +
 
+                            [ float(tier_result.max_length_p_mean) ] +
                             i_list_a +
                             f_list_a +
 
@@ -2763,6 +3335,7 @@ def compile_workbook(
                                 ' '.join([vowel_b] + text_b_list[1:]),
                                 round(tier_result.max_intensity_r_length, 4)] +
 
+                            [ float(tier_result.max_intensity_p_mean) ] +
                             i_list_b +
                             f_list_b +
 
@@ -2812,7 +3385,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            i_list, f_list, sign_longest, sign_highest, source_index) in (
+                            p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -2834,6 +3407,7 @@ def compile_workbook(
                                     ' '.join([vowel] + interval_str.split()[1:]),
                                     round(interval_r_length, 4)] +
 
+                                [float(p_mean)] +
                                 i_list +
                                 f_list +
 
@@ -4191,7 +4765,7 @@ def analyze_sound_markup(
             urllib.parse.urlparse(sound_url).path)[1]
 
         sound = None
-        with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix = extension, delete = (not args.__debug_flag__)) as temp_file:
 
             with storage_f(storage, sound_url) as sound_stream:
                 temp_file.write(sound_stream.read())
@@ -4316,6 +4890,9 @@ def perform_phonology(args, task_status, storage):
         args.use_fast_track,
         args.limit, args.limit_exception,
         args.limit_no_vowel, args.limit_result))
+
+    with open('pitch.log', 'w') as f:
+        print (datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S'), "\n", file=f)
 
     time_begin = time.time()
 
@@ -4831,6 +5408,9 @@ def perform_phonology(args, task_status, storage):
                     perspective_id[0], perspective_id[1],
                     perspective_result_count, '' if perspective_result_count == 1 else 's',
                     state.no_vowel_counter, state.exception_counter))
+
+    #for row in fails_dict.values(): print(row.get('errs'))
+    #sys.stdout.flush()
 
     # If we have no results, we indicate the situation and also show number of failures and number of
     # markups with no vowels.
