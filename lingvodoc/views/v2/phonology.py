@@ -2171,11 +2171,13 @@ class Tier_Result(object):
         mean_interval_length,
         max_length_str,
         max_length_r_length,
+        max_length_p_mean,
         max_length_i_list,
         max_length_f_list,
         max_length_source_index,
         max_intensity_str,
         max_intensity_r_length,
+        max_intensity_p_mean,
         max_intensity_i_list,
         max_intensity_f_list,
         max_intensity_source_index,
@@ -2190,12 +2192,14 @@ class Tier_Result(object):
 
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
+        self.max_length_p_mean = max_length_p_mean
         self.max_length_i_list = max_length_i_list
         self.max_length_f_list = max_length_f_list
         self.max_length_source_index = max_length_source_index
 
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
+        self.max_intensity_p_mean = max_intensity_p_mean
         self.max_intensity_i_list = max_intensity_i_list
         self.max_intensity_f_list = max_intensity_f_list
         self.max_intensity_source_index = max_intensity_source_index
@@ -2331,6 +2335,7 @@ def process_sound(tier_data_list, sound):
 
                 cur_frame = 0
                 pitch_means = list()
+                xl_p_mean = xi_p_mean = 0
                 for begin_sec, end_sec, text in interval_list:
                     sum_fq = num_fq = 0
                     for iframe in range(cur_frame, pitch_list['nx']):
@@ -2350,13 +2355,13 @@ def process_sound(tier_data_list, sound):
                     mean = sum_fq / num_fq if num_fq > 0 else 0
                     pitch_means.append(mean)
                     if begin_sec == max_length_interval[0]:
-                        xl_mean = mean
+                        xl_p_mean = mean
                     if begin_sec == max_intensity_interval[0]:
-                        xi_mean = mean
+                        xi_p_mean = mean
 
                     print(f"Mean: {mean:.3f} Hz\n", file=f)
-                print(f"XL Mean: {xl_mean:.3f} Hz", file=f)
-                print(f"XI Mean: {xi_mean:.3f} Hz\n", file=f)
+                print(f"XL Mean: {xl_p_mean:.3f} Hz", file=f)
+                print(f"XI Mean: {xi_p_mean:.3f} Hz\n", file=f)
 
             # Computing average sound interval length.
 
@@ -2443,11 +2448,13 @@ def process_sound(tier_data_list, sound):
                     mean_interval_length,
                     max_length_str,
                     max_length / mean_interval_length,
+                    f'{xl_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_length_i_list)),
                     list(map('{0:.3f}'.format, max_length_f_list)),
                     max_length_source_index,
                     max_intensity_str,
                     (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
+                    f'{xi_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_intensity_i_list)),
                     list(map('{0:.3f}'.format, max_intensity_f_list)),
                     max_intensity_source_index,
@@ -3130,12 +3137,14 @@ def compile_workbook(
 
             'Longest (seconds) interval',
             'Relative length',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
 
             'Highest intensity (dB) interval',
             'Relative length',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -3173,14 +3182,14 @@ def compile_workbook(
 
             worksheet_results.set_column(0, 2, 20)
             worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 6, 8)
-            worksheet_results.set_column(7, 9, 10)
-            worksheet_results.set_column(10, 10, 4)
-            worksheet_results.set_column(11, 11, 20)
-            worksheet_results.set_column(12, 12, 8, format_percent)
-            worksheet_results.set_column(13, 15, 8)
-            worksheet_results.set_column(16, 18, 10)
-            worksheet_results.set_column(19, 20, 4)
+            worksheet_results.set_column(4, 7, 8)
+            worksheet_results.set_column(8, 10, 10)
+            worksheet_results.set_column(11, 11, 4)
+            worksheet_results.set_column(12, 12, 20)
+            worksheet_results.set_column(13, 13, 8, format_percent)
+            worksheet_results.set_column(14, 17, 8)
+            worksheet_results.set_column(18, 20, 10)
+            worksheet_results.set_column(21, 22, 4)
 
         else:
 
@@ -3316,6 +3325,7 @@ def compile_workbook(
                                 ' '.join([vowel_a] + text_a_list[1:]),
                                 round(tier_result.max_length_r_length, 4)] +
 
+                            [ float(xl_p_mean) ] +
                             i_list_a +
                             f_list_a +
 
@@ -3323,6 +3333,7 @@ def compile_workbook(
                                 ' '.join([vowel_b] + text_b_list[1:]),
                                 round(tier_result.max_intensity_r_length, 4)] +
 
+                            [ float(xi_p_mean) ] +
                             i_list_b +
                             f_list_b +
 
