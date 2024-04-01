@@ -4765,7 +4765,7 @@ def analyze_sound_markup(
             urllib.parse.urlparse(sound_url).path)[1]
 
         sound = None
-        with tempfile.NamedTemporaryFile(suffix = extension, delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix = extension, delete = (not args.__debug_flag__)) as temp_file:
 
             with storage_f(storage, sound_url) as sound_stream:
                 temp_file.write(sound_stream.read())
