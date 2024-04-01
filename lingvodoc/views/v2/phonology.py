@@ -45,8 +45,8 @@ import cchardet as chardet
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
 matplotlib.use('Agg', warn = False)
-import matplotlib.pyplot as pyplot
 
+import matplotlib.pyplot as pyplot
 from mpl_toolkits.mplot3d import Axes3D
 
 import numpy
@@ -182,9 +182,11 @@ def get_gaussian_window(window_size):
     middle = float(window_size + 1) / 2
     edge = math.exp(-12)
     edge_one_minus = 1.0 - edge
+
     window_list = [
         (math.exp(-48 * ((i - middle) / (window_size + 1)) ** 2) - edge) / edge_one_minus
             for i in range(1, window_size + 1)]
+
     gaussian_window_dict[window_size] = window_list
     return window_list
 
@@ -2510,7 +2512,7 @@ def process_sound_markup(
             '{0} [CACHE {1}]: exception'.format(
             log_str, cache_key))
 
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return None
 
@@ -2589,7 +2591,7 @@ def process_sound_markup(
                 urllib.parse.urlparse(sound_url).path)[1]
 
             sound = None
-            with tempfile.NamedTemporaryFile(suffix = extension, delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix = extension, delete = (not __debug_flag__)) as temp_file:
 
                 if sound_bytes is None:
 
@@ -2622,7 +2624,7 @@ def process_sound_markup(
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('{0}: exception'.format(log_str))
-            log.warn(traceback_string)
+            log.debug(traceback_string)
 
             caching.CACHE.set(cache_key, ('exception', exception,
                 traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
@@ -4447,7 +4449,7 @@ def phonology(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         request.response.status = HTTPInternalServerError.code
 
@@ -4475,7 +4477,7 @@ def std_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -4515,7 +4517,7 @@ def async_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('phonology: exception')
-            log.warn(traceback_string)
+            log.debug(traceback_string)
 
             if task_status is not None:
                 task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -4833,7 +4835,7 @@ def analyze_sound_markup(
         traceback_string = ''.join(traceback.format_exception(
             exception, exception, exception.__traceback__))[:-1]
 
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         err_msg += "ERROR: Sound-markup analysis general exception.\n"
 
@@ -5456,7 +5458,7 @@ def perform_phonology(args, task_status, storage):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('compile_workbook: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         # If we failed to create an Excel file, we terminate with error.
 
@@ -5689,7 +5691,7 @@ class Sound_Markup_Iterator(object):
                     exception, exception, exception.__traceback__))[:-1]
 
                 log.debug('{0}: exception'.format(row_str))
-                log.warn(traceback_string)
+                log.debug(traceback_string)
 
 
 class Tier_List_Iterator(Sound_Markup_Iterator):
@@ -5767,7 +5769,7 @@ def get_tier_list(perspective_cid, perspective_oid):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_tier_list: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return False, traceback_string
 
@@ -5958,7 +5960,7 @@ def get_skip_list(perspective_cid, perspective_oid):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_skip_list: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return False, traceback_string
 
@@ -6085,7 +6087,7 @@ def get_link_perspective_data(perspective_id, field_id_list):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_link_perspective_data: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return False, traceback_string
 
@@ -6183,7 +6185,7 @@ def sound_and_markup(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('sound_and_markup: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6217,7 +6219,7 @@ def std_sound_and_markup(
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('sound_and_markup: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6264,7 +6266,7 @@ def async_sound_and_markup(
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('sound_and_markup: exception')
-            log.warn(traceback_string)
+            log.debug(traceback_string)
 
             if task_status is not None:
                 task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6574,7 +6576,7 @@ def perform_sound_and_markup(
                     traceback_string = ''.join(traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1]
 
-                    log.warn(traceback_string)
+                    log.debug(traceback_string)
 
                     task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / total_count)),
                         'Archiving sound and markup')
@@ -6652,7 +6654,7 @@ def perform_sound_and_markup(
                     traceback_string = ''.join(traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1]
 
-                    log.warn(traceback_string)
+                    log.debug(traceback_string)
 
                     task_status.set(3, int(math.floor(50.5 + (index + 1) * 49.5 / sound_count)),
                         'Archiving sounds without markup')
@@ -6823,7 +6825,7 @@ def perform_sound_and_markup(
                         traceback_string = ''.join(traceback.format_exception(
                             exception, exception, exception.__traceback__))[:-1]
 
-                        log.warn(traceback_string)
+                        log.debug(traceback_string)
 
                         task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / len(update_list))),
                             'Archiving sound and markup')
@@ -6894,7 +6896,7 @@ def perform_sound_and_markup(
                         traceback_string = ''.join(traceback.format_exception(
                             exception, exception, exception.__traceback__))[:-1]
 
-                        log.warn(traceback_string)
+                        log.debug(traceback_string)
 
                         task_status.set(3,
                             int(math.floor(50.5 + (index + 1) * 49.5 / len(sound_update_list))),
