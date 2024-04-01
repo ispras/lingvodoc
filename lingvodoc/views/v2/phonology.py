@@ -2363,6 +2363,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             interval_data_list = []
 
             if vowel_selection is None or vowel_selection == True:
+                #print('Calculating max_intensity_ and max_length_ lists..')
 
                 max_intensity_i_list = (
                     sound.get_interval_intensity(*max_intensity_interval[:2]))
@@ -2377,6 +2378,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     sound.get_interval_formants(*max_length_interval[:2]))
 
             if vowel_selection is None or vowel_selection == False:
+                #print('Calculating lists for all intervals...')
 
                 intensity_list = [
                     sound.get_interval_intensity(begin_sec, end_sec)
