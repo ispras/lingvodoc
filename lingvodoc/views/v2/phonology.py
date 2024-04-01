@@ -2488,6 +2488,7 @@ def process_sound_markup(
     markup_entity_id,
     markup_url,
     storage,
+    vowel_selection = None,
     __debug_flag__ = False):
     """
     Extracts phonology data from a pair of sound recording and its markup, using cache in a manner
@@ -2618,7 +2619,7 @@ def process_sound_markup(
             # Analysing sound, showing and caching analysis results.
 
             textgrid_result_list = process_sound(
-                tier_data_list, sound)
+                tier_data_list, sound, vowel_selection)
 
             log.debug(
                 '{0}:\n{1}'.format(

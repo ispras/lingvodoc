@@ -5127,6 +5127,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                         markup_id,
                         markup_url,
                         storage,
+                        vowel_selection,
                         __debug_flag__))
 
                 row_count += 1
