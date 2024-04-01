@@ -5180,7 +5180,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
                             # ...for all intervals.
 
-                            for (interval_str, interval_r_length, i_list, f_list,
+                            for (interval_str, interval_r_length, p_mean, i_list, f_list,
                                 sign_longest, sign_highest, source_index) in tier_result.interval_data_list:
 
                                 formant_list.append(tuple(map(float, f_list[:2])))
