@@ -1731,30 +1731,26 @@ class AudioPraatLike(object):
                 'nsamp_period': nsamp_period,
                 'halfnsamp_period': halfnsamp_period,
                 'brent_ixmax': brent_ixmax,
-                #'brent_depth': brent_depth,
                 'globalPeak': globalPeak,
                 'window': window,
                 'windowR': windowR,
-                'isMainThread': (ithread == numberOfThreads),
-                #'cancelled': cancelled,
-                # ???
-                'fftTable': numpy.fft.rfft(numpy.zeros(nsampFFT)),
                 'frame': numpy.zeros((ny, nsampFFT)),
                 'ac': numpy.zeros(nsampFFT, dtype=float),
-                'rbuffer': numpy.zeros(2 * nsamp_window),  # +1?
                 'imax': numpy.zeros(maxnCandidates, dtype=int),
-                'localMean': numpy.zeros(ny, dtype=float)
+                'localMean': numpy.zeros(ny, dtype=float),
+                'r': numpy.zeros(brent_ixmax + 1)
             }
-            arg['r'] = arg['rbuffer'][:nsamp_window + 1]
+
+            # single-thread
+            sound_into_pitch(arg)
 
             args.append(arg)
-            sound_into_pitch(arg)  # debug
 
             firstFrame = lastFrame
             lastFrame += numberOfFramesPerThread
 
         '''
-        # MelderThread_run equivalent in Python
+        # multi-thread
         pool = multiprocessing.Pool(numberOfThreads)
         pool.map(sound_into_pitch, args)
         pool.close()
@@ -2299,32 +2295,6 @@ def process_sound(tier_data_list, sound):
             if len(interval_list) <= 0:
                 continue
 
-            pitch_list = sound.get_pitch()
-
-            # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
-            with open('pitch.log', 'a') as f:
-                cur_frame = 0
-                pitch_means = list()
-                for begin_sec, end_sec, text in interval_list:
-                    sum_fq = num_fq = 0
-                    for iframe in range(cur_frame, pitch_list['nx']):
-                        point = pitch_list['x1'] + pitch_list['dx'] * iframe
-                        if point <= begin_sec:
-                            continue
-                        elif begin_sec < point < end_sec:
-                            freq = pitch_list['frames'][iframe]['candidates'][0]['frequency']
-                            print(f"'{text}' | {point:.3f} sec | {freq:.3f} Hz", file=f)
-                            sum_fq += freq
-                            num_fq += (freq > 0)
-                            continue
-                        else:
-                            break
-
-                    cur_frame = iframe
-                    mean = sum_fq / num_fq if num_fq > 0 else 0
-                    pitch_means.append(mean)
-                    print(f"Mean: {mean:.3f} Hz\n", file=f)
-
             # Looking in particular at longest interval and interval with highest intensity, and at all
             # intervals in general.
 
@@ -2353,6 +2323,40 @@ def process_sound(tier_data_list, sound):
             formant_list = [
                 sound.get_interval_formants(begin_sec, end_sec)
                     for begin_sec, end_sec, text in interval_list]
+
+            pitch_list = sound.get_pitch()
+
+            # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
+            with open('pitch.log', 'a') as f:
+
+                cur_frame = 0
+                pitch_means = list()
+                for begin_sec, end_sec, text in interval_list:
+                    sum_fq = num_fq = 0
+                    for iframe in range(cur_frame, pitch_list['nx']):
+                        point = pitch_list['x1'] + pitch_list['dx'] * iframe
+                        if point <= begin_sec:
+                            continue
+                        elif begin_sec < point < end_sec:
+                            freq = pitch_list['frames'][iframe]['candidates'][0]['frequency']
+                            print(f"'{text}' | {point:.3f} sec | {freq:.3f} Hz", file=f)
+                            sum_fq += freq
+                            num_fq += (freq > 0)
+                            continue
+                        else:
+                            break
+
+                    cur_frame = iframe
+                    mean = sum_fq / num_fq if num_fq > 0 else 0
+                    pitch_means.append(mean)
+                    if begin_sec == max_length_interval[0]:
+                        xl_mean = mean
+                    if begin_sec == max_intensity_interval[0]:
+                        xi_mean = mean
+
+                    print(f"Mean: {mean:.3f} Hz\n", file=f)
+                print(f"XL Mean: {xl_mean:.3f} Hz", file=f)
+                print(f"XI Mean: {xi_mean:.3f} Hz\n", file=f)
 
             # Computing average sound interval length.
 
