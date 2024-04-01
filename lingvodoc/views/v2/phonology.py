@@ -3325,7 +3325,7 @@ def compile_workbook(
                                 ' '.join([vowel_a] + text_a_list[1:]),
                                 round(tier_result.max_length_r_length, 4)] +
 
-                            [ float(xl_p_mean) ] +
+                            [ float(tier_result.max_length_p_mean) ] +
                             i_list_a +
                             f_list_a +
 
@@ -3333,7 +3333,7 @@ def compile_workbook(
                                 ' '.join([vowel_b] + text_b_list[1:]),
                                 round(tier_result.max_intensity_r_length, 4)] +
 
-                            [ float(xi_p_mean) ] +
+                            [ float(tier_result.max_intensity_p_mean) ] +
                             i_list_b +
                             f_list_b +
 
