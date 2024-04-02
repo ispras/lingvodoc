@@ -65,7 +65,7 @@ from sqlalchemy.orm import (
 
 from sqlalchemy import tuple_, and_, or_
 from lingvodoc.scripts import elan_parser
-from pdb import set_trace
+from pdb import set_trace as A
 import io, codecs
 from xlsxwriter import Workbook as xlsxDocument
 from docx import Document as docxDocument
@@ -163,14 +163,11 @@ def find_group_by_tags(
 
             .filter(
                 LexicalEntry.marked_for_deletion == False,
-                Entity.parent_client_id == LexicalEntry.client_id,
-                Entity.parent_object_id == LexicalEntry.object_id,
-                Entity.field_client_id == field_client_id,
-                Entity.field_object_id == field_object_id,
+                Entity.parent_id == LexicalEntry.id,
+                Entity.field_id == (field_client_id, field_object_id),
                 Entity.marked_for_deletion == False,
                 Entity.content.in_(tag_list),
-                PublishingEntity.client_id == Entity.client_id,
-                PublishingEntity.object_id == Entity.object_id,
+                PublishingEntity.id == Entity.id,
                 PublishingEntity.accepted == True))
 
         if published is not None:
@@ -200,11 +197,9 @@ def find_group_by_tags(
             .filter(
                 tuple_(Entity.parent_client_id, Entity.parent_object_id)
                     .in_(entry_id_list),
-                Entity.field_client_id == field_client_id,
-                Entity.field_object_id == field_object_id,
+                Entity.field_id == (field_client_id, field_object_id),
                 Entity.marked_for_deletion == False,
-                PublishingEntity.client_id == Entity.client_id,
-                PublishingEntity.object_id == Entity.object_id,
+                PublishingEntity.id == Entity.id,
                 PublishingEntity.accepted == True))
 
         if published is not None:
@@ -253,8 +248,7 @@ def generate_massive_cell_simple(
 
     for lex in lexical_entries:
         entities = session.query(Entity).join(PublishingEntity) \
-            .filter(Entity.parent_client_id == lex.client_id,
-                    Entity.parent_object_id == lex.object_id,
+            .filter(Entity.parent_id == (lex.client_id, lex.object_id),
                     PublishingEntity.accepted == True,
                     Entity.marked_for_deletion == False)
         if published is not None:
@@ -296,8 +290,7 @@ def generate_massive_cell_optimized(
                 tuple_(Entity.field_client_id, Entity.field_object_id)
                     .in_(text_fields),
                 Entity.content != None,
-                PublishingEntity.client_id == Entity.client_id,
-                PublishingEntity.object_id == Entity.object_id,
+                PublishingEntity.id == Entity.id,
                 PublishingEntity.accepted == True)
 
             .add_columns(
@@ -336,14 +329,12 @@ def generate_massive_cell_cte(
 
         .filter(
             LexicalEntry.marked_for_deletion == False,
-            Entity.parent_client_id == LexicalEntry.client_id,
-            Entity.parent_object_id == LexicalEntry.object_id,
+            Entity.parent_id == LexicalEntry.id,
             Entity.field_client_id == 66,
             Entity.field_object_id == 25,
             Entity.marked_for_deletion == False,
             Entity.content == tag,
-            PublishingEntity.client_id == Entity.client_id,
-            PublishingEntity.object_id == Entity.object_id,
+            PublishingEntity.id == Entity.id,
             PublishingEntity.accepted == True))
 
     if published is not None:
@@ -371,22 +362,18 @@ def generate_massive_cell_cte(
         
         .filter(
             LexicalEntry.marked_for_deletion == False,
-            E_entry.parent_client_id == LexicalEntry.client_id,
-            E_entry.parent_object_id == LexicalEntry.object_id,
+            E_entry.parent_id == LexicalEntry.id,
             E_entry.field_client_id == 66,
             E_entry.field_object_id == 25,
             E_entry.marked_for_deletion == False,
-            P_entry.client_id == E_entry.client_id,
-            P_entry.object_id == E_entry.object_id,
+            P_entry.id == E_entry.id,
             P_entry.accepted == True,
             E_entry.content == E_tag.content,
-            E_tag.parent_client_id == cte_query.c.client_id,
-            E_tag.parent_object_id == cte_query.c.object_id,
+            E_tag.parent_id == (cte_query.c.client_id, cte_query.c.object_id),
             E_tag.field_client_id == 66,
             E_tag.field_object_id == 25,
             E_tag.marked_for_deletion == False,
-            P_tag.client_id == E_tag.client_id,
-            P_tag.object_id == E_tag.object_id,
+            P_tag.id == E_tag.id,
             P_tag.accepted == True))
 
     if published is not None:
@@ -415,8 +402,7 @@ def generate_massive_cell_cte(
                 tuple_(Entity.field_client_id, Entity.field_object_id)
                     .in_(text_fields),
                 Entity.content != None,
-                PublishingEntity.client_id == Entity.client_id,
-                PublishingEntity.object_id == Entity.object_id,
+                PublishingEntity.id == Entity.id,
                 PublishingEntity.accepted == True)
 
             .add_columns(
@@ -674,8 +660,7 @@ def generate_massive_cell_temp_table(
                         'select * from ' + text_field_id_table_name)),
 
                 Entity.content != None,
-                PublishingEntity.client_id == Entity.client_id,
-                PublishingEntity.object_id == Entity.object_id,
+                PublishingEntity.id == Entity.id,
                 PublishingEntity.accepted == True)
 
             .add_columns(
@@ -829,7 +814,9 @@ class Save_Context(object):
                   transcription_client_id BIGINT,
                   transcription_object_id BIGINT,
                   translation_client_id BIGINT,
-                  translation_object_id BIGINT,{sound_str}{markup_str}
+                  translation_object_id BIGINT,
+                  third_field_client_id BIGINT,
+                  third_field_object_id BIGINT,{sound_str}{markup_str}
 
                   primary key (
                     perspective_client_id,
@@ -1134,7 +1121,9 @@ class Save_Context(object):
                   Tp.transcription_client_id,
                   Tp.transcription_object_id,
                   Tp.translation_client_id,
-                  Tp.translation_object_id{sound_fid_str}{markup_fid_str}
+                  Tp.translation_object_id,
+                  Tp.third_field_client_id,
+                  Tp.third_field_object_id{sound_fid_str}{markup_fid_str}
 
                   from
                   {eid_pid_table_name} Te,
@@ -1196,6 +1185,33 @@ class Save_Context(object):
                   
                   group by
                   E.parent_client_id,
+                  E.parent_object_id),
+
+                third_field_cte as (
+
+                  select
+                  E.parent_client_id,
+                  E.parent_object_id,
+                  array_agg(E.content) content_list
+
+                  from
+                  eid_pid_fid_cte T,
+                  public.entity E,
+                  publishingentity P
+                  
+                  where
+                  E.parent_client_id = T.entry_client_id and
+                  E.parent_object_id = T.entry_object_id and
+                  E.field_client_id = T.third_field_client_id and
+                  E.field_object_id = T.third_field_object_id and
+                  E.content is not null and
+                  E.marked_for_deletion = false and
+                  P.client_id = E.client_id and
+                  P.object_id = E.object_id and
+                  P.accepted = true{{0}}
+                  
+                  group by
+                  E.parent_client_id,
                   E.parent_object_id){sound_markup_cte_str}
 
                 select
@@ -1204,7 +1220,8 @@ class Save_Context(object):
                 T.perspective_client_id,
                 T.perspective_object_id,
                 Xc.content_list,
-                Xl.content_list{sound_markup_select_str}
+                Xl.content_list,
+                Tf.content_list{sound_markup_select_str}
 
                 from
                 eid_pid_fid_cte T
@@ -1219,7 +1236,13 @@ class Save_Context(object):
                 translation_cte Xl
                 on
                 Xl.parent_client_id = T.entry_client_id and
-                Xl.parent_object_id = T.entry_object_id{sound_markup_join_str};
+                Xl.parent_object_id = T.entry_object_id
+                
+                left outer join
+                third_field_cte Tf
+                on
+                Tf.parent_client_id = T.entry_client_id and
+                Tf.parent_object_id = T.entry_object_id{sound_markup_join_str};
 
                 '''.format(
 
@@ -1496,8 +1519,7 @@ class Save_Context(object):
             None if not self.cognates_flag else
 
             self.session.query(DictionaryPerspectiveToField).filter_by(
-                parent_client_id=perspective.client_id,
-                parent_object_id=perspective.object_id,
+                parent_id=(perspective.client_id, perspective.object_id),
                 marked_for_deletion=False,
                 field_client_id=66,
                 field_object_id=25).first())
@@ -1617,7 +1639,7 @@ class Save_Context(object):
 
             if perspective_info:
 
-                order_key, name_str, xcript_fid, xlat_fid, snd_fid, mrkp_fid = perspective_info
+                order_key, name_str, xcript_fid, xlat_fid, thrd_fid, snd_fid, mrkp_fid = perspective_info
 
                 if xcript_fid is None or xlat_fid is None:
 
@@ -1672,8 +1694,7 @@ class Save_Context(object):
 
                     DictionaryPerspective.marked_for_deletion == False,
 
-                    Dictionary.client_id == DictionaryPerspective.parent_client_id,
-                    Dictionary.object_id == DictionaryPerspective.parent_object_id,
+                    Dictionary.id == DictionaryPerspective.parent_id,
                     Dictionary.marked_for_deletion == False))
 
         # For each perspective we compile ordering info and its title, with ordering based on standard
@@ -1719,15 +1740,12 @@ class Save_Context(object):
                             .label('name'))
 
                     .filter(
-                        DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
-                        DictionaryPerspectiveToField.parent_object_id == perspective.object_id,
+                        DictionaryPerspectiveToField.parent_id == (perspective.client_id, perspective.object_id),
                         DictionaryPerspectiveToField.marked_for_deletion == False,
-                        Field.client_id == DictionaryPerspectiveToField.field_client_id,
-                        Field.object_id == DictionaryPerspectiveToField.field_object_id,
+                        Field.id == DictionaryPerspectiveToField.field_id,
                         Field.marked_for_deletion == False,
                         self.field_condition,
-                        Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                        Field.translation_gist_id == TranslationAtom.parent_id,
                         TranslationAtom.marked_for_deletion == False)
 
                     .group_by(
@@ -1737,6 +1755,31 @@ class Save_Context(object):
                     .order_by(
                         Field.client_id,
                         Field.object_id)
+
+                    .all())
+
+            text_field_position_list = (
+
+                self.session
+
+                    .query(
+                        DictionaryPerspectiveToField.field_client_id,
+                        DictionaryPerspectiveToField.field_object_id,
+                        DictionaryPerspectiveToField.position)
+
+                    .filter(
+                        DictionaryPerspectiveToField.parent_id == (perspective.client_id, perspective.object_id),
+                        DictionaryPerspectiveToField.marked_for_deletion == False,
+                        DictionaryPerspectiveToField.field_id.in_(
+                            sqlalchemy.text('select * from text_field_id_view')))
+
+                    .group_by(
+                        DictionaryPerspectiveToField.field_client_id,
+                        DictionaryPerspectiveToField.field_object_id,
+                        DictionaryPerspectiveToField.position)
+
+                    .order_by(
+                        DictionaryPerspectiveToField.position)
 
                     .all())
 
@@ -1953,16 +1996,24 @@ class Save_Context(object):
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
 
-            # Ok, failed to get transcription & translation fields, we should remember it.
-
+            # Failed to get transcription & translation fields, we will get first three fields.
             if transcription_fid is None or translation_fid is None:
 
-                self.perspective_fail_set.add(
-                    (order_key, name_str))
+                cognate_description_fids = [None, None, ('null', 'null')]
+                for index, (field_cid, field_oid, _) in enumerate(text_field_position_list):
+                    if index > 2:
+                        break
+                    cognate_description_fids[index] = (field_cid, field_oid)
+
+                # Ok, failed to get three fields, we should remember it.
+                if not all(cognate_description_fids):
+                    self.perspective_fail_set.add(
+                        (order_key, name_str))
+            else:
+                cognate_description_fids = [transcription_fid, translation_fid, ('null', 'null')]
 
             # Got transcription & translation fields, what about sound and/or markup?
-
-            else:
+            if all(cognate_description_fids):
 
                 # If we are going to show both sound and markup fields for cognates, we require that the
                 # markup field is a subfield of the sound field.
@@ -1981,23 +2032,18 @@ class Save_Context(object):
                                 .query(
 
                                     self.session
-                                    
+
                                         .query(
                                             literal(1))
 
                                         .filter(
-                                            Sound.parent_client_id == perspective.client_id,
-                                            Sound.parent_object_id == perspective.object_id,
+                                            Sound.parent_id == (perspective.client_id, perspective.object_id),
                                             Sound.marked_for_deletion == False,
-                                            Sound.field_client_id == sound_fid[0],
-                                            Sound.field_object_id == sound_fid[1],
-                                            Markup.parent_client_id == perspective.client_id,
-                                            Markup.parent_object_id == perspective.object_id,
+                                            Sound.field_id == sound_fid,
+                                            Markup.parent_id == (perspective.client_id, perspective.object_id),
                                             Markup.marked_for_deletion == False,
-                                            Markup.field_client_id == markup_fid[0],
-                                            Markup.field_object_id == markup_fid[1],
-                                            Markup.self_client_id == Sound.client_id,
-                                            Markup.self_object_id == Sound.object_id)
+                                            Markup.field_id == markup_fid,
+                                            Markup.self_id == Sound.id)
 
                                         .exists())
 
@@ -2028,17 +2074,12 @@ class Save_Context(object):
                         (order_key, name_str))
 
                 format_str = (
-                    '({}, {}, {}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag and self.markup_flag else
-                    '({}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag or self.markup_flag else
-                    '({}, {}, {}, {}, {}, {})')
+                    '({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag and self.markup_flag else
+                    '({}, {}, {}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag or self.markup_flag else
+                    '({}, {}, {}, {}, {}, {}, {}, {})')
 
-                format_arg_list = [
-                    perspective.client_id,
-                    perspective.object_id,
-                    transcription_fid[0],
-                    transcription_fid[1],
-                    translation_fid[0],
-                    translation_fid[1]]
+                format_arg_list = [perspective.client_id, perspective.object_id] + \
+                                  [cognate_description_fids[i][j] for i in range(3) for j in range(2)]
 
                 if self.sound_flag:
 
@@ -2057,9 +2098,13 @@ class Save_Context(object):
                         *format_arg_list))
 
             self.perspective_info_dict[perspective.id] = (
-                order_key, name_str, transcription_fid, translation_fid, sound_fid, markup_fid)
+                order_key, name_str,
+                cognate_description_fids[0],
+                cognate_description_fids[1],
+                cognate_description_fids[2],
+                sound_fid, markup_fid)
 
-        # Updating perspectives' transcription / transpation field info, if required.
+        # Updating perspectives' transcription / translation field info, if required.
 
         if insert_list:
 
@@ -2131,9 +2176,10 @@ class Save_Context(object):
                 perspective_cid,
                 perspective_oid,
                 transcription_list,
-                translation_list) = (
+                translation_list,
+                third_field_list) = (
 
-                result_item[:6])
+                result_item[:7])
 
             sound_markup_list = result_item[-1]
 
@@ -2145,7 +2191,7 @@ class Save_Context(object):
             if perspective_info is None:
                 continue
 
-            order_key, name_str, _, _, _, _ = perspective_info
+            order_key, name_str, _, _, _, _, _ = perspective_info
 
             # Getting ready to compose etymology info to inserted into XLSX.
 
@@ -2154,6 +2200,9 @@ class Save_Context(object):
 
             if translation_list is None:
                 translation_list = []
+
+            if third_field_list is None:
+                third_field_list = []
 
             if sound_markup_list is None:
                 sound_markup_list = []
@@ -2166,7 +2215,10 @@ class Save_Context(object):
                     for t in transcription_list],
 
                 ['\'' + t.strip() + '\''
-                    for t in translation_list]]
+                    for t in translation_list],
+
+                [t.strip()
+                    for t in third_field_list]]
 
             # Processing sound and/or markup links.
 
@@ -2261,8 +2313,7 @@ class Save_Context(object):
 
         entities = (
             self.session.query(Entity).filter(
-                Entity.parent_client_id == entry.client_id,
-                Entity.parent_object_id == entry.object_id,
+                Entity.parent_id == (entry.client_id, entry.object_id),
                 Entity.marked_for_deletion == False))
 
         if published is not None or accepted is not None:
@@ -2318,7 +2369,7 @@ class Save_Context(object):
                         len(rows_to_write))
 
                     rows_to_write.extend(
-                        ([], [], [], [], []))
+                        ([], [], [], [], [], []))
 
                     for _, cognate_entry_id, row_list in etymology_info:
 
@@ -2794,11 +2845,10 @@ def compile_document(
     Compiles analysis results into xlsx/docx/rtf document.
     """
 
-    dictionary = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id,
+    dictionary = session.query(Dictionary).filter_by(id=(client_id, object_id),
                                                      marked_for_deletion=False).one()
 
-    perspectives = session.query(DictionaryPerspective).filter_by(parent_client_id=client_id,
-                                                                  parent_object_id=object_id,
+    perspectives = session.query(DictionaryPerspective).filter_by(parent_id=(client_id, object_id),
                                                                   marked_for_deletion=False).all()
 
     # Processing all perspectives of the dictionary.
@@ -2810,8 +2860,7 @@ def compile_document(
             __debug_flag__ = __debug_flag__)
 
         lexical_entries = session.query(LexicalEntry, Entity).join(Entity).join(PublishingEntity) \
-            .filter(LexicalEntry.parent_client_id == perspective.client_id,
-                    LexicalEntry.parent_object_id == perspective.object_id,
+            .filter(LexicalEntry.parent_id == (perspective.client_id, perspective.object_id),
                     LexicalEntry.marked_for_deletion == False,
                     Entity.marked_for_deletion == False,
                     PublishingEntity.accepted == True)
@@ -2835,7 +2884,6 @@ def compile_document(
 
         if context.workbook:
             write_xlsx(context, lex_dict, published, __debug_flag__)
-            context.workbook.close()
         elif context.document:
             write_docx(context, lex_dict, published, __debug_flag__)
             context.document.save(context.stream)
@@ -2844,6 +2892,9 @@ def compile_document(
             # Write utf to bytes
             wrapper_file = codecs.getwriter('utf-8')(context.stream)
             context.richtext.write(wrapper_file)
+
+    if context.workbook:
+        context.workbook.close()
 
 
 # @profile()
@@ -3027,7 +3078,7 @@ def save_dictionary(
 
         else:
 
-            dictionary = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).one()
+            dictionary = session.query(Dictionary).filter_by(id=(client_id, object_id)).one()
 
             dict_status_atom = session.query(TranslationAtom).filter_by(
                 parent_client_id=dictionary.state_translation_gist_client_id,

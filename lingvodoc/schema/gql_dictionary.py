@@ -1007,7 +1007,8 @@ class CreateDictionary(graphene.Mutation):
                     if self_id:
                         parent_field = CreateDictionary.get_by_fake_id(field_fake_ids, self_id)
                         self_id = (parent_field.client_id, parent_field.object_id)
-                    persp_to_field = create_dictionary_persp_to_field(id=(client_id, None),
+                    persp_to_field = create_dictionary_persp_to_field(
+                                                     id=(client_id, None),
                                                      parent_id=parent_id,
                                                      field_id=field_id,
                                                      self_id=self_id,

@@ -3,12 +3,9 @@ import random
 import string
 import collections
 import transaction
-import datetime
 from collections import defaultdict
-from itertools import chain
 import logging
 import traceback
-import pprint
 import csv
 import urllib
 import io
@@ -29,29 +26,17 @@ from lingvodoc.models import (
 )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
-    LingvodocObjectType,
-    CommonFieldsComposite,
-    StateHolder,
-    TranslationHolder,
-    fetch_object,
-    del_object,
-    client_id_check,
     ResponseError,
     ObjectVal,
-    acl_check_by_id,
-    LingvodocID,
-    UserAndOrganizationsRoles
+    LingvodocID
 )
 
 from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
-                                      create_dictionary_persp_to_field,
-                                      edit_role,
-                                      create_group_entity)
-from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
+                                      create_dictionary_persp_to_field)
+from lingvodoc.utils.search import get_id_to_field_dict
 
-from lingvodoc.scripts.convert_five_tiers import convert_all
 from lingvodoc.queue.celery import celery
 
 from lingvodoc.cache.caching import CACHE
@@ -213,8 +198,8 @@ def csv_to_columns_excel(path, url):
 
     for row_index, row in enumerate(row_list[1:]):
 
-        for column_index, value in enumerate(row):
-            column_dict[f'{column_index}:{header_list[column_index]}'].append(value)
+        for column_index, (header, value) in enumerate(zip(header_list, row)):
+            column_dict[f'{column_index}:{header}'].append(value)
 
         column_dict['NUMBER'].append(row_index)
 
@@ -621,14 +606,16 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             continue
                         else:
                             fields_fix.add(field_id)
-                        persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                         parent_id=perspective_id,
-                                         field_id=field_id,
-                                         upper_level=None,
-                                         link_id=None,
-                                         position=position_counter
-                                         )
+
+                        create_dictionary_persp_to_field(
+                            id=obj_id.id_pair(client_id),
+                            parent_id=perspective_id,
+                            field_id=field_id,
+                            upper_level=None,
+                            link_id=None,
+                            position=position_counter)
                         position_counter += 1
+
                         starlingname_to_column[starling_name] = field_id
                         keep_field_dict[blob_id][field_id] = starling_name
                     elif starling_type == 2:
@@ -638,49 +625,51 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             continue
                         else:
                             fields_fix.add(field_id)
-                        # copy
-                        persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                         parent_id=perspective_id,
-                                         field_id=field_id,
-                                         upper_level=None,
-                                         link_id=None,
-                                         position=position_counter
-                                         )
+
+                        create_dictionary_persp_to_field(
+                            id=obj_id.id_pair(client_id),
+                            parent_id=perspective_id,
+                            field_id=field_id,
+                            upper_level=None,
+                            link_id=None,
+                            position=position_counter)
                         position_counter += 1
+
                         starlingname_to_column[starling_name] = field_id
                         copy_field_dict[blob_id][field_id] = starling_name
                     elif starling_type == 4:
-                        persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                         parent_id=perspective_id,
-                                         field_id=field_id,
-                                         upper_level=None,
-                                         link_id=None,
-                                         position=position_counter
-                                         )
-                        position_counter += 1
 
+                        create_dictionary_persp_to_field(
+                            id=obj_id.id_pair(client_id),
+                            parent_id=perspective_id,
+                            field_id=field_id,
+                            upper_level=None,
+                            link_id=None,
+                            position=position_counter)
+                        position_counter += 1
 
                 add_etymology = starling_dictionary.get("add_etymology")
                 if add_etymology:
-                    persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                     parent_id=perspective_id,
-                                     field_id=etymology_field_id,
-                                     upper_level=None,
-                                     link_id=None,
-                                     position=position_counter
-                                     )
+                    create_dictionary_persp_to_field(
+                        id=obj_id.id_pair(client_id),
+                        parent_id=perspective_id,
+                        field_id=etymology_field_id,
+                        upper_level=None,
+                        link_id=None,
+                        position=position_counter)
                     position_counter += 1
+
                     etymology_blobs.add(blob_id)
 
                 if starling_flag:
-
-                    persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                             parent_id=perspective_id,
-                             field_id=relation_field_id,
-                             upper_level=None,
-                             link_id=None,
-                             position=position_counter
-                             )
+                    create_dictionary_persp_to_field(
+                        id=obj_id.id_pair(client_id),
+                        parent_id=perspective_id,
+                        field_id=relation_field_id,
+                        upper_level=None,
+                        link_id=None,
+                        position=position_counter)
+                    position_counter += 1
 
                 fields_marked_as_links = [x.get("starling_name") for x in fields if x.get("starling_type") == 3]
                 link_field_dict[blob_id] = fields_marked_as_links

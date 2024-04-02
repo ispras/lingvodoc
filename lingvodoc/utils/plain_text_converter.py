@@ -393,7 +393,7 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
 
             perspective_id = [new_persp.client_id, new_persp.object_id]
 
-            for position, field_id in enumerate(columns_dict):
+            for position, field_id in enumerate(columns_dict, 1):
                 create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
                                                  parent_id=perspective_id,
                                                  field_id=field_id,

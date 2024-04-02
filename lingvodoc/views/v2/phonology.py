@@ -2454,6 +2454,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 len(''.join(text for index, (begin, end, text) in
                     raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
 
+
             textgrid_result_list[-1][2].append(
 
                 Tier_Result(

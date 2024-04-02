@@ -389,7 +389,7 @@ def save_xlsx_data(
                     (perspective.client_id, perspective.object_id)]:
 
                     xlsx_context.save_lexical_entry(
-                        lexical_entry, published = True, accepted = True)
+                        lexical_entry, published = True, accepted = True)()
 
 
 def get_text_field_cte(session):

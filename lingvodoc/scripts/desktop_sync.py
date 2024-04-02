@@ -140,12 +140,14 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
             SyncDBSession.delete(field)
         position = 1
         for field in req:
-            create_nested_field(field=field,
-                                perspective=perspective,
-                                client_id=client.id,
-                                upper_level=None,
-                                link_ids=link_ids, position=position)
-            position += 1
+            position = (
+                create_nested_field(field=field,
+                                    perspective=perspective,
+                                    client_id=client.id,
+                                    upper_level=None,
+                                    link_ids=link_ids,
+                                    position=position)
+            )
 
         return response
     else:
@@ -162,19 +164,22 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids, po
     if field.get('link'):
         field_object.link_client_id = field['link']['client_id']
         field_object.link_object_id = field['link']['object_id']
+
     SyncDBSession.flush()
-    contains = field.get('contains', None)
-    if contains:
-        inner_position = 1
-        for subfield in contains:
+    position += 1
+
+    contains = field.get('contains', None) or []
+    for subfield in contains:
+        position = (
             create_nested_field(subfield,
                                 perspective,
                                 client_id,
                                 upper_level=field_object,
                                 link_ids=link_ids,
-                                position=inner_position)
-            inner_position += 1
-    return
+                                position=position)
+        )
+
+    return position
 
 
 def object_file_path(obj, base_path, filename, create_dir=False):

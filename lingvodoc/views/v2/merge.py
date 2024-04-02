@@ -72,6 +72,7 @@ from lingvodoc.views.v2.utils import (
 )
 
 from lingvodoc.cache.caching import CACHE
+from lingvodoc.acl import check_direct as acl_check_direct
 
 log = logging.getLogger(__name__)
 
@@ -488,79 +489,19 @@ def check_user_merge_permissions_direct(
 
 def check_user_merge_permissions(
     request,
-    user,
-    dictionary_client_id,
-    dictionary_object_id,
     perspective_client_id,
     perspective_object_id):
     """
-    Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
-    create and delete them, via perspective user role subrequest.
+    Checks if the user has permissions required to merge lexical entries and entities,
+    i.e. permissions to create and delete them.
     """
 
-    if not user:
-        return False
-
-    if user.id == 1:
-        return True
-
-    if not user.is_active:
-        return False
-
-    create_base_group = DBSession.query(BaseGroup).filter_by(
-        subject = 'lexical_entries_and_entities', action = 'create').first()
-
-    delete_base_group = DBSession.query(BaseGroup).filter_by(
-        subject = 'lexical_entries_and_entities', action = 'delete').first()
-
-    #
-    # Getting perspective permissions for all users.
-    #
-    # NOTE:
-    #
-    # Obviously theoretically we can make this check more efficient by querying for the specified user, but
-    # at the moment we need correctness provided by a subrequest more then efficiency provided by a direct
-    # DB query.
-    #
-    # If the need arises, we would add to roles REST API user-specific perspective roles method.
-    #
-
-    url = request.route_url('perspective_roles',
-        client_id = dictionary_client_id,
-        object_id = dictionary_object_id,
-        perspective_client_id = perspective_client_id,
-        perspective_object_id = perspective_object_id)
-
-    subrequest = Request.blank(url)
-    subrequest.method = 'GET'
-    subrequest.headers = request.headers
-
-    result = request.invoke_subrequest(subrequest)
-
-    log.debug('check_user_merge_permissions: user {0}, perspective {1}/{2}: roles\n{3}'.format(
-        user.id, perspective_client_id, perspective_object_id, pprint.pformat(result.json)))
-
-    # Checking if the user themselves can create and delete lexical entries and entities.
-
-    if (user.id in result.json['roles_users'][create_base_group.name] and
-        user.id in result.json['roles_users'][delete_base_group.name]):
-
-        return True
-
-    # Checking if the user has required permissions through one of their organizations.
-
-    organization_create = any(organization_id in user.organizations
-        for organization_id in result.json['roles_organizations'][create_base_group.name])
-
-    organization_delete = any(organization_id in user.organizations
-        for organization_id in result.json['roles_organizations'][delete_base_group.name])
-
-    if organization_create and organization_delete:
-        return True
-
-    # Ok, so the user doesn't have permissions.
-
-    return False
+    return (acl_check_direct(request.authenticated_userid, request,
+                             'create', 'lexical_entries_and_entities',
+                             (perspective_client_id, perspective_object_id)) and
+            acl_check_direct(request.authenticated_userid, request,
+                             'delete', 'lexical_entries_and_entities',
+                             (perspective_client_id, perspective_object_id)))
 
 
 @view_config(
@@ -579,15 +520,8 @@ def merge_permissions(request):
     # Trying to check user's merge permissions.
 
     try:
-        user = Client.get_user_by_client_id(request.authenticated_userid)
-
-        perspective = DBSession.query(DictionaryPerspective).filter_by(
-            client_id = perspective_client_id, object_id = perspective_object_id).first()
-
         user_has_permissions = check_user_merge_permissions(
-            request, user,
-            perspective.parent_client_id, perspective.parent_object_id,
-            perspective_client_id, perspective_object_id)
+            request, perspective_client_id, perspective_object_id)
 
         log.debug('merge_permissions {0}/{1}: {2}'.format(
             perspective_client_id, perspective_object_id, user_has_permissions))
@@ -1032,15 +966,8 @@ def merge_suggestions_compute(
 
     # Checking if the user has sufficient permissions to perform suggested merges.
 
-    user = Client.get_user_by_client_id(request.authenticated_userid)
-
-    perspective = DBSession.query(DictionaryPerspective).filter_by(
-        client_id = perspective_client_id, object_id = perspective_object_id).first()
-
     user_has_permissions = check_user_merge_permissions(
-        request, user,
-        perspective.parent_client_id, perspective.parent_object_id,
-        perspective_client_id, perspective_object_id)
+        request, perspective_client_id, perspective_object_id)
 
     # Getting data of the undeleted lexical entries of the perspective.
 
@@ -1306,13 +1233,8 @@ class Merge_Context(object):
         if (perspective_client_id, perspective_object_id) in self.user_permission_dict:
             return self.user_permission_dict[(perspective_client_id, perspective_object_id)]
 
-        perspective = DBSession.query(DictionaryPerspective).filter_by(
-            client_id = perspective_client_id, object_id = perspective_object_id).first()
-
         user_has_permissions = check_user_merge_permissions(
-            self.request, self.user,
-            perspective.parent_client_id, perspective.parent_object_id,
-            perspective_client_id, perspective_object_id)
+            self.request, perspective_client_id, perspective_object_id)
 
         self.user_permission_dict[(perspective_client_id, perspective_object_id)] = user_has_permissions
 

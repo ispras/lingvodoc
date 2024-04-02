@@ -12,7 +12,8 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     LingvodocID,
     TranslationHolder,
-    del_object
+    del_object,
+    undel_object
 )
 
 from lingvodoc.models import (
@@ -193,6 +194,42 @@ class DeleteTranslationGist(graphene.Mutation):
         translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
         translationgist.dbObject = dbtranslationgist
         return DeleteTranslationGist(translationgist=translationgist, triumph=True)
+
+
+class UndeleteTranslationGist(graphene.Mutation):
+    """
+    # Request example (bash script with args: <client_id of the gist> <object_id of the gist>):
+    tkt='123456789' #! Set real auth_tkt
+    usr='9876' #! Set real user_id
+    curl 'http://watson.local:6543/graphql' \
+        -H 'Content-Type: application/json' \
+        -H "Cookie: locale_id=2; auth_tkt=$tkt!userid_type:int; client_id=$usr" \
+        --data-raw '{ "operationName": "UndeleteTranslationGist", "variables":{"id":['$1','$2']}, \
+        "query": "mutation UndeleteTranslationGist($id: LingvodocID!) \
+        { undelete_translationgist(id: $id) { translationgist {id}, triumph }}"}'
+    #! Remove any newline from the curl command above
+    """
+    class Arguments:
+        id = LingvodocID(required=True)
+
+    translationgist = graphene.Field(TranslationGist)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id('delete', 'translations')
+    def mutate(root, info, **args):
+        id = args.get("id")
+        client_id, object_id = id
+        dbtranslationgist = DBSession.query(dbTranslationGist).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbtranslationgist:
+            raise ResponseError(message="No such translationgist in the system")
+        if not dbtranslationgist.marked_for_deletion:
+            raise ResponseError(message="Translationgist is not deleted")
+        # translationgist is undeleted with related translationatoms
+        undel_object(dbtranslationgist, "undelete_translationgist", info.context.get('client_id'))
+        translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
+        translationgist.dbObject = dbtranslationgist
+        return UndeleteTranslationGist(translationgist=translationgist, triumph=True)
 
 
 class TranslationGistInterface(graphene.Interface):

@@ -68,6 +68,8 @@ from lingvodoc.utils.creation import (
     create_gists_with_atoms
 )
 
+from lingvodoc.schema.gql_parserresult import diacritic_signs
+
 DEFAULT_EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
@@ -152,12 +154,13 @@ def translation_service_search(searchstring):
         return translationgist_contents(translationgist)
 
 
-def translation_service_get(searchstring):
+def translation_get(searchstring, client_id, gist_type='Service'):
     translationgist = (
         DBSession
             .query(TranslationGist)
             .join(TranslationAtom)
             .filter(
+                TranslationGist.type == gist_type,
                 TranslationGist.marked_for_deletion == False,
                 TranslationAtom.marked_for_deletion == False,
                 TranslationAtom.content == searchstring,
@@ -173,9 +176,9 @@ def translation_service_get(searchstring):
 
     translation_gist_id = create_gists_with_atoms([{'locale_id': ENGLISH_LOCALE,
                                                     'content': searchstring}],
-                                                  None,
-                                                  [66, None],
-                                                  gist_type='Service')
+                                                    None,
+                                                    [client_id, None],
+                                                    gist_type=gist_type)
 
     return {"client_id": translation_gist_id[0], "object_id": translation_gist_id[1]}
 
@@ -206,20 +209,23 @@ def create_nested_field(
         field.link_object_id = link_info['object_id']
 
     DBSession.add(field)
+    position += 1
 
     contains = field_info.get('contains')
 
     if contains is not None:
 
-        for sub_position, sub_field_info in enumerate(contains, 1):
+        for sub_field_info in contains:
+            position = (
+                create_nested_field(
+                    sub_field_info,
+                    perspective,
+                    client,
+                    upper_level = field,
+                    position = position)
+            )
 
-            create_nested_field(
-                sub_field_info,
-                perspective,
-                client,
-                upper_level = field,
-                position = sub_position)
-
+    return position
 
 def object_file_path(entity_dict, base_path, folder_name, filename):
 
@@ -344,6 +350,9 @@ def convert_five_tiers(
     morphology,
     custom_eaf_tiers,
     debug_flag=False):
+
+    apostrophes = "\u02D9" + "\u0027"
+    delimiter_re = re.compile("[^\\w." + apostrophes + diacritic_signs + "]")
 
     EAF_TIERS = {tier: column for tier, column in DEFAULT_EAF_TIERS.items() if column not in custom_eaf_tiers}
     for column, tier in custom_eaf_tiers.items():
@@ -737,6 +746,7 @@ def convert_five_tiers(
         dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?/|]*)')
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
+        affix_re = re.compile('[-][\w]+')
 
         # Checking text data of all existing lexical entries.
 
@@ -876,7 +886,8 @@ def convert_five_tiers(
             and not morphology)
 
         if new_p1_flag:
-            response = translation_service_get("Lexical Entries")
+            response = translation_get("Lexical Entries",
+                                       client_id=extra_client_id, gist_type='Perspective')
             le_perspective = add_perspective(response)
 
         le_perspective_id = le_perspective.id if le_perspective else None
@@ -891,7 +902,8 @@ def convert_five_tiers(
             and not morphology)
 
         if new_p2_flag:
-            response = translation_service_get("Paradigms")
+            response = translation_get("Paradigms",
+                                       client_id=extra_client_id, gist_type='Perspective')
             pa_perspective = add_perspective(response)
 
         pa_perspective_id = pa_perspective.id if pa_perspective else None
@@ -906,7 +918,8 @@ def convert_five_tiers(
             and morphology)
 
         if new_p3_flag:
-            response = translation_service_get("Morphology")
+            response = translation_get("Morphology",
+                                       client_id=extra_client_id, gist_type='Perspective')
             mo_perspective = add_perspective(response)
 
         mo_perspective_id = mo_perspective.id if mo_perspective else None
@@ -921,7 +934,8 @@ def convert_five_tiers(
             and morphology)
 
         if new_p4_flag:
-            response = translation_service_get("Morphological Paradigms")
+            response = translation_get("Morphological Paradigms",
+                                       client_id=extra_client_id, gist_type='Perspective')
             mp_perspective = add_perspective(response)
 
         mp_perspective_id = mp_perspective.id if mp_perspective else None
@@ -960,13 +974,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    le_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        le_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Creating fields of the second perspective, if required.
 
@@ -1001,13 +1018,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    pa_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        pa_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Creating fields of the third perspective, if required.
 
@@ -1033,13 +1053,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    mo_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        mo_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Creating fields of the fourth perspective, if required.
 
@@ -1063,13 +1086,16 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
-            for position, field_info in enumerate(field_info_list, 1):
-                create_nested_field(
-                    field_info,
-                    mp_perspective,
-                    extra_client,
-                    None,
-                    position)
+            position = 1
+            for field_info in field_info_list:
+                position = (
+                    create_nested_field(
+                        field_info,
+                        mp_perspective,
+                        extra_client,
+                        None,
+                        position)
+                )
 
         # Getting field data types.
 
@@ -1612,11 +1638,11 @@ def convert_five_tiers(
 
                         # Create an entry with affix and its meaning
                         # for each affix+meaning variant
-                        for n in range(len(afx_text)):
+                        for n, afx in enumerate(afx_text):
                             # Clean the affix of any non-alnum symbols after it
                             # \u0301 is an accent mark
-                            afx = afx_text[n].replace(u'\u0301', '')
-                            afx = re.split(r'[\W]', afx.strip())[0]
+                            # afx = afx.replace(u'\u0301', '')
+                            afx = re.split(delimiter_re, afx.strip())[0]
                             mrk = mrk_text[n] if n < len(mrk_text) else None
 
                             if not afx or not mrk:
@@ -1818,8 +1844,9 @@ def convert_five_tiers(
                                 p1_lexical_entry_id)
 
                             for other_word in column:
-                                text = other_word.text
-                                if not text or other_word.tier not in EAF_TIERS:
+                                if (not (text := other_word.text) or
+                                        not (text := text.strip()) or
+                                        other_word.tier not in EAF_TIERS):
                                     continue
 
                                 field_id = get_field_id(EAF_TIERS[other_word.tier])
@@ -1828,15 +1855,11 @@ def convert_five_tiers(
                                     all(x.content != text or x.field_id != field_id
                                         for x in match_dict[max_sim])):
 
-                                    create_entity(
-                                        extra_client,
-                                        p1_lexical_entry_id,
-                                        field_id,
-                                        field_data_type_dict[field_id],
-                                        text)
+                                    if merge_by_meaning_all:
 
-                                    if (merge_by_meaning_all and
-                                        (text := text .strip())):
+                                        if (field_id == le_fields['translation'] and
+                                                (mark_search := re.search(dash_re, text))):
+                                            text = text[: mark_search.start()].strip()
 
                                         le_check_dict = (
                                             le_word_dict if field_id == le_fields['word'] else
@@ -1844,7 +1867,18 @@ def convert_five_tiers(
                                             None)
 
                                         if le_check_dict is not None:
+
+                                            if affix_search := re.search(affix_re, text):
+                                                text = text[: affix_search.start()].strip()
+
                                             le_check_dict[p1_lexical_entry_id].add(text.lower())
+
+                                    create_entity(
+                                        extra_client,
+                                        p1_lexical_entry_id,
+                                        field_id,
+                                        field_data_type_dict[field_id],
+                                        text)
 
                         # If we check lexical entry identity only by meaning, we should add to it any
                         # transcriptions and words it doesn't have.
@@ -1866,6 +1900,9 @@ def convert_five_tiers(
                                         le_xcript_dict[p1_lexical_entry_id])
                                 else:
                                     continue
+
+                                if affix_search := re.search(affix_re, text):
+                                    text = text[: affix_search.start()].strip()
 
                                 text_key = text.lower()
 
@@ -2158,18 +2195,23 @@ def convert_five_tiers(
 
             if additional_entries:
                 if (additional_entries_all or
-                    le_entry_id not in word_le_set):
+                        le_entry_id not in word_le_set):
 
                     for pa_word in pa_word_dict[pa_entry_id]:
-                        word_key = (
-                            (pa_word := pa_word.strip())
-                                .lower())
+
+                        if (merge_by_meaning and
+                                (affix_search := re.search(affix_re, pa_word))):
+                            pa_word = pa_word[: affix_search.start()].strip()
+
+                        word_key = pa_word.strip().lower()
 
                         le_word_set = (
                             le_word_dict[le_entry_id])
 
                         if word_key not in le_word_set:
+
                             le_word_set.add(word_key)
+
                             create_entity(
                                 extra_client,
                                 le_entry_id,
@@ -2178,17 +2220,21 @@ def convert_five_tiers(
                                 pa_word)
 
                 if (additional_entries_all or
-                    le_entry_id not in xcript_le_set):
+                        le_entry_id not in xcript_le_set):
 
                     for pa_xcript in pa_xcript_dict[pa_entry_id]:
-                        xcript_key = (
-                            (pa_xcript := pa_xcript.strip())
-                                .lower())
+
+                        if (merge_by_meaning and
+                                (affix_search := re.search(affix_re, pa_xcript))):
+                            pa_xcript = pa_xcript[: affix_search.start()].strip()
+
+                        xcript_key = pa_xcript.strip().lower()
 
                         le_xcript_set = (
                             le_xcript_dict[le_entry_id])
 
                         if xcript_key not in le_xcript_set:
+
                             le_xcript_set.add(xcript_key)
 
                             create_entity(
