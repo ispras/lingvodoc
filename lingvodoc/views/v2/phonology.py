@@ -2273,7 +2273,7 @@ def before_after_text(index, interval_list, join_set = None):
     return before_text, after_text
 
 
-def process_sound(tier_data_list, sound):
+def process_sound(tier_data_list, sound, vowel_selection = None):
     """
     Analyzes sound intervals corresponding to vowel-containing markup.
     """
@@ -2300,6 +2300,17 @@ def process_sound(tier_data_list, sound):
             if len(interval_list) <= 0:
                 continue
 
+            # Computing average sound interval length.
+
+            total_interval_length = (
+
+                sum(
+                    end - begin
+                    for raw_index, (begin, end, text) in raw_interval_list))
+
+            mean_interval_length = (
+                total_interval_length / len(raw_interval_list))
+
             # Looking in particular at longest interval and interval with highest intensity, and at all
             # intervals in general.
 
@@ -2309,26 +2320,7 @@ def process_sound(tier_data_list, sound):
             max_intensity_interval = interval_list[max_intensity_index]
             max_length_interval = interval_list[max_length_index]
 
-            max_intensity_i_list = (
-                sound.get_interval_intensity(*max_intensity_interval[:2]))
-
-            max_length_i_list = (
-                sound.get_interval_intensity(*max_length_interval[:2]))
-
-            max_intensity_f_list = (
-                sound.get_interval_formants(*max_intensity_interval[:2]))
-
-            max_length_f_list = (
-                sound.get_interval_formants(*max_length_interval[:2]))
-
-            intensity_list = [
-                sound.get_interval_intensity(begin_sec, end_sec)
-                    for begin_sec, end_sec, text in interval_list]
-
-            formant_list = [
-                sound.get_interval_formants(begin_sec, end_sec)
-                    for begin_sec, end_sec, text in interval_list]
-
+            # Pitches are calculated for the whole sound content at once.
             pitch_list = sound.get_pitch()
 
             # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
@@ -2364,16 +2356,85 @@ def process_sound(tier_data_list, sound):
                 print(f"XL Mean: {xl_p_mean:.3f} Hz", file=f)
                 print(f"XI Mean: {xi_p_mean:.3f} Hz\n", file=f)
 
-            # Computing average sound interval length.
+            max_intensity_i_list = []
+            max_length_i_list = []
+            max_intensity_f_list = []
+            max_length_f_list = []
+            interval_data_list = []
 
-            total_interval_length = (
+            if vowel_selection is None or vowel_selection == True:
+                #print('Calculating max_intensity_ and max_length_ lists..')
 
-                sum(
-                    end - begin
-                    for raw_index, (begin, end, text) in raw_interval_list))
+                max_intensity_i_list = (
+                    sound.get_interval_intensity(*max_intensity_interval[:2]))
 
-            mean_interval_length = (
-                total_interval_length / len(raw_interval_list))
+                max_length_i_list = (
+                    sound.get_interval_intensity(*max_length_interval[:2]))
+
+                max_intensity_f_list = (
+                    sound.get_interval_formants(*max_intensity_interval[:2]))
+
+                max_length_f_list = (
+                    sound.get_interval_formants(*max_length_interval[:2]))
+
+            if vowel_selection is None or vowel_selection == False:
+                #print('Calculating lists for all intervals...')
+
+                intensity_list = [
+                    sound.get_interval_intensity(begin_sec, end_sec)
+                        for begin_sec, end_sec, text in interval_list]
+
+                formant_list = [
+                    sound.get_interval_formants(begin_sec, end_sec)
+                        for begin_sec, end_sec, text in interval_list]
+
+                # Preparing data of all other intervals.
+
+                str_list = [
+
+                    '{0} {1:.3f} {2:.3f} [{3}]'.format(
+                        text.strip(),
+                        end_sec - begin_sec, intensity,
+                        len(''.join(text for raw_index, (begin, end, text) in
+                            raw_interval_list[:interval_idx_to_raw_idx[seq_index][index]])))
+
+                        for index, ((intensity, _, _), (begin_sec, end_sec, text)) in
+                            enumerate(zip(intensity_list, interval_list))]
+
+                source_index_list = [
+                    interval_idx_to_raw_idx[(seq_index, index)]
+                        for index in range(len(interval_list))]
+
+                # Compiling results.
+
+                interval_data_list = [
+
+                    (interval_str,
+                        (end - begin) / mean_interval_length,
+                        f'{p_mean:.3f}',
+                        [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
+                        list(map('{0:.3f}'.format, f_list)),
+                        '+' if index == max_length_index else '-',
+                        '+' if index == max_intensity_index else '-',
+                        source_index)
+
+                        for (
+                            index,
+                                (interval_str,
+                                 p_mean,
+                                 (_, i_min, i_max),
+                                 f_list,
+                                 (begin, end, text),
+                                 source_index)) in
+
+                            enumerate(
+                                zip(
+                                    str_list,
+                                    pitch_means,
+                                    intensity_list,
+                                    formant_list,
+                                    interval_list,
+                                    source_index_list))]
 
             # Preparing data of maximum length and maximum intensity intervals.
 
@@ -2393,53 +2454,6 @@ def process_sound(tier_data_list, sound):
                 len(''.join(text for index, (begin, end, text) in
                     raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
 
-            # Preparing data of all other intervals.
-
-            str_list = [
-
-                '{0} {1:.3f} {2:.3f} [{3}]'.format(
-                    text.strip(),
-                    end_sec - begin_sec, intensity,
-                    len(''.join(text for raw_index, (begin, end, text) in
-                        raw_interval_list[:interval_idx_to_raw_idx[seq_index][index]])))
-
-                    for index, ((intensity, _, _), (begin_sec, end_sec, text)) in
-                        enumerate(zip(intensity_list, interval_list))]
-
-            source_index_list = [
-                interval_idx_to_raw_idx[(seq_index, index)]
-                    for index in range(len(interval_list))]
-
-            # Compiling results.
-
-            interval_data_list = [
-
-                (interval_str,
-                    (end - begin) / mean_interval_length,
-                    f'{p_mean:.3f}',
-                    [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
-                    list(map('{0:.3f}'.format, f_list)),
-                    '+' if index == max_length_index else '-',
-                    '+' if index == max_intensity_index else '-',
-                    source_index)
-
-                    for (
-                        index,
-                            (interval_str,
-                             p_mean,
-                             (_, i_min, i_max),
-                             f_list,
-                             (begin, end, text),
-                             source_index)) in
-
-                        enumerate(
-                            zip(
-                                str_list,
-                                pitch_means,
-                                intensity_list,
-                                formant_list,
-                                interval_list,
-                                source_index_list))]
 
             textgrid_result_list[-1][2].append(
 
@@ -2475,6 +2489,7 @@ def process_sound_markup(
     markup_entity_id,
     markup_url,
     storage,
+    vowel_selection = None,
     __debug_flag__ = False):
     """
     Extracts phonology data from a pair of sound recording and its markup, using cache in a manner
@@ -2605,7 +2620,7 @@ def process_sound_markup(
             # Analysing sound, showing and caching analysis results.
 
             textgrid_result_list = process_sound(
-                tier_data_list, sound)
+                tier_data_list, sound, vowel_selection)
 
             log.debug(
                 '{0}:\n{1}'.format(
@@ -4778,7 +4793,7 @@ def analyze_sound_markup(
                     vowel_range_list if args.interval_only else None))
 
         textgrid_result_list = (
-            process_sound(tier_data_list, sound))
+            process_sound(tier_data_list, sound, args.vowel_selection))
 
         caching.CACHE.set(cache_key, textgrid_result_list)
 
@@ -7161,7 +7176,7 @@ def main_test_profile(args):
 
             sound = AudioPraatLike(pydub.AudioSegment.from_wav(wav_path))
 
-            textgrid_result_list = process_sound(tier_data_list, sound)
+            textgrid_result_list = process_sound(tier_data_list, sound, args.vowel_selection)
             result_list.append(textgrid_result_list)
 
             result_string = '\n'.join(

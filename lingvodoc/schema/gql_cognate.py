@@ -1945,6 +1945,7 @@ class CognateAnalysis(graphene.Mutation):
                 markup_entity_id,
                 markup_url,
                 storage,
+                False,
                 __debug_flag__))
 
         if textgrid_result_list is None:
