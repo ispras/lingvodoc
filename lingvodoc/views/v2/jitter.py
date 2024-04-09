@@ -1,5 +1,8 @@
 import bisect
+import math
 
+voiced_floor = 75
+voiced_ceiling = 600
 
 def get_jitter_local(me, tmin, tmax, pmin, pmax, maximumPeriodFactor):
     tmin, tmax = unidirectional_autowindow(me, tmin, tmax)
@@ -94,6 +97,120 @@ def is_period(me, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
 
     if (previousIntervalFactor is not None and previousIntervalFactor > maximumPeriodFactor and
             nextIntervalFactor is not None and nextIntervalFactor > maximumPeriodFactor):
+        return False
+
+    return True
+
+
+import numpy as np
+from scipy.signal import find_peaks
+
+
+def pitch_to_point(sound, pitch):
+    try:
+        point = np.array([])
+        t = pitch['xmin']
+        added_right = -1e308
+        global_peak = np.max(np.abs(sound['z'][ t : sound['xmax'] + 1 ]))
+
+        # Cycle over all voiced intervals
+        for _ in range(100):  # Limit the number of iterations to prevent infinite loop
+            t_left, t_right = pitch.get_voiced_interval_after(t)
+            if t_right is None:
+                break
+            assert t_right > t
+
+            # Go to the middle of the voice stretch
+            t_middle = 0.5 * (t_left + t_right)
+            f0_middle = pitch.get_value_at_time(t_middle, 'HERTZ', 'LINEAR')
+            if np.isnan(f0_middle):
+                raise ValueError(
+                    f"Sound_Pitch_to_PointProcess_cc: tleft {t_left}, tright {t_right}, f0middle {f0_middle}")
+
+            # Our first point is near this middle
+            t_max = sound.find_extremum(t_middle - 0.5 / f0_middle, t_middle + 0.5 / f0_middle, True, True)
+            assert not np.isnan(t_max)
+            point = np.append(point, t_max)
+
+            t_save = t_max
+            while True:
+                f0 = pitch.get_value_at_time(t_max, 'HERTZ', 'LINEAR')
+                if np.isnan(f0):
+                    break
+                correlation, peak, t_max = sound.find_maximum_correlation(t_max, 1.0 / f0, t_max - 1.25 / f0,
+                                                                          t_max - 0.8 / f0)
+                if correlation == -1.0:
+                    t_max -= 1.0 / f0
+                if t_max < t_left:
+                    if correlation > 0.7 and peak > 0.023333 * global_peak and t_max - added_right > 0.8 / f0:
+                        point = np.append(point, t_max)
+                    break
+                if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
+                    if t_max - added_right > 0.8 / f0:
+                        point = np.append(point, t_max)
+
+            t_max = t_save
+            while True:
+                f0 = pitch.get_value_at_time(t_max, 'HERTZ', 'LINEAR')
+                if np.isnan(f0):
+                    break
+                correlation, peak, t_max = sound.find_maximum_correlation(t_max, 1.0 / f0, t_max + 0.8 / f0,
+                                                                          t_max + 1.25 / f0)
+                if correlation == -1.0:
+                    t_max += 1.0 / f0
+                if t_max > t_right:
+                    if correlation > 0.7 and peak > 0.023333 * global_peak:
+                        point = np.append(point, t_max)
+                        added_right = t_max
+                    break
+                if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
+                    point = np.append(point, t_max)
+                    added_right = t_max
+
+            t = t_right
+
+        return point
+    except Exception as e:
+        raise ValueError(f"{sound} & {pitch}: not converted to PointProcess (cc).") from e
+
+
+def sampled_index_to_x(me, index):
+    return me['x1'] + (index - 1) * me['dx']
+
+
+def Pitch_getVoicedIntervalAfter(me, after, edges):
+    ileft = math.ceil((after - me['x1']) / me['dx'] + 1.0)
+    if ileft >= me['nx']:
+        return False   # offright
+    if ileft < 0:
+        ileft = 0   # offleft
+
+    # Search for first voiced frame
+    while ileft < me['nx']:
+        if voiced_floor < me['frames'][ileft]['candidates'][0] < voiced_ceiling:
+            break
+        ileft += 1
+    if ileft >= me['nx']:
+        return False   # offright
+
+    # Search for last voiced frame
+    iright = ileft
+    while iright < me['nx']:
+        if not voiced_floor < me['frames'][iright]['candidates'][0] < voiced_ceiling:
+            break
+        iright += 1
+    iright -= 1
+
+    edges[0] = sampled_index_to_x(me, ileft) - 0.5 * me['dx']   # the whole frame is considered voiced
+    edges[1] = sampled_index_to_x(me, iright) + 0.5 * me['dx']
+
+    if edges[0] >= me['xmax'] - 0.5 * me['dx']:
+        return False
+
+    edges[0] = max(edges[0], me['xmin'])
+    edges[1] = min(edges[1], me['xmax'])
+
+    if edges[1] <= after:
         return False
 
     return True
