@@ -105,6 +105,72 @@ def is_period(me, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
 import numpy as np
 from scipy.signal import find_peaks
 
+import numpy as np
+
+
+def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_minima):
+    channel1 = channel1_base + d
+    channel2 = channel2_base + d if channel2_base is not None else None
+    include_all = (include_maxima == include_minima)
+    imin = imax = 0
+
+    if n < 3:
+        if n <= 0:
+            return 0.0
+        elif n == 1:
+            return 1.0
+        else:
+            x1 = (channel1[0] + channel2[0]) / 2 if channel2 is not None else channel1[0]
+            x2 = (channel1[1] + channel2[1]) / 2 if channel2 is not None else channel1[1]
+            xleft = abs(x1) if include_all else x1 if include_maxima else -x1
+            xright = abs(x2) if include_all else x2 if include_maxima else -x2
+            return 1.0 if xleft > xright else 2.0 if xleft < xright else 1.5
+
+    minimum = maximum = (channel1[0] + channel2[0]) / 2 if channel2 is not None else channel1[0]
+    for i in range(1, n):
+        value = (channel1[i] + channel2[i]) / 2 if channel2 is not None else channel1[i]
+        if value < minimum:
+            minimum = value
+            imin = i
+        if value > maximum:
+            maximum = value
+            imax = i
+
+    if minimum == maximum:
+        return 0.5 * (n + 1.0)
+
+    if include_all:
+        if abs(minimum) > abs(maximum):
+            iextr = imin
+        else:
+            iextr = imax
+    else:
+        if include_maxima:
+            iextr = imax
+        else:
+            iextr = imin
+
+    if iextr == 0 or iextr == n:
+        return iextr
+
+    value_mid = (channel1[iextr] + channel2[iextr]) / 2 if channel2 is not None else channel1[iextr]
+    value_left = (channel1[iextr - 1] + channel2[iextr - 1]) / 2 if channel2 is not None else channel1[iextr - 1]
+    value_right = (channel1[iextr + 1] + channel2[iextr + 1]) / 2 if channel2 is not None else channel1[iextr + 1]
+    return iextr + 0.5 * (value_right - value_left) / (2 * value_mid - value_left - value_right)
+
+
+def sound_find_extremum(me, tmin, tmax, include_maxima, include_minima):
+    assert tmin is not None
+    assert tmax is not None
+    imin = max(0, x_to_sampled_index(me, tmin, 'low'))
+    imax = min(me['nx'] - 1, x_to_sampled_index(me, tmax, 'high'))
+    iextremum = find_extremum_3(me['z'][0], me['z'][1] if me['ny'] > 1 else None, imin, imax - imin,
+                                include_maxima, include_minima)
+    if iextremum != 0.0:
+        return me['x1'] + (imin - 1 + iextremum - 1) * me['dx']
+    else:
+        return 0.5 * (tmin + tmax)
+
 
 def find_maximum_correlation(me, t1, windowLength, tmin2, tmax2):
     maximumCorrelation = -1.0  # smart 'impossible' starting value
@@ -146,7 +212,7 @@ def find_maximum_correlation(me, t1, windowLength, tmin2, tmax2):
             maximumCorrelation += 0.5 * dr * dr / d2r
             ir += dr / d2r
         tout = t1 + (ir - ileft1) * me['dx']
-    return maximumCorrelation
+    return maximumCorrelation, peak, tout
 
 
 def sound_find_extremum(one, two, three, four, five):
