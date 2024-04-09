@@ -105,17 +105,67 @@ def is_period(me, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
 import numpy as np
 from scipy.signal import find_peaks
 
+
+def find_maximum_correlation(me, t1, windowLength, tmin2, tmax2):
+    maximumCorrelation = -1.0  # smart 'impossible' starting value
+    r1_best = r3_best = ir = None  # assignments not necessary, but extra safe
+    r1 = r2 = r3 = 0.0
+    halfWindowLength = 0.5 * windowLength
+    ileft1 = x_to_sampled_index(me, t1 - halfWindowLength, 'nearest')
+    iright1 = x_to_sampled_index(me, t1 + halfWindowLength, 'nearest')
+    ileft2min = x_to_sampled_index(me, tmin2 - halfWindowLength, 'low')
+    ileft2max = x_to_sampled_index(me, tmax2 - halfWindowLength, 'high')
+    peak = 0.0  # default
+    assert ileft2max >= ileft2min  # if the loop is never executed, the result will be garbage
+    for ileft2 in range(ileft2min, ileft2max + 1):
+        norm1 = norm2 = product = 0.0
+        localPeak = 0.0
+        for ichan in range(me['ny']):
+            i2 = ileft2
+            for i1 in range(ileft1, iright1 + 1):
+                if i1 < 0 or i1 >= me['nx'] or i2 < 0 or i2 >= me['nx']:
+                    continue
+                amp1, amp2 = me['z'][ichan][i1], me['z'][ichan][i2]
+                norm1 += amp1 ** 2
+                norm2 += amp2 ** 2
+                product += amp1 * amp2
+                localPeak = max(localPeak, abs(amp2))
+                i2 += 1
+
+        r1, r2, r3 = r2, r3, 0.0 if product == 0.0 else product / np.sqrt(norm1 * norm2)
+        if r2 > maximumCorrelation and r2 >= r1 and r2 >= r3:
+            r1_best, maximumCorrelation, r3_best, ir = r1, r2, r3, ileft2 - 1
+            peak = localPeak
+
+    if maximumCorrelation > -1.0:  # was maximumCorrelation ever assigned to?...
+        # ...then r1_best and r3_best and ir must also have been assigned to:
+        assert r1_best is not None and r3_best is not None and ir is not None
+        d2r = 2 * maximumCorrelation - r1_best - r3_best
+        if d2r != 0.0:
+            dr = 0.5 * (r3_best - r1_best)
+            maximumCorrelation += 0.5 * dr * dr / d2r
+            ir += dr / d2r
+        tout = t1 + (ir - ileft1) * me['dx']
+    return maximumCorrelation
+
+
+def sound_find_extremum(one, two, three, four, five):
+    value = voiced_floor
+    return value
+
+
 # TODO: implement
 def get_value_at_time(pitch, t):
     value = voiced_floor
     return value
+
 
 def pitch_to_point(sound, pitch):
     try:
         point = []
         t = pitch['xmin']
         added_right = -1e308
-        global_peak = np.max(np.abs(sound['z']))
+        global_peak = np.max(np.abs(sound['z']))  # with interpolation?
 
         # Cycle over all voiced intervals
         edges = [0, 0]
@@ -192,7 +242,21 @@ def pitch_to_point(sound, pitch):
 
 
 def sampled_index_to_x(me, index):
-    return me['x1'] + (index - 1) * me['dx']
+    # Index starts from zero
+    return me['x1'] + index * me['dx']
+
+
+def x_to_sampled_index(me, x, to_int=None):
+    # Index starts from zero
+    index = (x - me['x1']) / me['dx']
+    if to_int == 'nearest':
+        return round(index)
+    elif to_int == 'low':
+        return math.floor(index)
+    elif to_int == 'high':
+        return math.ceil(index)
+    else:
+        return index
 
 
 def get_voiced_interval_after(me, after, edges):
