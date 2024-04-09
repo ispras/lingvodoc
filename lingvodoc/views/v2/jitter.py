@@ -109,9 +109,8 @@ import numpy as np
 
 
 def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_minima):
-    # SHIFT here!!!!!! FIX!
-    channel1 = channel1_base + d
-    channel2 = channel2_base + d if channel2_base is not None else None
+    channel1 = channel1_base[d:]
+    channel2 = channel2_base[d:] if channel2_base is not None else None
     include_all = (include_maxima == include_minima)
     imin = imax = 0
 
