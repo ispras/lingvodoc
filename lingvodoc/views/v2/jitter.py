@@ -105,66 +105,83 @@ def is_period(me, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
 import numpy as np
 from scipy.signal import find_peaks
 
+# TODO: implement
+def get_value_at_time(pitch, t):
+    value = voiced_floor
+    return value
 
 def pitch_to_point(sound, pitch):
     try:
-        point = np.array([])
+        point = []
         t = pitch['xmin']
         added_right = -1e308
-        global_peak = np.max(np.abs(sound['z'][ t : sound['xmax'] + 1 ]))
+        global_peak = np.max(np.abs(sound['z']))
 
         # Cycle over all voiced intervals
-        for _ in range(100):  # Limit the number of iterations to prevent infinite loop
-            t_left, t_right = pitch.get_voiced_interval_after(t)
-            if t_right is None:
-                break
+        edges = [0, 0]
+        while get_voiced_interval_after(pitch, t, edges):
+            t_left, t_right = edges
             assert t_right > t
 
             # Go to the middle of the voice stretch
-            t_middle = 0.5 * (t_left + t_right)
-            f0_middle = pitch.get_value_at_time(t_middle, 'HERTZ', 'LINEAR')
-            if np.isnan(f0_middle):
+            t_middle = (t_left + t_right) / 2
+            f0_middle = get_value_at_time(pitch, t_middle)
+
+            # Our first point is near this middle
+            if f0_middle is None:
                 raise ValueError(
                     f"Sound_Pitch_to_PointProcess_cc: tleft {t_left}, tright {t_right}, f0middle {f0_middle}")
 
-            # Our first point is near this middle
-            t_max = sound.find_extremum(t_middle - 0.5 / f0_middle, t_middle + 0.5 / f0_middle, True, True)
-            assert not np.isnan(t_max)
-            point = np.append(point, t_max)
+            t_max = sound_find_extremum(
+                        sound,
+                        t_middle - 0.5 / f0_middle,
+                        t_middle + 0.5 / f0_middle,
+                        True, True)
+
+            assert t_max is not None
+            point.append(t_max)
 
             t_save = t_max
             while True:
-                f0 = pitch.get_value_at_time(t_max, 'HERTZ', 'LINEAR')
-                if np.isnan(f0):
+                f0 = get_value_at_time(pitch, t_max)
+                if f0 is None:
                     break
-                correlation, peak, t_max = sound.find_maximum_correlation(t_max, 1.0 / f0, t_max - 1.25 / f0,
-                                                                          t_max - 0.8 / f0)
+                correlation, peak, t_max = find_maximum_correlation(
+                                                sound,
+                                                t_max,
+                                                1.0 / f0,
+                                                t_max - 1.25 / f0,
+                                                t_max - 0.8 / f0)
                 if correlation == -1.0:
                     t_max -= 1.0 / f0
                 if t_max < t_left:
                     if correlation > 0.7 and peak > 0.023333 * global_peak and t_max - added_right > 0.8 / f0:
-                        point = np.append(point, t_max)
+                        point.append(t_max)
                     break
                 if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
                     if t_max - added_right > 0.8 / f0:
-                        point = np.append(point, t_max)
+                        point.append(t_max)
 
             t_max = t_save
             while True:
-                f0 = pitch.get_value_at_time(t_max, 'HERTZ', 'LINEAR')
-                if np.isnan(f0):
+                f0 = get_value_at_time(pitch, t_max)
+                if f0 is None:
                     break
-                correlation, peak, t_max = sound.find_maximum_correlation(t_max, 1.0 / f0, t_max + 0.8 / f0,
-                                                                          t_max + 1.25 / f0)
+                correlation, peak, t_max = find_maximum_correlation(
+                                                sound,
+                                                t_max,
+                                                1.0 / f0,
+                                                t_max + 0.8 / f0,
+                                                t_max + 1.25 / f0)
                 if correlation == -1.0:
                     t_max += 1.0 / f0
                 if t_max > t_right:
                     if correlation > 0.7 and peak > 0.023333 * global_peak:
-                        point = np.append(point, t_max)
+                        point.append(t_max)
                         added_right = t_max
                     break
                 if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
-                    point = np.append(point, t_max)
+                    point.append(t_max)
                     added_right = t_max
 
             t = t_right
@@ -178,7 +195,7 @@ def sampled_index_to_x(me, index):
     return me['x1'] + (index - 1) * me['dx']
 
 
-def Pitch_getVoicedIntervalAfter(me, after, edges):
+def get_voiced_interval_after(me, after, edges):
     ileft = math.ceil((after - me['x1']) / me['dx'] + 1.0)
     if ileft >= me['nx']:
         return False   # offright
