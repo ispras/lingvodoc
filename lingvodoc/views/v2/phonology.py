@@ -1623,8 +1623,8 @@ class AudioPraatLike(object):
 
         # Create the resulting pitch contour.
         thee = {
-            #'xmin': x1,
-            #'xmax': x1 + duration,
+            'xmin': x1,
+            'xmax': x1 + duration,
             'nx': numberOfFrames,
             'dx': dt,
             'x1': t1,
