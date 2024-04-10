@@ -164,7 +164,8 @@ def sound_find_extremum(me, tmin, tmax, include_maxima, include_minima):
     iextremum = find_extremum_3(me['z'][0], me['z'][1] if me['ny'] > 1 else None, imin, imax - imin,
                                 include_maxima, include_minima)
     if iextremum != 0.0:
-        return me['x1'] + (imin - 1 + iextremum - 1) * me['dx']
+        # Indexes 'imin' and 'iextremum' starts from zero
+        return me['x1'] + (imin + iextremum) * me['dx']
     else:
         return 0.5 * (tmin + tmax)
 
@@ -316,7 +317,8 @@ def x_to_sampled_index(me, x, to_int=None):
 
 # OK
 def get_voiced_interval_after(me, after, edges):
-    ileft = math.ceil((after - me['x1']) / me['dx'] + 1.0)
+    # Index starts from zero
+    ileft = math.ceil((after - me['x1']) / me['dx'])
     if ileft >= me['nx']:
         return False   # offright
     if ileft < 0:
