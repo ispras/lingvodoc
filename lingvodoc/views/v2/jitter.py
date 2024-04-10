@@ -1,9 +1,12 @@
 import bisect
 import math
+import numpy as np
+from scipy.interpolate import CubicSpline
 
 voiced_floor = 75
 voiced_ceiling = 600
 
+# OK
 def get_jitter_local(me, tmin, tmax, pmin, pmax, maximumPeriodFactor):
     tmin, tmax = unidirectional_autowindow(me, tmin, tmax)
     first, last = bisect.bisect_right(me['t'], tmin), bisect.bisect_left(me['t'], tmax)
@@ -24,14 +27,14 @@ def get_jitter_local(me, tmin, tmax, pmin, pmax, maximumPeriodFactor):
     return (dsum / (numberOfPeriods - 1) /
             get_mean_period(me, tmin, tmax, pmin, pmax, maximumPeriodFactor))
 
-
+# OK
 def unidirectional_autowindow(me, tmin, tmax):
     if tmin >= tmax:
         tmin = me['xmin']
         tmax = me['xmax']
     return tmin, tmax
 
-
+# OK
 def get_mean_period(me, tmin, tmax, minimumPeriod, maximumPeriod, maximumPeriodFactor):
     tmin, tmax = unidirectional_autowindow(me, tmin, tmax)
     first, last = bisect.bisect_right(me['t'], tmin), bisect.bisect_left(me['t'], tmax)
@@ -43,7 +46,7 @@ def get_mean_period(me, tmin, tmax, minimumPeriod, maximumPeriod, maximumPeriodF
             dsum += me['t'][ipoint + 1] - me['t'][ipoint]
     return dsum / numberOfPeriods if numberOfPeriods > 0 else None
 
-
+# OK
 def is_period(me, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
     """
     This function answers the question: is the interval from point 'ileft' to point 'ileft+1' a period?
@@ -65,7 +68,7 @@ def is_period(me, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
     if maximumPeriodFactor is None or maximumPeriodFactor < 1.0:
         return True
 
-    # Period condition 3: the interval cannot be too different from both of its neigbours, if any.
+    # Period condition 3: the interval cannot be too different from both of its neighbours, if any.
     if ileft <= 0:
         previousInterval = None
     else:
@@ -101,13 +104,7 @@ def is_period(me, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
 
     return True
 
-
-import numpy as np
-from scipy.signal import find_peaks
-
-import numpy as np
-
-
+# OK
 def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_minima):
     channel1 = channel1_base[d:]
     channel2 = channel2_base[d:] if channel2_base is not None else None
@@ -158,12 +155,12 @@ def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_
     value_right = (channel1[iextr + 1] + channel2[iextr + 1]) / 2 if channel2 is not None else channel1[iextr + 1]
     return iextr + 0.5 * (value_right - value_left) / (2 * value_mid - value_left - value_right)
 
-
+# OK
 def sound_find_extremum(me, tmin, tmax, include_maxima, include_minima):
     assert tmin is not None
     assert tmax is not None
     imin = max(0, x_to_sampled_index(me, tmin, 'low'))
-    imax = min(me['nx'] - 1, x_to_sampled_index(me, tmax, 'high'))
+    imax = min(x_to_sampled_index(me, tmax, 'high'), me['nx'] - 1)
     iextremum = find_extremum_3(me['z'][0], me['z'][1] if me['ny'] > 1 else None, imin, imax - imin,
                                 include_maxima, include_minima)
     if iextremum != 0.0:
@@ -171,7 +168,7 @@ def sound_find_extremum(me, tmin, tmax, include_maxima, include_minima):
     else:
         return 0.5 * (tmin + tmax)
 
-
+# OK
 def find_maximum_correlation(me, t1, windowLength, tmin2, tmax2):
     maximumCorrelation = -1.0  # smart 'impossible' starting value
     r1_best = r3_best = ir = None  # assignments not necessary, but extra safe
@@ -214,24 +211,17 @@ def find_maximum_correlation(me, t1, windowLength, tmin2, tmax2):
         tout = t1 + (ir - ileft1) * me['dx']
     return maximumCorrelation, peak, tout
 
-
-def sound_find_extremum(one, two, three, four, five):
-    value = voiced_floor
-    return value
-
-
-# TODO: implement
-def get_value_at_time(pitch, t):
-    value = voiced_floor
-    return value
-
-
+# OK
 def pitch_to_point(sound, pitch):
     try:
         point = []
         t = pitch['xmin']
         added_right = -1e308
         global_peak = np.max(np.abs(sound['z']))  # with interpolation?
+
+        get_value_at_time = CubicSpline(
+            [pitch['x1'] + pitch['dx'] * n for n in range(pitch['nx'])],
+            [frame['candidates'][0]['frequency'] for frame in pitch['frames']])
 
         # Cycle over all voiced intervals
         edges = [0, 0]
@@ -241,7 +231,7 @@ def pitch_to_point(sound, pitch):
 
             # Go to the middle of the voice stretch
             t_middle = (t_left + t_right) / 2
-            f0_middle = get_value_at_time(pitch, t_middle)
+            f0_middle = get_value_at_time(t_middle)
 
             # Our first point is near this middle
             if f0_middle is None:
@@ -259,7 +249,7 @@ def pitch_to_point(sound, pitch):
 
             t_save = t_max
             while True:
-                f0 = get_value_at_time(pitch, t_max)
+                f0 = get_value_at_time(t_max)
                 if f0 is None:
                     break
                 correlation, peak, t_max = find_maximum_correlation(
@@ -280,7 +270,7 @@ def pitch_to_point(sound, pitch):
 
             t_max = t_save
             while True:
-                f0 = get_value_at_time(pitch, t_max)
+                f0 = get_value_at_time(t_max)
                 if f0 is None:
                     break
                 correlation, peak, t_max = find_maximum_correlation(
@@ -306,12 +296,12 @@ def pitch_to_point(sound, pitch):
     except Exception as e:
         raise ValueError(f"{sound} & {pitch}: not converted to PointProcess (cc).") from e
 
-
+# OK
 def sampled_index_to_x(me, index):
     # Index starts from zero
     return me['x1'] + index * me['dx']
 
-
+# OK
 def x_to_sampled_index(me, x, to_int=None):
     # Index starts from zero
     index = (x - me['x1']) / me['dx']
@@ -324,7 +314,7 @@ def x_to_sampled_index(me, x, to_int=None):
     else:
         return index
 
-
+# OK
 def get_voiced_interval_after(me, after, edges):
     ileft = math.ceil((after - me['x1']) / me['dx'] + 1.0)
     if ileft >= me['nx']:
