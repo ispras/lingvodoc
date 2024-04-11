@@ -7,46 +7,6 @@ voiced_floor = 75
 voiced_ceiling = 600
 
 # OK
-def get_jitter_local(pulse, tmin, tmax, pmin, pmax, maximumPeriodFactor):
-    tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
-    numberOfPeriods = max(0, last - first)
-    if numberOfPeriods < 2:
-        return None
-    dsum = 0.0
-    for i in range(first + 1, last):
-        p1 = pulse['t'][i] - pulse['t'][i - 1]
-        p2 = pulse['t'][i + 1] - pulse['t'][i]
-        intervalFactor = p1 / p2 if p1 > p2 else p2 / p1
-        if pmin == pmax or (pmin <= p1 <= pmax and pmin <= p2 <= pmax and intervalFactor <= maximumPeriodFactor):
-            dsum += abs(p1 - p2)
-        else:
-            numberOfPeriods -= 1
-    if numberOfPeriods < 2:
-        return None
-    return (dsum / (numberOfPeriods - 1) /
-            get_mean_period(pulse, tmin, tmax, pmin, pmax, maximumPeriodFactor))
-
-# OK
-def unidirectional_autowindow(pulse, tmin, tmax):
-    if tmin >= tmax:
-        tmin = pulse['xmin']
-        tmax = pulse['xmax']
-    return tmin, tmax
-
-# OK
-def get_mean_period(pulse, tmin, tmax, minimumPeriod, maximumPeriod, maximumPeriodFactor):
-    tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
-    numberOfPeriods = 0
-    dsum = 0.0
-    for ipoint in range(first, last):
-        if is_period(pulse, ipoint, minimumPeriod, maximumPeriod, maximumPeriodFactor):
-            numberOfPeriods += 1
-            dsum += pulse['t'][ipoint + 1] - pulse['t'][ipoint]
-    return dsum / numberOfPeriods if numberOfPeriods > 0 else None
-
-# OK
 def is_period(pulse, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
     """
     This function answers the question: is the interval from point 'ileft' to point 'ileft+1' a period?
@@ -103,6 +63,64 @@ def is_period(pulse, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
         return False
 
     return True
+
+# OK
+def unidirectional_autowindow(pulse, tmin, tmax):
+    if tmin >= tmax:
+        tmin = pulse['xmin']
+        tmax = pulse['xmax']
+    return tmin, tmax
+
+# OK
+def get_mean_period(pulse, tmin, tmax, minimumPeriod, maximumPeriod, maximumPeriodFactor):
+    tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
+    first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
+    numberOfPeriods = 0
+    dsum = 0.0
+    for ipoint in range(first, last):
+        if is_period(pulse, ipoint, minimumPeriod, maximumPeriod, maximumPeriodFactor):
+            numberOfPeriods += 1
+            dsum += pulse['t'][ipoint + 1] - pulse['t'][ipoint]
+    return dsum / numberOfPeriods if numberOfPeriods > 0 else None
+
+# OK
+def get_jitter_local(pulse, tmin, tmax, pmin, pmax, maximumPeriodFactor):
+    tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
+    first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
+    numberOfPeriods = max(0, last - first)
+    if numberOfPeriods < 2:
+        return None
+    dsum = 0.0
+    for i in range(first + 1, last):
+        p1 = pulse['t'][i] - pulse['t'][i - 1]
+        p2 = pulse['t'][i + 1] - pulse['t'][i]
+        intervalFactor = p1 / p2 if p1 > p2 else p2 / p1
+        if pmin == pmax or (pmin <= p1 <= pmax and pmin <= p2 <= pmax and intervalFactor <= maximumPeriodFactor):
+            dsum += abs(p1 - p2)
+        else:
+            numberOfPeriods -= 1
+    if numberOfPeriods < 2:
+        return None
+    return (dsum / (numberOfPeriods - 1) /
+            get_mean_period(pulse, tmin, tmax, pmin, pmax, maximumPeriodFactor))
+
+# OK
+def sampled_index_to_x(me, index):
+    # Index starts from zero
+    return me['x1'] + index * me['dx']
+
+# OK
+def x_to_sampled_index(me, x, to_int=None):
+    # Index starts from zero
+    index = (x - me['x1']) / me['dx']
+    if to_int == 'nearest':
+        return round(index)
+    elif to_int == 'low':
+        return math.floor(index)
+    elif to_int == 'high':
+        return math.ceil(index)
+    else:
+        return index
 
 # OK
 def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_minima):
@@ -296,24 +314,6 @@ def pitch_to_point(sound, pitch):
         return point
     except Exception as e:
         raise ValueError(f"{sound} & {pitch}: not converted to PointProcess (cc).") from e
-
-# OK
-def sampled_index_to_x(me, index):
-    # Index starts from zero
-    return me['x1'] + index * me['dx']
-
-# OK
-def x_to_sampled_index(me, x, to_int=None):
-    # Index starts from zero
-    index = (x - me['x1']) / me['dx']
-    if to_int == 'nearest':
-        return round(index)
-    elif to_int == 'low':
-        return math.floor(index)
-    elif to_int == 'high':
-        return math.ceil(index)
-    else:
-        return index
 
 # OK
 def get_voiced_interval_after(pitch, after, edges):
