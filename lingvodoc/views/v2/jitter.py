@@ -5,9 +5,12 @@ from scipy.interpolate import CubicSpline
 
 voiced_floor = 75
 voiced_ceiling = 600
+pmin = 0.8 / voiced_ceiling
+pmax = 1.25 / voiced_floor
+maximumPeriodFactor = 1.3
 
 # OK
-def is_period(pulse, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
+def is_period(pulse, ileft):
     """
     This function answers the question: is the interval from point 'ileft' to point 'ileft+1' a period?
     """
@@ -18,11 +21,11 @@ def is_period(pulse, ileft, minimumPeriod, maximumPeriod, maximumPeriodFactor):
         return False
 
     # Period condition 2: the interval has to be within the boundaries, if specified.
-    if minimumPeriod == maximumPeriod:  # special input setting (typically both zero)
+    if pmin == pmax:  # special input setting (typically both zero)
         return True  # all intervals count as periods, irrespective of absolute size and relative size
 
     interval = pulse['t'][iright] - pulse['t'][ileft]
-    if interval <= 0.0 or interval < minimumPeriod or interval > maximumPeriod:
+    if interval <= 0.0 or interval < pmin or interval > pmax:
         return False
 
     if maximumPeriodFactor is None or maximumPeriodFactor < 1.0:
@@ -72,19 +75,19 @@ def unidirectional_autowindow(pulse, tmin, tmax):
     return tmin, tmax
 
 # OK
-def get_mean_period(pulse, tmin, tmax, minimumPeriod, maximumPeriod, maximumPeriodFactor):
+def get_mean_period(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
     first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
     numberOfPeriods = 0
     dsum = 0.0
     for ipoint in range(first, last):
-        if is_period(pulse, ipoint, minimumPeriod, maximumPeriod, maximumPeriodFactor):
+        if is_period(pulse, ipoint):
             numberOfPeriods += 1
             dsum += pulse['t'][ipoint + 1] - pulse['t'][ipoint]
     return dsum / numberOfPeriods if numberOfPeriods > 0 else None
 
 # OK
-def get_jitter_local(pulse, tmin, tmax, pmin, pmax, maximumPeriodFactor):
+def get_jitter_local(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
     first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
     numberOfPeriods = max(0, last - first)
@@ -102,7 +105,7 @@ def get_jitter_local(pulse, tmin, tmax, pmin, pmax, maximumPeriodFactor):
     if numberOfPeriods < 2:
         return None
     return (dsum / (numberOfPeriods - 1) /
-            get_mean_period(pulse, tmin, tmax, pmin, pmax, maximumPeriodFactor))
+            get_mean_period(pulse, tmin, tmax))
 
 # OK
 def sampled_index_to_x(me, index):

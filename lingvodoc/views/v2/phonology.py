@@ -96,6 +96,7 @@ from lingvodoc.models import (
 from lingvodoc.queue.celery import celery
 from lingvodoc.utils import sanitize_worksheet_name
 from lingvodoc.views.v2.utils import anonymous_userid, as_storage_file, message, storage_file, unimplemented
+from jitter import pitch_to_point, get_jitter_local
 
 from pdb import set_trace as A
 
@@ -485,6 +486,13 @@ def sound_into_pitch_frame(
             if value > localPeak:
                 localPeak = value
 
+    '''
+    Shortcut: absolute silence is always voiceless.
+    We are done for this frame.
+    '''
+    if localPeak == 0.0:
+        return
+
     pitchFrame['intensity'] = 1.0 if localPeak > globalPeak else localPeak / globalPeak
 
     '''
@@ -514,22 +522,16 @@ def sound_into_pitch_frame(
         r[-i] = r[i] = ac[i] / (ac[0] * windowR[i])
 
     '''
-    import matplotlib.pyplot as plt
-    plt.plot(numpy.arange(len(r)), r)
-    plt.savefig('r.png')
-    '''
-
-    '''
-    Shortcut: absolute silence is always voiceless.
-	We are done for this frame.
-    '''
-    if localPeak == 0.0:
-        return
-
-    '''
 	Find the strongest maxima of the correlation of this frame,
 	and register them as candidates.
     '''
+
+    offset = - brent_ixmax - 1
+
+    # Use cubic spline to interpolete discrete values and get function for exact argument
+    r_offset_spline_func = CubicSpline(numpy.arange(brent_ixmax - offset),
+                                       list(r[offset + 1:]) + list(r[:- offset]))
+
     imax[0] = 0
     for i in range(2, min(maximumLag, brent_ixmax)):
         if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:  # maximum?
@@ -541,11 +543,6 @@ def sound_into_pitch_frame(
             dr = 0.5 * (r[i+1] - r[i-1])
             d2r = 2.0 * r[i] - r[i-1] - r[i+1]
             frequencyOfMaximum = 1.0 / dx / (i + dr / d2r)
-            offset = - brent_ixmax - 1
-
-            # Use cubic spline to interpolete discrete values and get function for exact argument
-            r_offset_spline_func =  CubicSpline(numpy.arange(brent_ixmax - offset),
-                                                list(r[ offset + 1: ]) + list(r[ :- offset ]))
             strengthOfMaximum = float(r_offset_spline_func(1.0 / dx / frequencyOfMaximum - offset))
 
             '''
@@ -592,7 +589,6 @@ def sound_into_pitch_frame(
     Second pass: for extra precision, maximize cubic spline interpolation.
     '''
     for i in range(1, pitchFrame['nCandidates']):
-        offset = -brent_ixmax - 1
         # Get improved x and y of function maximum after cubic spline interpolation
         xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset, disp=False)[0]
         ymid = float(r_offset_spline_func(xmid))
@@ -1767,7 +1763,8 @@ class AudioPraatLike(object):
                     [frame['candidates'][1]['frequency'] for frame in thee['frames']])
         pyplot.savefig('freq.png')
         '''
-        return thee
+        return sound, thee
+
 
 def find_max_interval_praat(sound, interval_list):
     """
@@ -2321,9 +2318,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             max_length_interval = interval_list[max_length_index]
 
             # Pitches are calculated for the whole sound content at once.
-            pitch_list = sound.get_pitch()
+            sound, pitch = sound.get_pitch()
+            pulse = pitch_to_point(sound, pitch)
 
-            # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
+            # Getting desired intervals and mean values within them from the obtained 'pitch'.
             with open('pitch.log', 'a') as f:
 
                 cur_frame = 0
@@ -2331,12 +2329,12 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 xl_p_mean = xi_p_mean = 0
                 for begin_sec, end_sec, text in interval_list:
                     sum_fq = num_fq = 0
-                    for iframe in range(cur_frame, pitch_list['nx']):
-                        point = pitch_list['x1'] + pitch_list['dx'] * iframe
+                    for iframe in range(cur_frame, pitch['nx']):
+                        point = pitch['x1'] + pitch['dx'] * iframe
                         if point <= begin_sec:
                             continue
                         elif begin_sec < point < end_sec:
-                            freq = pitch_list['frames'][iframe]['candidates'][0]['frequency']
+                            freq = pitch['frames'][iframe]['candidates'][0]['frequency']
                             print(f"'{text}' | {point:.3f} sec | {freq:.3f} Hz", file=f)
                             sum_fq += freq
                             num_fq += (freq > 0)
@@ -2377,6 +2375,12 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 max_length_f_list = (
                     sound.get_interval_formants(*max_length_interval[:2]))
 
+                max_intensity_jt_list = (
+                    get_jitter_local(pulse, *max_intensity_interval[:2]))
+
+                max_length_jt_list = (
+                    get_jitter_local(pulse, *max_length_interval[:2]))
+
             if vowel_selection is None or vowel_selection == False:
                 #print('Calculating lists for all intervals...')
 
@@ -2386,6 +2390,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
                 formant_list = [
                     sound.get_interval_formants(begin_sec, end_sec)
+                        for begin_sec, end_sec, text in interval_list]
+
+                jitter_list = [
+                    get_jitter_local(pulse, begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
 
                 # Preparing data of all other intervals.
