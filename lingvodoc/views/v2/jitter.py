@@ -2,6 +2,7 @@ import bisect
 import math
 import numpy as np
 from scipy.interpolate import CubicSpline
+from pdb import set_trace as A
 
 voiced_floor = 75
 voiced_ceiling = 600
@@ -316,6 +317,7 @@ def pitch_to_point(sound, pitch):
 
         return point
     except Exception as e:
+        print(e)
         raise ValueError(f"{sound} & {pitch}: not converted to PointProcess (cc).") from e
 
 # OK
@@ -329,7 +331,7 @@ def get_voiced_interval_after(pitch, after, edges):
 
     # Search for first voiced frame
     while ileft < pitch['nx']:
-        if voiced_floor < pitch['frames'][ileft]['candidates'][0] < voiced_ceiling:
+        if voiced_floor < pitch['frames'][ileft]['candidates'][0]['frequency'] < voiced_ceiling:
             break
         ileft += 1
     if ileft >= pitch['nx']:
@@ -338,7 +340,7 @@ def get_voiced_interval_after(pitch, after, edges):
     # Search for last voiced frame
     iright = ileft
     while iright < pitch['nx']:
-        if not voiced_floor < pitch['frames'][iright]['candidates'][0] < voiced_ceiling:
+        if not voiced_floor < pitch['frames'][iright]['candidates'][0]['frequency'] < voiced_ceiling:
             break
         iright += 1
     iright -= 1

@@ -2320,7 +2320,6 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             # Pitches are calculated for the whole sound content at once.
             sound_dict, pitch_dict = sound.get_pitch()
             pulse = pitch_to_point(sound_dict, pitch_dict)
-            A()
 
             # Getting desired intervals and mean values within them from the obtained 'pitch'.
             with open('pitch.log', 'a') as f:
@@ -2381,7 +2380,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
                 max_length_jt_list = (
                     get_jitter_local(pulse, *max_length_interval[:2]))
-                A()
+
             if vowel_selection is None or vowel_selection == False:
                 print('Calculating lists for all intervals...')
 
@@ -2392,11 +2391,11 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 formant_list = [
                     sound.get_interval_formants(begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
-
+                '''
                 jitter_list = [
                     get_jitter_local(pulse, begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
-                A()
+                '''
                 # Preparing data of all other intervals.
 
                 str_list = [
@@ -2535,7 +2534,7 @@ def process_sound_markup(
             '{0} [CACHE {1}]: exception'.format(
             log_str, cache_key))
 
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return None
 
@@ -2647,7 +2646,7 @@ def process_sound_markup(
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('{0}: exception'.format(log_str))
-            log.warn(traceback_string)
+            log.debug(traceback_string)
 
             caching.CACHE.set(cache_key, ('exception', exception,
                 traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
@@ -4472,7 +4471,7 @@ def phonology(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         request.response.status = HTTPInternalServerError.code
 
@@ -4500,7 +4499,7 @@ def std_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -4540,7 +4539,7 @@ def async_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('phonology: exception')
-            log.warn(traceback_string)
+            log.debug(traceback_string)
 
             if task_status is not None:
                 task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -4858,7 +4857,7 @@ def analyze_sound_markup(
         traceback_string = ''.join(traceback.format_exception(
             exception, exception, exception.__traceback__))[:-1]
 
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         err_msg += "ERROR: Sound-markup analysis general exception.\n"
 
@@ -5481,7 +5480,7 @@ def perform_phonology(args, task_status, storage):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('compile_workbook: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         # If we failed to create an Excel file, we terminate with error.
 
@@ -5714,7 +5713,7 @@ class Sound_Markup_Iterator(object):
                     exception, exception, exception.__traceback__))[:-1]
 
                 log.debug('{0}: exception'.format(row_str))
-                log.warn(traceback_string)
+                log.debug(traceback_string)
 
 
 class Tier_List_Iterator(Sound_Markup_Iterator):
@@ -5792,7 +5791,7 @@ def get_tier_list(perspective_cid, perspective_oid):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_tier_list: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return False, traceback_string
 
@@ -5983,7 +5982,7 @@ def get_skip_list(perspective_cid, perspective_oid):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_skip_list: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return False, traceback_string
 
@@ -6110,7 +6109,7 @@ def get_link_perspective_data(perspective_id, field_id_list):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_link_perspective_data: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         return False, traceback_string
 
@@ -6208,7 +6207,7 @@ def sound_and_markup(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('sound_and_markup: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6242,7 +6241,7 @@ def std_sound_and_markup(
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('sound_and_markup: exception')
-        log.warn(traceback_string)
+        log.debug(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6289,7 +6288,7 @@ def async_sound_and_markup(
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('sound_and_markup: exception')
-            log.warn(traceback_string)
+            log.debug(traceback_string)
 
             if task_status is not None:
                 task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6599,7 +6598,7 @@ def perform_sound_and_markup(
                     traceback_string = ''.join(traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1]
 
-                    log.warn(traceback_string)
+                    log.debug(traceback_string)
 
                     task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / total_count)),
                         'Archiving sound and markup')
@@ -6677,7 +6676,7 @@ def perform_sound_and_markup(
                     traceback_string = ''.join(traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1]
 
-                    log.warn(traceback_string)
+                    log.debug(traceback_string)
 
                     task_status.set(3, int(math.floor(50.5 + (index + 1) * 49.5 / sound_count)),
                         'Archiving sounds without markup')
@@ -6848,7 +6847,7 @@ def perform_sound_and_markup(
                         traceback_string = ''.join(traceback.format_exception(
                             exception, exception, exception.__traceback__))[:-1]
 
-                        log.warn(traceback_string)
+                        log.debug(traceback_string)
 
                         task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / len(update_list))),
                             'Archiving sound and markup')
@@ -6919,7 +6918,7 @@ def perform_sound_and_markup(
                         traceback_string = ''.join(traceback.format_exception(
                             exception, exception, exception.__traceback__))[:-1]
 
-                        log.warn(traceback_string)
+                        log.debug(traceback_string)
 
                         task_status.set(3,
                             int(math.floor(50.5 + (index + 1) * 49.5 / len(sound_update_list))),
