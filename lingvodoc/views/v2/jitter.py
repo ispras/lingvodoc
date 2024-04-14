@@ -237,7 +237,10 @@ def find_maximum_correlation(sound, t1, windowLength, tmin2, tmax2):
 # OK
 def pitch_to_point(sound, pitch):
     try:
-        point = []
+        point = {
+            'nt': 0,
+            't': []
+        }
         t = pitch['xmin']
         added_right = -1e308
         global_peak = np.max(np.abs(sound['z']))  # with interpolation?
@@ -268,7 +271,7 @@ def pitch_to_point(sound, pitch):
                         True, True)
 
             assert t_max is not None
-            point.append(t_max)
+            point['t'].append(t_max)
 
             t_save = t_max
             while True:
@@ -285,11 +288,11 @@ def pitch_to_point(sound, pitch):
                     t_max -= 1.0 / f0
                 if t_max < t_left:
                     if correlation > 0.7 and peak > 0.023333 * global_peak and t_max - added_right > 0.8 / f0:
-                        point.append(t_max)
+                        point['t'].append(t_max)
                     break
                 if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
                     if t_max - added_right > 0.8 / f0:
-                        point.append(t_max)
+                        point['t'].append(t_max)
 
             t_max = t_save
             while True:
@@ -306,14 +309,17 @@ def pitch_to_point(sound, pitch):
                     t_max += 1.0 / f0
                 if t_max > t_right:
                     if correlation > 0.7 and peak > 0.023333 * global_peak:
-                        point.append(t_max)
+                        point['t'].append(t_max)
                         added_right = t_max
                     break
                 if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
-                    point.append(t_max)
+                    point['t'].append(t_max)
                     added_right = t_max
 
             t = t_right
+
+        point['t'].sort()
+        point['nt'] = len(point['t'])
 
         return point
     except Exception as e:
