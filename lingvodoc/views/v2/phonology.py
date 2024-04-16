@@ -442,7 +442,7 @@ def sound_into_pitch_frame(
         ac, r, imax, localMean,
         x1, dx, nx, ny, z, **rest):
 
-    leftSample = (t - x1) // dx  # +1?
+    leftSample = (t - x1) // dx
     rightSample = leftSample + 1
 
     for channel in range(ny):
@@ -1566,11 +1566,11 @@ class AudioPraatLike(object):
             for frame in range(nx):
                 z[channel].append(plain_z[ny * frame + channel])  # signal
 
-        minimumPitch = 75
-        maximumPitch = 600
+        minimumPitch = 50 # 75?
+        maximumPitch = 800 # 600?
         periodsPerWindow = 3.0
         oversampling = 4
-        dt = 0.015 #periodsPerWindow / minimumPitch / oversampling
+        dt = periodsPerWindow / minimumPitch / oversampling # 0.015
         assert minimumPitch >= periodsPerWindow / duration, \
             f"To analyse this Sound, 'pitch floor' must not be less than {periodsPerWindow / duration} Hz."
         maximumPitch = min(0.5 / dx, maximumPitch)

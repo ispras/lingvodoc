@@ -1,7 +1,7 @@
 import bisect
 import math
 import numpy as np
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, interp1d
 from pdb import set_trace as A
 
 voiced_floor = 75
@@ -78,7 +78,7 @@ def unidirectional_autowindow(pulse, tmin, tmax):
 # OK
 def get_mean_period(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
+    first, last = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax) - 1
     numberOfPeriods = 0
     dsum = 0.0
     for ipoint in range(first, last):
@@ -90,7 +90,7 @@ def get_mean_period(pulse, tmin, tmax):
 # OK
 def get_jitter_local(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    first, last = bisect.bisect_right(pulse['t'], tmin), bisect.bisect_left(pulse['t'], tmax)
+    first, last = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax) - 1
     numberOfPeriods = max(0, last - first)
     if numberOfPeriods < 2:
         return None
@@ -245,9 +245,18 @@ def pitch_to_point(sound, pitch):
         added_right = -1e308
         global_peak = np.max(np.abs(sound['z']))  # with interpolation?
 
-        get_value_at_time = CubicSpline(
+        # get_value_at_time = CubicSpline(
+        get_value_at_time = interp1d(
             [pitch['x1'] + pitch['dx'] * n for n in range(pitch['nx'])],
             [frame['candidates'][0]['frequency'] for frame in pitch['frames']])
+
+        '''
+        # Debug        
+        for n in range(40, 140):
+            print(f"{n + 1 :03}'th at {pitch['x1'] + pitch['dx'] * n :.4f} sec | "
+                  f"{pitch['frames'][n]['candidates'][0]['frequency'] :08.4f} | "
+                  f"{pitch['frames'][n]['candidates'][0]['strength'] :06.4f}\n")
+        '''
 
         # Cycle over all voiced intervals
         edges = [0, 0]
@@ -320,7 +329,7 @@ def pitch_to_point(sound, pitch):
 
         point['t'].sort()
         point['nt'] = len(point['t'])
-
+        #A()
         return point
     except Exception as e:
         print(e)
