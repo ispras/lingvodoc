@@ -66,7 +66,7 @@ from pyramid.view import view_config
 
 import scipy.linalg
 from scipy.interpolate import CubicSpline
-from scipy.optimize import fmin
+from scipy.optimize import minimize_scalar
 
 from sqlalchemy import and_, create_engine, func, tuple_
 from sqlalchemy.orm import aliased
@@ -481,7 +481,7 @@ def sound_into_pitch_frame(
     endSample = int(min(nsamp_window, halfnsamp_window + halfnsamp_period))
 
     for channel in range(ny):
-        for j in range(startSample, endSample + 1):
+        for j in range(startSample, endSample):
             value = math.fabs(frame[channel][j])
             if value > localPeak:
                 localPeak = value
@@ -531,6 +531,14 @@ def sound_into_pitch_frame(
     # Use cubic spline to interpolete discrete values and get function for exact argument
     r_offset_spline_func = CubicSpline(numpy.arange(brent_ixmax - offset),
                                        list(r[offset + 1:]) + list(r[:- offset]))
+    def inverted_spline(x):
+        return (-r_offset_spline_func(x))
+
+    '''
+    x = numpy.arange(0, brent_ixmax - offset, 0.5)
+    pyplot.plot(x, r_offset_spline_func(x))
+    pyplot.savefig('spline.png')
+    '''
 
     imax[0] = 0
     for i in range(2, min(maximumLag, brent_ixmax)):
@@ -590,8 +598,10 @@ def sound_into_pitch_frame(
     '''
     for i in range(1, pitchFrame['nCandidates']):
         # Get improved x and y of function maximum after cubic spline interpolation
-        xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset, disp=False)[0]
+        x = imax[i] - offset
+        xmid = minimize_scalar(inverted_spline, bounds=(x - 1, x + 1), method='bounded').x
         ymid = float(r_offset_spline_func(xmid))
+        #A()
         xmid += offset
         pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
         if ymid > 1.0:
