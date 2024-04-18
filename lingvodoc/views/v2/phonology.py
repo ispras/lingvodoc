@@ -601,9 +601,8 @@ def sound_into_pitch_frame(
         x = imax[i] - offset
         xmid = minimize_scalar(inverted_spline, bounds=(x - 1, x + 1), method='bounded').x
         ymid = float(r_offset_spline_func(xmid))
-        #A()
         xmid += offset
-        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
+        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid - 1 # -1 is an empirique delta due to used methods
         if ymid > 1.0:
             ymid = 1.0 / ymid
         pitchFrame['candidates'][i]['strength'] = ymid
@@ -2406,8 +2405,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
                 jitter_list = [
                     get_jitter_local(pulse, begin_sec, end_sec)
-                        for begin_sec, end_sec, text in interval_list]
-                A()
+                        for begin_sec, end_sec, text in interval_list[1:3]] # debug
+
+                log.debug(f"jitter_list: {jitter_list}"); A()
+
                 # Preparing data of all other intervals.
 
                 str_list = [

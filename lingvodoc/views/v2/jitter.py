@@ -4,8 +4,8 @@ import numpy as np
 from scipy.interpolate import CubicSpline, interp1d
 from pdb import set_trace as A
 
-voiced_floor = 75
-voiced_ceiling = 600
+voiced_floor = 50
+voiced_ceiling = 800
 pmin = 0.8 / voiced_ceiling
 pmax = 1.25 / voiced_floor
 maximumPeriodFactor = 1.3
@@ -78,7 +78,8 @@ def unidirectional_autowindow(pulse, tmin, tmax):
 # OK
 def get_mean_period(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    first, last = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax) - 1
+    left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
+    first, last = left, right - bool(right)  # decrease right if it is not zero
     numberOfPeriods = 0
     dsum = 0.0
     for ipoint in range(first, last):
@@ -90,7 +91,8 @@ def get_mean_period(pulse, tmin, tmax):
 # OK
 def get_jitter_local(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    first, last = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax) - 1
+    left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
+    first, last = left, right - bool(right)  # decrease right if it is not zero
     numberOfPeriods = max(0, last - first)
     if numberOfPeriods < 2:
         return None
@@ -133,17 +135,15 @@ def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_
     include_all = (include_maxima == include_minima)
     imin = imax = 0
 
-    if n < 3:
+    if n < 2:
         if n <= 0:
-            return 0.0
-        elif n == 1:
-            return 1.0
+            return None
         else:
             x1 = (channel1[0] + channel2[0]) / 2 if channel2 is not None else channel1[0]
             x2 = (channel1[1] + channel2[1]) / 2 if channel2 is not None else channel1[1]
             xleft = abs(x1) if include_all else x1 if include_maxima else -x1
             xright = abs(x2) if include_all else x2 if include_maxima else -x2
-            return 1.0 if xleft > xright else 2.0 if xleft < xright else 1.5
+            return 0.0 if xleft > xright else 1.0 if xleft < xright else 0.5
 
     minimum = maximum = (channel1[0] + channel2[0]) / 2 if channel2 is not None else channel1[0]
     for i in range(1, n):
@@ -156,7 +156,7 @@ def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_
             imax = i
 
     if minimum == maximum:
-        return 0.5 * (n + 1.0)
+        return 0.5 * n  # +1?
 
     if include_all:
         if abs(minimum) > abs(maximum):
@@ -185,8 +185,8 @@ def sound_find_extremum(sound, tmin, tmax, include_maxima, include_minima):
     imax = min(x_to_sampled_index(sound, tmax, 'high'), sound['nx'] - 1)
     iextremum = find_extremum_3(sound['z'][0], sound['z'][1] if sound['ny'] > 1 else None, imin, imax - imin,
                                 include_maxima, include_minima)
-    if iextremum != 0.0:
-        # Indexes 'imin' and 'iextremum' starts from zero
+    if iextremum is not None:
+        # Indexes 'imin' and 'iextremum' start from zero
         return sound['x1'] + (imin + iextremum) * sound['dx']
     else:
         return 0.5 * (tmin + tmax)
@@ -338,7 +338,7 @@ def pitch_to_point(sound, pitch):
 # OK
 def get_voiced_interval_after(pitch, after, edges):
     # Index starts from zero
-    ileft = math.ceil((after - pitch['x1']) / pitch['dx'])
+    ileft = x_to_sampled_index(pitch, after, to_int='high')
     if ileft >= pitch['nx']:
         return False   # offright
     if ileft < 0:
