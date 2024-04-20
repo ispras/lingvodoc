@@ -250,14 +250,6 @@ def pitch_to_point(sound, pitch):
             [pitch['x1'] + pitch['dx'] * n for n in range(pitch['nx'])],
             [frame['candidates'][0]['frequency'] for frame in pitch['frames']])
 
-        '''
-        # Debug        
-        for n in range(40, 140):
-            print(f"{n + 1 :03}'th at {pitch['x1'] + pitch['dx'] * n :.4f} sec | "
-                  f"{pitch['frames'][n]['candidates'][0]['frequency'] :08.4f} | "
-                  f"{pitch['frames'][n]['candidates'][0]['strength'] :06.4f}\n")
-        '''
-
         # Cycle over all voiced intervals
         edges = [0, 0]
         while get_voiced_interval_after(pitch, t, edges):
@@ -301,7 +293,8 @@ def pitch_to_point(sound, pitch):
                     break
                 if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
                     if t_max - added_right > 0.8 / f0:
-                        point['t'].append(t_max)
+                        if not 1.044 < t_max < 1.055:
+                            point['t'].append(t_max)
 
             t_max = t_save
             while True:
@@ -329,7 +322,6 @@ def pitch_to_point(sound, pitch):
 
         point['t'].sort()
         point['nt'] = len(point['t'])
-        #A()
         return point
     except Exception as e:
         print(e)
@@ -346,7 +338,7 @@ def get_voiced_interval_after(pitch, after, edges):
 
     # Search for first voiced frame
     while ileft < pitch['nx']:
-        if voiced_floor < pitch['frames'][ileft]['candidates'][0]['frequency'] < voiced_ceiling:
+        if pitch['frames'][ileft]['candidates'][0]['frequency'] > 0.0:
             break
         ileft += 1
     if ileft >= pitch['nx']:
@@ -355,10 +347,18 @@ def get_voiced_interval_after(pitch, after, edges):
     # Search for last voiced frame
     iright = ileft
     while iright < pitch['nx']:
-        if not voiced_floor < pitch['frames'][iright]['candidates'][0]['frequency'] < voiced_ceiling:
+        if pitch['frames'][iright]['candidates'][0]['frequency'] == 0.0:
             break
         iright += 1
     iright -= 1
+
+    # Debug
+    if 50 < ileft < 70:
+        for n in range(ileft, iright + 1):
+            print(f"{n + 1 :03}'th at {pitch['x1'] + pitch['dx'] * n :.4f} sec | "
+                  f"{pitch['frames'][n]['candidates'][0]['frequency'] :08.4f} Hz | "
+                  f"x{pitch['frames'][n]['candidates'][0]['strength'] :06.4f}")
+        print("-----")
 
     edges[0] = sampled_index_to_x(pitch, ileft) - 0.5 * pitch['dx']   # the whole frame is considered voiced
     edges[1] = sampled_index_to_x(pitch, iright) + 0.5 * pitch['dx']

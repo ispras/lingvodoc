@@ -2405,7 +2405,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
                 jitter_list = [
                     get_jitter_local(pulse, begin_sec, end_sec)
-                        for begin_sec, end_sec, text in interval_list[1:3]] # debug
+                        for begin_sec, end_sec, text in interval_list[2:3]] # debug
 
                 log.debug(f"jitter_list: {jitter_list}"); A()
 
