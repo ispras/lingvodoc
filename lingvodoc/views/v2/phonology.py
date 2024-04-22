@@ -66,7 +66,7 @@ from pyramid.view import view_config
 
 import scipy.linalg
 from scipy.interpolate import CubicSpline
-from scipy.optimize import fmin
+from scipy.optimize import minimize_scalar
 
 from sqlalchemy import and_, create_engine, func, tuple_
 from sqlalchemy.orm import aliased
@@ -96,6 +96,7 @@ from lingvodoc.models import (
 from lingvodoc.queue.celery import celery
 from lingvodoc.utils import sanitize_worksheet_name
 from lingvodoc.views.v2.utils import anonymous_userid, as_storage_file, message, storage_file, unimplemented
+from lingvodoc.views.v2.jitter import pitch_to_point, get_jitter_local
 
 from pdb import set_trace as A
 
@@ -441,7 +442,7 @@ def sound_into_pitch_frame(
         ac, r, imax, localMean,
         x1, dx, nx, ny, z, **rest):
 
-    leftSample = (t - x1) // dx  # +1?
+    leftSample = (t - x1) // dx
     rightSample = leftSample + 1
 
     for channel in range(ny):
@@ -480,10 +481,17 @@ def sound_into_pitch_frame(
     endSample = int(min(nsamp_window, halfnsamp_window + halfnsamp_period))
 
     for channel in range(ny):
-        for j in range(startSample, endSample + 1):
+        for j in range(startSample, endSample):
             value = math.fabs(frame[channel][j])
             if value > localPeak:
                 localPeak = value
+
+    '''
+    Shortcut: absolute silence is always voiceless.
+    We are done for this frame.
+    '''
+    if localPeak == 0.0:
+        return
 
     pitchFrame['intensity'] = 1.0 if localPeak > globalPeak else localPeak / globalPeak
 
@@ -514,22 +522,24 @@ def sound_into_pitch_frame(
         r[-i] = r[i] = ac[i] / (ac[0] * windowR[i])
 
     '''
-    import matplotlib.pyplot as plt
-    plt.plot(numpy.arange(len(r)), r)
-    plt.savefig('r.png')
-    '''
-
-    '''
-    Shortcut: absolute silence is always voiceless.
-	We are done for this frame.
-    '''
-    if localPeak == 0.0:
-        return
-
-    '''
 	Find the strongest maxima of the correlation of this frame,
 	and register them as candidates.
     '''
+
+    offset = - brent_ixmax - 1
+
+    # Use cubic spline to interpolete discrete values and get function for exact argument
+    r_offset_spline_func = CubicSpline(numpy.arange(brent_ixmax - offset),
+                                       list(r[offset + 1:]) + list(r[:- offset]))
+    def inverted_spline(x):
+        return (-r_offset_spline_func(x))
+
+    '''
+    x = numpy.arange(0, brent_ixmax - offset, 0.5)
+    pyplot.plot(x, r_offset_spline_func(x))
+    pyplot.savefig('spline.png')
+    '''
+
     imax[0] = 0
     for i in range(2, min(maximumLag, brent_ixmax)):
         if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:  # maximum?
@@ -541,11 +551,6 @@ def sound_into_pitch_frame(
             dr = 0.5 * (r[i+1] - r[i-1])
             d2r = 2.0 * r[i] - r[i-1] - r[i+1]
             frequencyOfMaximum = 1.0 / dx / (i + dr / d2r)
-            offset = - brent_ixmax - 1
-
-            # Use cubic spline to interpolete discrete values and get function for exact argument
-            r_offset_spline_func =  CubicSpline(numpy.arange(brent_ixmax - offset),
-                                                list(r[ offset + 1: ]) + list(r[ :- offset ]))
             strengthOfMaximum = float(r_offset_spline_func(1.0 / dx / frequencyOfMaximum - offset))
 
             '''
@@ -592,12 +597,12 @@ def sound_into_pitch_frame(
     Second pass: for extra precision, maximize cubic spline interpolation.
     '''
     for i in range(1, pitchFrame['nCandidates']):
-        offset = -brent_ixmax - 1
         # Get improved x and y of function maximum after cubic spline interpolation
-        xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset, disp=False)[0]
+        x = imax[i] - offset
+        xmid = minimize_scalar(inverted_spline, bounds=(x - 1, x + 1), method='bounded').x
         ymid = float(r_offset_spline_func(xmid))
         xmid += offset
-        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
+        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid - 1.0 # -1.0 is an empirique delta due to used methods
         if ymid > 1.0:
             ymid = 1.0 / ymid
         pitchFrame['candidates'][i]['strength'] = ymid
@@ -1570,19 +1575,19 @@ class AudioPraatLike(object):
             for frame in range(nx):
                 z[channel].append(plain_z[ny * frame + channel])  # signal
 
-        minimumPitch = 75
-        maximumPitch = 600
+        minimumPitch = 50 # 75?
+        maximumPitch = 800 # 600?
         periodsPerWindow = 3.0
         oversampling = 4
-        dt = 0.015 #periodsPerWindow / minimumPitch / oversampling
+        dt = periodsPerWindow / minimumPitch / oversampling # 0.015
         assert minimumPitch >= periodsPerWindow / duration, \
             f"To analyse this Sound, 'pitch floor' must not be less than {periodsPerWindow / duration} Hz."
         maximumPitch = min(0.5 / dx, maximumPitch)
 
         maxnCandidates = 15
-        silenceThreshold = 0.03
-        voicingThreshold = 0.45
-        octaveCost = 0.01
+        silenceThreshold = 0.09 # 0.03?
+        voicingThreshold = 0.5 # 0.45?
+        octaveCost = 0.055 # 0.01?
         octaveJumpCost = 0.35
         voicedUnvoicedCost = 0.14
 
@@ -1623,8 +1628,8 @@ class AudioPraatLike(object):
 
         # Create the resulting pitch contour.
         thee = {
-            #'xmin': x1,
-            #'xmax': x1 + duration,
+            'xmin': x1,
+            'xmax': x1 + duration,
             'nx': numberOfFrames,
             'dx': dt,
             'x1': t1,
@@ -1767,7 +1772,8 @@ class AudioPraatLike(object):
                     [frame['candidates'][1]['frequency'] for frame in thee['frames']])
         pyplot.savefig('freq.png')
         '''
-        return thee
+        return sound, thee
+
 
 def find_max_interval_praat(sound, interval_list):
     """
@@ -2172,12 +2178,14 @@ class Tier_Result(object):
         mean_interval_length,
         max_length_str,
         max_length_r_length,
+        max_length_jt_local,
         max_length_p_mean,
         max_length_i_list,
         max_length_f_list,
         max_length_source_index,
         max_intensity_str,
         max_intensity_r_length,
+        max_intensity_jt_local,
         max_intensity_p_mean,
         max_intensity_i_list,
         max_intensity_f_list,
@@ -2193,6 +2201,7 @@ class Tier_Result(object):
 
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
+        self.max_length_jt_local = max_length_jt_local
         self.max_length_p_mean = max_length_p_mean
         self.max_length_i_list = max_length_i_list
         self.max_length_f_list = max_length_f_list
@@ -2200,6 +2209,7 @@ class Tier_Result(object):
 
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
+        self.max_intensity_jt_local = max_intensity_jt_local
         self.max_intensity_p_mean = max_intensity_p_mean
         self.max_intensity_i_list = max_intensity_i_list
         self.max_intensity_f_list = max_intensity_f_list
@@ -2220,11 +2230,12 @@ class Tier_Result(object):
             ([interval_str,
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
+                j_local,
                 p_mean,
                 i_list,
                 f_list)
 
-                for interval_str, r_length, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, j_local, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -2321,9 +2332,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             max_length_interval = interval_list[max_length_index]
 
             # Pitches are calculated for the whole sound content at once.
-            pitch_list = sound.get_pitch()
+            sound_dict, pitch_dict = sound.get_pitch()
+            pulse = pitch_to_point(sound_dict, pitch_dict)
 
-            # Getting desired intervals and mean values within them from the obtained 'pitch_list'.
+            # Getting desired intervals and mean values within them from the obtained 'pitch_dict'.
             with open('pitch.log', 'a') as f:
 
                 cur_frame = 0
@@ -2331,12 +2343,12 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 xl_p_mean = xi_p_mean = 0
                 for begin_sec, end_sec, text in interval_list:
                     sum_fq = num_fq = 0
-                    for iframe in range(cur_frame, pitch_list['nx']):
-                        point = pitch_list['x1'] + pitch_list['dx'] * iframe
+                    for iframe in range(cur_frame, pitch_dict['nx']):
+                        point = pitch_dict['x1'] + pitch_dict['dx'] * iframe
                         if point <= begin_sec:
                             continue
                         elif begin_sec < point < end_sec:
-                            freq = pitch_list['frames'][iframe]['candidates'][0]['frequency']
+                            freq = pitch_dict['frames'][iframe]['candidates'][0]['frequency']
                             print(f"'{text}' | {point:.3f} sec | {freq:.3f} Hz", file=f)
                             sum_fq += freq
                             num_fq += (freq > 0)
@@ -2360,10 +2372,12 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             max_length_i_list = []
             max_intensity_f_list = []
             max_length_f_list = []
+            max_intensity_jt_local = 0
+            max_length_jt_local = 0
             interval_data_list = []
 
             if vowel_selection is None or vowel_selection == True:
-                #print('Calculating max_intensity_ and max_length_ lists..')
+                print('Calculating max_intensity_ and max_length_ lists..')
 
                 max_intensity_i_list = (
                     sound.get_interval_intensity(*max_intensity_interval[:2]))
@@ -2377,8 +2391,14 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 max_length_f_list = (
                     sound.get_interval_formants(*max_length_interval[:2]))
 
+                max_intensity_jt_local = (
+                    get_jitter_local(pulse, *max_intensity_interval[:2])[0])
+
+                max_length_jt_local = (
+                    get_jitter_local(pulse, *max_length_interval[:2])[0])
+
             if vowel_selection is None or vowel_selection == False:
-                #print('Calculating lists for all intervals...')
+                print('Calculating lists for all intervals...')
 
                 intensity_list = [
                     sound.get_interval_intensity(begin_sec, end_sec)
@@ -2387,6 +2407,12 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 formant_list = [
                     sound.get_interval_formants(begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
+
+                jitter_list = [
+                    get_jitter_local(pulse, begin_sec, end_sec)
+                        for begin_sec, end_sec, text in interval_list]
+
+                log.debug(f"jitter_list: {jitter_list}")
 
                 # Preparing data of all other intervals.
 
@@ -2411,6 +2437,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
                     (interval_str,
                         (end - begin) / mean_interval_length,
+                        f'{j_local:.3f}',
                         f'{p_mean:.3f}',
                         [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                         list(map('{0:.3f}'.format, f_list)),
@@ -2421,6 +2448,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                         for (
                             index,
                                 (interval_str,
+                                 j_local,
                                  p_mean,
                                  (_, i_min, i_max),
                                  f_list,
@@ -2430,6 +2458,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                             enumerate(
                                 zip(
                                     str_list,
+                                    jitter_list,
                                     pitch_means,
                                     intensity_list,
                                     formant_list,
@@ -2463,12 +2492,14 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     mean_interval_length,
                     max_length_str,
                     max_length / mean_interval_length,
+                    f'{max_length_jt_local:.3f}',
                     f'{xl_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_length_i_list)),
                     list(map('{0:.3f}'.format, max_length_f_list)),
                     max_length_source_index,
                     max_intensity_str,
                     (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
+                    f'{max_intensity_jt_local:.3f}',
                     f'{xi_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_intensity_i_list)),
                     list(map('{0:.3f}'.format, max_intensity_f_list)),
@@ -2848,7 +2879,7 @@ def chart_data(f_2d_tt_list, f_3d_tt_list):
     if len(filtered_3d_list) < (len(distance_3d_list) + 1) // 2:
 
         sorted_list = [
-                
+
             (f_3d, tt)
             for distance_squared, f_3d, tt in distance_3d_list]
 
@@ -2926,7 +2957,7 @@ def chart_definition_list(
         chart_data_2d_list[i] = list(chart_data_2d_list[i])
 
         chart_data_2d_list[i][4] = (
-                
+
             list(
                 filter(
                     lambda f_2d_tt:
@@ -3153,6 +3184,7 @@ def compile_workbook(
 
             'Longest (seconds) interval',
             'Relative length',
+            'Jitter local',
             'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
@@ -3160,6 +3192,7 @@ def compile_workbook(
 
             'Highest intensity (dB) interval',
             'Relative length',
+            'Jitter local',
             'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
@@ -3173,6 +3206,7 @@ def compile_workbook(
 
             'Interval',
             'Relative length',
+            'Jitter local',
             'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
@@ -3197,23 +3231,25 @@ def compile_workbook(
         if args.vowel_selection:
 
             worksheet_results.set_column(0, 2, 20)
-            worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 7, 8)
-            worksheet_results.set_column(8, 10, 10)
-            worksheet_results.set_column(11, 11, 4)
-            worksheet_results.set_column(12, 12, 20)
-            worksheet_results.set_column(13, 13, 8, format_percent)
-            worksheet_results.set_column(14, 17, 8)
-            worksheet_results.set_column(18, 20, 10)
-            worksheet_results.set_column(21, 22, 4)
+            worksheet_results.set_column(3, 4, 8, format_percent)
+            worksheet_results.set_column(5, 8, 8)
+            worksheet_results.set_column(9, 11, 10)
+            worksheet_results.set_column(12, 12, 4)
+            worksheet_results.set_column(13, 13, 20)
+            worksheet_results.set_column(14, 14, 8, format_percent)
+            worksheet_results.set_column(15, 18, 8)
+            worksheet_results.set_column(19, 21, 10)
+            worksheet_results.set_column(22, 23, 4)
+            worksheet_results.set_column(24, 24, 8, format_percent)
 
         else:
 
             worksheet_results.set_column(0, 2, 20)
-            worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 7, 8)
-            worksheet_results.set_column(8, 10, 10)
-            worksheet_results.set_column(11, 13, 4)
+            worksheet_results.set_column(3, 4, 8, format_percent)
+            worksheet_results.set_column(5, 8, 8)
+            worksheet_results.set_column(9, 11, 10)
+            worksheet_results.set_column(12, 14, 4)
+            worksheet_results.set_column(15, 15, 8, format_percent)
 
         worksheet_dict[group] = (
 
@@ -3341,6 +3377,7 @@ def compile_workbook(
                                 ' '.join([vowel_a] + text_a_list[1:]),
                                 round(tier_result.max_length_r_length, 4)] +
 
+                            [ float(tier_result.max_length_jt_local)] +
                             [ float(tier_result.max_length_p_mean) ] +
                             i_list_a +
                             f_list_a +
@@ -3349,6 +3386,7 @@ def compile_workbook(
                                 ' '.join([vowel_b] + text_b_list[1:]),
                                 round(tier_result.max_intensity_r_length, 4)] +
 
+                            [ float(tier_result.max_intensity_jt_local)] +
                             [ float(tier_result.max_intensity_p_mean) ] +
                             i_list_b +
                             f_list_b +
@@ -3399,7 +3437,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
+                            j_local, p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -3421,6 +3459,7 @@ def compile_workbook(
                                     ' '.join([vowel] + interval_str.split()[1:]),
                                     round(interval_r_length, 4)] +
 
+                                [float(j_local)] +
                                 [float(p_mean)] +
                                 i_list +
                                 f_list +
@@ -3606,7 +3645,7 @@ def compile_workbook(
                 reverse = True)
 
             chart_dict_list, table_2d_row_index = (
-                    
+
                 chart_definition_list(
                     chart_data_2d_list, worksheet_table_2d,
                     min_2d_f1, max_2d_f1, min_2d_f2, max_2d_f2,
@@ -3704,7 +3743,7 @@ def compile_workbook(
                     list(chart_data_3d_list[i]))
 
                 chart_data_3d_list[i][4] = (
-                        
+
                     list(
                         filter(
                             lambda f_3d_tt:
@@ -3749,7 +3788,7 @@ def compile_workbook(
 
                     xc_outlier_list, xl_outlier_list = (
                         zip(*tt_list))
-                
+
                 f1_column = column_list[index * 5]
                 f2_column = column_list[index * 5 + 1]
                 f3_column = column_list[index * 5 + 2]
@@ -4210,7 +4249,7 @@ class Phonology_Parameters(object):
                 perspective_id_list = [
                     tuple(map(int, perspective_str.split(',')))
                     for perspective_str in perspective_list_str.split('|')]
-                    
+
                 self.link_field_list.append((field_id, perspective_id_list))
 
             self.link_perspective_list = []
@@ -5236,7 +5275,7 @@ def perform_phonology(args, task_status, storage):
             else:
 
                 # Ok, we don't yet have a text field, but maybe we have an identifier to find the field by?
-                
+
                 if perspective_id in args.link_perspective_dict:
                     text_field_id = args.link_perspective_dict[perspective_id]
 
