@@ -2179,12 +2179,14 @@ class Tier_Result(object):
         max_length_str,
         max_length_r_length,
         max_length_p_mean,
+        max_length_jt_local,
         max_length_i_list,
         max_length_f_list,
         max_length_source_index,
         max_intensity_str,
         max_intensity_r_length,
         max_intensity_p_mean,
+        max_intensity_jt_local,
         max_intensity_i_list,
         max_intensity_f_list,
         max_intensity_source_index,
@@ -2200,6 +2202,7 @@ class Tier_Result(object):
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
         self.max_length_p_mean = max_length_p_mean
+        self.max_length_jt_local = max_length_jt_local
         self.max_length_i_list = max_length_i_list
         self.max_length_f_list = max_length_f_list
         self.max_length_source_index = max_length_source_index
@@ -2207,6 +2210,7 @@ class Tier_Result(object):
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
         self.max_intensity_p_mean = max_intensity_p_mean
+        self.max_intensity_jt_local = max_intensity_jt_local
         self.max_intensity_i_list = max_intensity_i_list
         self.max_intensity_f_list = max_intensity_f_list
         self.max_intensity_source_index = max_intensity_source_index
@@ -3225,25 +3229,25 @@ def compile_workbook(
         if args.vowel_selection:
 
             worksheet_results.set_column(0, 2, 20)
-            worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 7, 8)
-            worksheet_results.set_column(8, 10, 10)
-            worksheet_results.set_column(11, 11, 4)
-            worksheet_results.set_column(12, 12, 20)
-            worksheet_results.set_column(13, 13, 8, format_percent)
-            worksheet_results.set_column(14, 17, 8)
-            worksheet_results.set_column(18, 20, 10)
-            worksheet_results.set_column(21, 22, 4)
-            worksheet_results.set_column(23, 23, 8, format_percent)
+            worksheet_results.set_column(3, 4, 8, format_percent)
+            worksheet_results.set_column(5, 8, 8)
+            worksheet_results.set_column(9, 11, 10)
+            worksheet_results.set_column(12, 12, 4)
+            worksheet_results.set_column(13, 13, 20)
+            worksheet_results.set_column(14, 14, 8, format_percent)
+            worksheet_results.set_column(15, 18, 8)
+            worksheet_results.set_column(19, 21, 10)
+            worksheet_results.set_column(22, 23, 4)
+            worksheet_results.set_column(24, 24, 8, format_percent)
 
         else:
 
             worksheet_results.set_column(0, 2, 20)
-            worksheet_results.set_column(3, 3, 8, format_percent)
-            worksheet_results.set_column(4, 7, 8)
-            worksheet_results.set_column(8, 10, 10)
-            worksheet_results.set_column(11, 13, 4)
-            worksheet_results.set_column(14, 14, 8, format_percent)
+            worksheet_results.set_column(3, 4, 8, format_percent)
+            worksheet_results.set_column(5, 8, 8)
+            worksheet_results.set_column(9, 11, 10)
+            worksheet_results.set_column(13, 14, 4)
+            worksheet_results.set_column(15, 15, 8, format_percent)
 
         worksheet_dict[group] = (
 
@@ -3372,6 +3376,7 @@ def compile_workbook(
                                 round(tier_result.max_length_r_length, 4)] +
 
                             [ float(tier_result.max_length_p_mean) ] +
+                            [ float(tier_result.max_length_jt_local) ] +
                             i_list_a +
                             f_list_a +
 
@@ -3380,6 +3385,7 @@ def compile_workbook(
                                 round(tier_result.max_intensity_r_length, 4)] +
 
                             [ float(tier_result.max_intensity_p_mean) ] +
+                            [ float(tier_result.max_intensity_jt_local) ] +
                             i_list_b +
                             f_list_b +
 
