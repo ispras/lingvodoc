@@ -2385,10 +2385,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 max_length_f_list = (
                     sound.get_interval_formants(*max_length_interval[:2]))
 
-                max_intensity_jt_list = (
+                max_intensity_jt_local = (
                     get_jitter_local(pulse, *max_intensity_interval[:2]))
 
-                max_length_jt_list = (
+                max_length_jt_local = (
                     get_jitter_local(pulse, *max_length_interval[:2]))
 
             if vowel_selection is None or vowel_selection == False:
@@ -2487,12 +2487,14 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     max_length_str,
                     max_length / mean_interval_length,
                     f'{xl_p_mean:.3f}',
+                    f'{max_length_jt_local:.3f}',
                     list(map('{0:.3f}'.format, max_length_i_list)),
                     list(map('{0:.3f}'.format, max_length_f_list)),
                     max_length_source_index,
                     max_intensity_str,
                     (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
                     f'{xi_p_mean:.3f}',
+                    f'{max_intensity_jt_local:.3f}',
                     list(map('{0:.3f}'.format, max_intensity_i_list)),
                     list(map('{0:.3f}'.format, max_intensity_f_list)),
                     max_intensity_source_index,
