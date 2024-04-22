@@ -2178,15 +2178,15 @@ class Tier_Result(object):
         mean_interval_length,
         max_length_str,
         max_length_r_length,
-        max_length_p_mean,
         max_length_jt_local,
+        max_length_p_mean,
         max_length_i_list,
         max_length_f_list,
         max_length_source_index,
         max_intensity_str,
         max_intensity_r_length,
-        max_intensity_p_mean,
         max_intensity_jt_local,
+        max_intensity_p_mean,
         max_intensity_i_list,
         max_intensity_f_list,
         max_intensity_source_index,
@@ -2201,16 +2201,16 @@ class Tier_Result(object):
 
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
-        self.max_length_p_mean = max_length_p_mean
         self.max_length_jt_local = max_length_jt_local
+        self.max_length_p_mean = max_length_p_mean
         self.max_length_i_list = max_length_i_list
         self.max_length_f_list = max_length_f_list
         self.max_length_source_index = max_length_source_index
 
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
-        self.max_intensity_p_mean = max_intensity_p_mean
         self.max_intensity_jt_local = max_intensity_jt_local
+        self.max_intensity_p_mean = max_intensity_p_mean
         self.max_intensity_i_list = max_intensity_i_list
         self.max_intensity_f_list = max_intensity_f_list
         self.max_intensity_source_index = max_intensity_source_index
@@ -2230,12 +2230,12 @@ class Tier_Result(object):
             ([interval_str,
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
-                p_mean,
                 j_local,
+                p_mean,
                 i_list,
                 f_list)
 
-                for interval_str, r_length, p_mean, j_local, i_list, f_list, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, j_local, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -2435,8 +2435,8 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
                     (interval_str,
                         (end - begin) / mean_interval_length,
-                        f'{p_mean:.3f}',
                         f'{j_local:.3f}',
+                        f'{p_mean:.3f}',
                         [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                         list(map('{0:.3f}'.format, f_list)),
                         '+' if index == max_length_index else '-',
@@ -2446,8 +2446,8 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                         for (
                             index,
                                 (interval_str,
-                                 p_mean,
                                  j_local,
+                                 p_mean,
                                  (_, i_min, i_max),
                                  f_list,
                                  (begin, end, text),
@@ -2456,8 +2456,8 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                             enumerate(
                                 zip(
                                     str_list,
-                                    pitch_means,
                                     jitter_list,
+                                    pitch_means,
                                     intensity_list,
                                     formant_list,
                                     interval_list,
@@ -2490,15 +2490,15 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     mean_interval_length,
                     max_length_str,
                     max_length / mean_interval_length,
-                    f'{xl_p_mean:.3f}',
                     f'{max_length_jt_local:.3f}',
+                    f'{xl_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_length_i_list)),
                     list(map('{0:.3f}'.format, max_length_f_list)),
                     max_length_source_index,
                     max_intensity_str,
                     (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
-                    f'{xi_p_mean:.3f}',
                     f'{max_intensity_jt_local:.3f}',
+                    f'{xi_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_intensity_i_list)),
                     list(map('{0:.3f}'.format, max_intensity_f_list)),
                     max_intensity_source_index,
@@ -3246,7 +3246,7 @@ def compile_workbook(
             worksheet_results.set_column(3, 4, 8, format_percent)
             worksheet_results.set_column(5, 8, 8)
             worksheet_results.set_column(9, 11, 10)
-            worksheet_results.set_column(13, 14, 4)
+            worksheet_results.set_column(12, 14, 4)
             worksheet_results.set_column(15, 15, 8, format_percent)
 
         worksheet_dict[group] = (
@@ -3375,8 +3375,8 @@ def compile_workbook(
                                 ' '.join([vowel_a] + text_a_list[1:]),
                                 round(tier_result.max_length_r_length, 4)] +
 
+                            [ float(tier_result.max_length_jt_local)] +
                             [ float(tier_result.max_length_p_mean) ] +
-                            [ float(tier_result.max_length_jt_local) ] +
                             i_list_a +
                             f_list_a +
 
@@ -3384,8 +3384,8 @@ def compile_workbook(
                                 ' '.join([vowel_b] + text_b_list[1:]),
                                 round(tier_result.max_intensity_r_length, 4)] +
 
+                            [ float(tier_result.max_intensity_jt_local)] +
                             [ float(tier_result.max_intensity_p_mean) ] +
-                            [ float(tier_result.max_intensity_jt_local) ] +
                             i_list_b +
                             f_list_b +
 
@@ -3435,7 +3435,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            p_mean, j_local, i_list, f_list, sign_longest, sign_highest, source_index) in (
+                            j_local, p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -3457,8 +3457,8 @@ def compile_workbook(
                                     ' '.join([vowel] + interval_str.split()[1:]),
                                     round(interval_r_length, 4)] +
 
-                                [float(p_mean)] +
                                 [float(j_local)] +
+                                [float(p_mean)] +
                                 i_list +
                                 f_list +
 
