@@ -1964,7 +1964,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 for tier_result in tier_result_list:
 
-                    for (interval_str, interval_r_length, p_mean, i_list, f_list,
+                    for (interval_str, interval_r_length, p_mean, j_local, i_list, f_list,
                         sign_longest, sign_highest, source_index) in tier_result.interval_data_list:
 
                         interval_str_list = interval_str.split()

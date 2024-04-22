@@ -2227,10 +2227,11 @@ class Tier_Result(object):
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
                 p_mean,
+                j_local,
                 i_list,
                 f_list)
 
-                for interval_str, r_length, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, p_mean, j_local, i_list, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -2431,6 +2432,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     (interval_str,
                         (end - begin) / mean_interval_length,
                         f'{p_mean:.3f}',
+                        f'{j_local:.3f}',
                         [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                         list(map('{0:.3f}'.format, f_list)),
                         '+' if index == max_length_index else '-',
@@ -2441,6 +2443,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                             index,
                                 (interval_str,
                                  p_mean,
+                                 j_local,
                                  (_, i_min, i_max),
                                  f_list,
                                  (begin, end, text),
@@ -2450,6 +2453,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                                 zip(
                                     str_list,
                                     pitch_means,
+                                    jitter_list,
                                     intensity_list,
                                     formant_list,
                                     interval_list,
@@ -3173,6 +3177,7 @@ def compile_workbook(
             'Longest (seconds) interval',
             'Relative length',
             'Pitch mean (Hz)',
+            'Jitter local',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -3180,6 +3185,7 @@ def compile_workbook(
             'Highest intensity (dB) interval',
             'Relative length',
             'Pitch mean (Hz)',
+            'Jitter local',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -3193,6 +3199,7 @@ def compile_workbook(
             'Interval',
             'Relative length',
             'Pitch mean (Hz)',
+            'Jitter local',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -3225,6 +3232,7 @@ def compile_workbook(
             worksheet_results.set_column(14, 17, 8)
             worksheet_results.set_column(18, 20, 10)
             worksheet_results.set_column(21, 22, 4)
+            worksheet_results.set_column(23, 23, 8, format_percent)
 
         else:
 
@@ -3233,6 +3241,7 @@ def compile_workbook(
             worksheet_results.set_column(4, 7, 8)
             worksheet_results.set_column(8, 10, 10)
             worksheet_results.set_column(11, 13, 4)
+            worksheet_results.set_column(14, 14, 8, format_percent)
 
         worksheet_dict[group] = (
 
@@ -3418,7 +3427,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
+                            p_mean, j_local, i_list, f_list, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -3441,6 +3450,7 @@ def compile_workbook(
                                     round(interval_r_length, 4)] +
 
                                 [float(p_mean)] +
+                                [float(j_local)] +
                                 i_list +
                                 f_list +
 
