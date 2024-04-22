@@ -2372,6 +2372,8 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             max_length_i_list = []
             max_intensity_f_list = []
             max_length_f_list = []
+            max_intensity_jt_local = 0
+            max_length_jt_local = 0
             interval_data_list = []
 
             if vowel_selection is None or vowel_selection == True:
@@ -2390,10 +2392,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     sound.get_interval_formants(*max_length_interval[:2]))
 
                 max_intensity_jt_local = (
-                    get_jitter_local(pulse, *max_intensity_interval[:2]))
+                    get_jitter_local(pulse, *max_intensity_interval[:2])[0])
 
                 max_length_jt_local = (
-                    get_jitter_local(pulse, *max_length_interval[:2]))
+                    get_jitter_local(pulse, *max_length_interval[:2])[0])
 
             if vowel_selection is None or vowel_selection == False:
                 print('Calculating lists for all intervals...')
@@ -3182,16 +3184,16 @@ def compile_workbook(
 
             'Longest (seconds) interval',
             'Relative length',
-            'Pitch mean (Hz)',
             'Jitter local',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
 
             'Highest intensity (dB) interval',
             'Relative length',
-            'Pitch mean (Hz)',
             'Jitter local',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',
@@ -3204,8 +3206,8 @@ def compile_workbook(
 
             'Interval',
             'Relative length',
-            'Pitch mean (Hz)',
             'Jitter local',
+            'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
             'Table reference',

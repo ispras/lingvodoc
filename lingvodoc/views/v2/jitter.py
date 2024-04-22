@@ -38,7 +38,7 @@ def is_period(pulse, ileft):
     else:
         previousInterval = pulse['t'][ileft] - pulse['t'][ileft - 1]
 
-    if iright >= pulse['nt']:
+    if iright >= pulse['nt'] - 1:
         nextInterval = None
     else:
         nextInterval = pulse['t'][iright + 1] - pulse['t'][iright]
