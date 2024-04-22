@@ -602,7 +602,7 @@ def sound_into_pitch_frame(
         xmid = minimize_scalar(inverted_spline, bounds=(x - 1, x + 1), method='bounded').x
         ymid = float(r_offset_spline_func(xmid))
         xmid += offset
-        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid - 1 # -1 is an empirique delta due to used methods
+        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid - 1.0 # -1.0 is an empirique delta due to used methods
         if ymid > 1.0:
             ymid = 1.0 / ymid
         pitchFrame['candidates'][i]['strength'] = ymid
@@ -1585,9 +1585,9 @@ class AudioPraatLike(object):
         maximumPitch = min(0.5 / dx, maximumPitch)
 
         maxnCandidates = 15
-        silenceThreshold = 0.03
-        voicingThreshold = 0.45
-        octaveCost = 0.01
+        silenceThreshold = 0.09 # 0.03?
+        voicingThreshold = 0.5 # 0.45?
+        octaveCost = 0.055 # 0.01?
         octaveJumpCost = 0.35
         voicedUnvoicedCost = 0.14
 
@@ -2405,9 +2405,9 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
                 jitter_list = [
                     get_jitter_local(pulse, begin_sec, end_sec)
-                        for begin_sec, end_sec, text in interval_list[2:3]] # debug
+                        for begin_sec, end_sec, text in interval_list]
 
-                log.debug(f"jitter_list: {jitter_list}"); A()
+                log.warn(f"jitter_list: {jitter_list}"); A()
 
                 # Preparing data of all other intervals.
 

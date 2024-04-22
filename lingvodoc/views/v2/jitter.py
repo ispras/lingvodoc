@@ -202,6 +202,7 @@ def find_maximum_correlation(sound, t1, windowLength, tmin2, tmax2):
     ileft2min = x_to_sampled_index(sound, tmin2 - halfWindowLength, 'low')
     ileft2max = x_to_sampled_index(sound, tmax2 - halfWindowLength, 'high')
     peak = 0.0  # default
+    tout = t1  # default
     assert ileft2max >= ileft2min  # if the loop is never executed, the result will be garbage
     for ileft2 in range(ileft2min, ileft2max + 1):
         norm1 = norm2 = product = 0.0
@@ -237,6 +238,13 @@ def find_maximum_correlation(sound, t1, windowLength, tmin2, tmax2):
 # OK
 def pitch_to_point(sound, pitch):
     try:
+        '''
+        # Debug
+        num_to_erase = int((1.06 - pitch['x1']) // pitch['dx'])
+        pitch['frames'][num_to_erase]['candidates'][0]['frequency'] = 0.0
+        pitch['frames'][num_to_erase]['candidates'][0]['strength'] = 0.0
+        '''
+
         point = {
             'nt': 0,
             't': []
@@ -248,7 +256,8 @@ def pitch_to_point(sound, pitch):
         # get_value_at_time = CubicSpline(
         get_value_at_time = interp1d(
             [pitch['x1'] + pitch['dx'] * n for n in range(pitch['nx'])],
-            [frame['candidates'][0]['frequency'] for frame in pitch['frames']])
+            [frame['candidates'][0]['frequency'] for frame in pitch['frames']],
+            fill_value="extrapolate")
 
         # Cycle over all voiced intervals
         edges = [0, 0]
@@ -293,8 +302,7 @@ def pitch_to_point(sound, pitch):
                     break
                 if correlation > 0.3 and (peak == 0.0 or peak > 0.01 * global_peak):
                     if t_max - added_right > 0.8 / f0:
-                        if not 1.044 < t_max < 1.055:
-                            point['t'].append(t_max)
+                        point['t'].append(t_max)
 
             t_max = t_save
             while True:
