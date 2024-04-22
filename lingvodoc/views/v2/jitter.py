@@ -10,7 +10,7 @@ pmin = 0.8 / voiced_ceiling
 pmax = 1.25 / voiced_floor
 maximumPeriodFactor = 1.3
 
-# OK
+
 def is_period(pulse, ileft):
     """
     This function answers the question: is the interval from point 'ileft' to point 'ileft+1' a period?
@@ -68,14 +68,14 @@ def is_period(pulse, ileft):
 
     return True
 
-# OK
+
 def unidirectional_autowindow(pulse, tmin, tmax):
     if tmin >= tmax:
         tmin = pulse['xmin']
         tmax = pulse['xmax']
     return tmin, tmax
 
-# OK
+
 def get_mean_period(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
     left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
@@ -88,7 +88,7 @@ def get_mean_period(pulse, tmin, tmax):
             dsum += pulse['t'][ipoint + 1] - pulse['t'][ipoint]
     return dsum / numberOfPeriods if numberOfPeriods > 0 else None
 
-# OK
+
 def get_jitter_local(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
     left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
@@ -110,12 +110,12 @@ def get_jitter_local(pulse, tmin, tmax):
     return (dsum / (numberOfPeriods - 1) /
             get_mean_period(pulse, tmin, tmax))
 
-# OK
+
 def sampled_index_to_x(me, index):
     # Index starts from zero
     return me['x1'] + index * me['dx']
 
-# OK
+
 def x_to_sampled_index(me, x, to_int=None):
     # Index starts from zero
     index = (x - me['x1']) / me['dx']
@@ -128,7 +128,7 @@ def x_to_sampled_index(me, x, to_int=None):
     else:
         return index
 
-# OK
+
 def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_minima):
     channel1 = channel1_base[d:]
     channel2 = channel2_base[d:] if channel2_base is not None else None
@@ -177,7 +177,7 @@ def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_
     value_right = (channel1[iextr + 1] + channel2[iextr + 1]) / 2 if channel2 is not None else channel1[iextr + 1]
     return iextr + 0.5 * (value_right - value_left) / (2 * value_mid - value_left - value_right)
 
-# OK
+
 def sound_find_extremum(sound, tmin, tmax, include_maxima, include_minima):
     assert tmin is not None
     assert tmax is not None
@@ -191,7 +191,7 @@ def sound_find_extremum(sound, tmin, tmax, include_maxima, include_minima):
     else:
         return 0.5 * (tmin + tmax)
 
-# OK
+
 def find_maximum_correlation(sound, t1, windowLength, tmin2, tmax2):
     maximumCorrelation = -1.0  # smart 'impossible' starting value
     r1_best = r3_best = ir = None  # assignments not necessary, but extra safe
@@ -235,7 +235,7 @@ def find_maximum_correlation(sound, t1, windowLength, tmin2, tmax2):
         tout = t1 + (ir - ileft1) * sound['dx']
     return maximumCorrelation, peak, tout
 
-# OK
+
 def pitch_to_point(sound, pitch):
     try:
         '''
@@ -335,7 +335,7 @@ def pitch_to_point(sound, pitch):
         print(e)
         raise ValueError(f"{sound} & {pitch}: not converted to PointProcess (cc).") from e
 
-# OK
+
 def get_voiced_interval_after(pitch, after, edges):
     # Index starts from zero
     ileft = x_to_sampled_index(pitch, after, to_int='high')
@@ -360,6 +360,7 @@ def get_voiced_interval_after(pitch, after, edges):
         iright += 1
     iright -= 1
 
+    '''
     # Debug
     if 50 < ileft < 70:
         for n in range(ileft, iright + 1):
@@ -367,6 +368,7 @@ def get_voiced_interval_after(pitch, after, edges):
                   f"{pitch['frames'][n]['candidates'][0]['frequency'] :08.4f} Hz | "
                   f"x{pitch['frames'][n]['candidates'][0]['strength'] :06.4f}")
         print("-----")
+    '''
 
     edges[0] = sampled_index_to_x(pitch, ileft) - 0.5 * pitch['dx']   # the whole frame is considered voiced
     edges[1] = sampled_index_to_x(pitch, iright) + 0.5 * pitch['dx']
