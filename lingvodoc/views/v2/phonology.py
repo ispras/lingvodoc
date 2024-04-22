@@ -2335,7 +2335,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             sound_dict, pitch_dict = sound.get_pitch()
             pulse = pitch_to_point(sound_dict, pitch_dict)
 
-            # Getting desired intervals and mean values within them from the obtained 'pitch'.
+            # Getting desired intervals and mean values within them from the obtained 'pitch_dict'.
             with open('pitch.log', 'a') as f:
 
                 cur_frame = 0

@@ -169,7 +169,7 @@ def find_extremum_3(channel1_base, channel2_base, d, n, include_maxima, include_
         else:
             iextr = imin
 
-    if iextr == 0 or iextr == n:
+    if iextr == 0 or iextr == n - 1:
         return iextr
 
     value_mid = (channel1[iextr] + channel2[iextr]) / 2 if channel2 is not None else channel1[iextr]
