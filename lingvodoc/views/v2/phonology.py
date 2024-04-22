@@ -2392,10 +2392,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     sound.get_interval_formants(*max_length_interval[:2]))
 
                 max_intensity_jt_local = (
-                    get_jitter_local(pulse, *max_intensity_interval[:2])[0])
+                    get_jitter_local(pulse, *max_intensity_interval[:2]))
 
                 max_length_jt_local = (
-                    get_jitter_local(pulse, *max_length_interval[:2])[0])
+                    get_jitter_local(pulse, *max_length_interval[:2]))
 
             if vowel_selection is None or vowel_selection == False:
                 print('Calculating lists for all intervals...')
