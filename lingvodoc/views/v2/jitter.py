@@ -76,10 +76,14 @@ def unidirectional_autowindow(pulse, tmin, tmax):
     return tmin, tmax
 
 
+def get_window_points(pulse, tmin, tmax):
+    left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
+    return left, right - bool(right)  # decrease right if it is not zero
+
+
 def get_mean_period(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
-    first, last = left, right - bool(right)  # decrease right if it is not zero
+    first, last = get_window_points(pulse, tmin, tmax)
     numberOfPeriods = 0
     dsum = 0.0
     for ipoint in range(first, last):
@@ -91,8 +95,7 @@ def get_mean_period(pulse, tmin, tmax):
 
 def get_jitter_local(pulse, tmin, tmax):
     tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-    left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
-    first, last = left, right - bool(right)  # decrease right if it is not zero
+    first, last = get_window_points(pulse, tmin, tmax)
     numberOfPeriods = max(0, last - first)
     if numberOfPeriods < 2:
         return None
