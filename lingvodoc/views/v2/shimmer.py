@@ -1,5 +1,11 @@
 import numpy as np
-from jitter import unidirectional_autowindow, get_window_points
+from jitter import (
+    unidirectional_autowindow,
+    get_window_points,
+    pmin, pmax,
+    maximumPeriodFactor,
+    maximumAmplitudeFactor
+)
 from math import pi
 
 #OK
@@ -50,7 +56,7 @@ def get_window_samples(sound, tmin, tmax):
     return imin, imax
 
 #OK
-def point_to_amplitude_period(pulse, sound, tmin, tmax, pmin, pmax, maximumPeriodFactor):
+def point_to_amplitude_period(pulse, sound, tmin, tmax):
     try:
         tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
         first, last = get_window_points(pulse, tmin, tmax)
@@ -72,11 +78,11 @@ def point_to_amplitude_period(pulse, sound, tmin, tmax, pmin, pmax, maximumPerio
         raise ValueError(f"{pulse} & {sound}: not converted to AmplitudeTier.") from e
 
 
-def point_get_shimmer_local(pulse, sound, tmin, tmax, pmin, pmax, maximumPeriodFactor, maximumAmplitudeFactor):
+def point_get_shimmer_local(pulse, sound, tmin, tmax):
     try:
         tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-        peaks = point_to_amplitude_period(pulse, sound, tmin, tmax, pmin, pmax, maximumPeriodFactor)
-        return amplitude_get_shimmer_local(peaks, pmin, pmax, maximumAmplitudeFactor)
+        peaks = point_to_amplitude_period(pulse, sound, tmin, tmax)
+        return amplitude_get_shimmer_local(peaks)
     except Exception as e:
         if "Too few pulses between" in str(e):
             return None
@@ -84,7 +90,7 @@ def point_get_shimmer_local(pulse, sound, tmin, tmax, pmin, pmax, maximumPeriodF
             raise Exception(f"{pulse} & {sound}: shimmer (local) not computed.")
 
 
-def amplitude_get_shimmer_local(peaks, pmin, pmax, maximumAmplitudeFactor):
+def amplitude_get_shimmer_local(peaks):
     numberOfPeaks = 0
     numerator = 0.0
     denominator = 0.0
