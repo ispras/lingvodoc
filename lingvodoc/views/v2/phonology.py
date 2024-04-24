@@ -97,6 +97,7 @@ from lingvodoc.queue.celery import celery
 from lingvodoc.utils import sanitize_worksheet_name
 from lingvodoc.views.v2.utils import anonymous_userid, as_storage_file, message, storage_file, unimplemented
 from lingvodoc.views.v2.jitter import pitch_to_point, get_jitter_local
+from lingvodoc.views.v2.shimmer import get_shimmer_local
 
 from pdb import set_trace as A
 
@@ -2400,6 +2401,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             if vowel_selection is None or vowel_selection == False:
                 print('Calculating lists for all intervals...')
 
+                '''
                 intensity_list = [
                     sound.get_interval_intensity(begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
@@ -2411,8 +2413,13 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 jitter_list = [
                     get_jitter_local(pulse, begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
+                '''
 
-                log.debug(f"jitter_list: {jitter_list}")
+                shimmer_list = [
+                    get_shimmer_local(pulse, sound_dict, begin_sec, end_sec)
+                        for begin_sec, end_sec, text in interval_list]
+
+                log.debug(f"shimmer_list: {shimmer_list}"); A()
 
                 # Preparing data of all other intervals.
 

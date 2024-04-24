@@ -1,5 +1,5 @@
 import numpy as np
-from jitter import (
+from lingvodoc.views.v2.jitter import (
     unidirectional_autowindow,
     get_window_points,
     pmin, pmax,
@@ -78,7 +78,7 @@ def point_to_amplitude_period(pulse, sound, tmin, tmax):
         raise ValueError(f"{pulse} & {sound}: not converted to AmplitudeTier.") from e
 
 
-def point_get_shimmer_local(pulse, sound, tmin, tmax):
+def get_shimmer_local(pulse, sound, tmin, tmax):
     try:
         tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
         peaks = point_to_amplitude_period(pulse, sound, tmin, tmax)
