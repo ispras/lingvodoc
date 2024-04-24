@@ -6,6 +6,7 @@ from lingvodoc.views.v2.jitter import (
     maximumPeriodFactor,
 )
 from math import pi
+from pdb import set_trace as A
 
 maximumAmplitudeFactor = 1.6
 

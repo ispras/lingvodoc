@@ -78,7 +78,7 @@ def unidirectional_autowindow(pulse, tmin, tmax):
 
 def get_window_points(pulse, tmin, tmax):
     left, right = bisect.bisect(pulse['t'], tmin), bisect.bisect(pulse['t'], tmax)
-    return left, right - bool(right)  # decrease right if it is not zero
+    return left - bool(left), right - bool(right)  # decrease left and right if not zero
 
 
 def get_mean_period(pulse, tmin, tmax):
