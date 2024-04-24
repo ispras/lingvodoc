@@ -2,19 +2,20 @@ import numpy as np
 from jitter import unidirectional_autowindow, get_window_points
 from math import pi
 
-
+#OK
 class AmplitudeTier:
     def __init__(self, tmin, tmax):
-        self.tmin = tmin
-        self.tmax = tmax
-        self.times = []
-        self.values = []
+        self.xmin = tmin
+        self.xmax = tmax
+        self.points = []
 
     def addPoint(self, t, value):
-        self.times.append(t)
-        self.values.append(value)
+        self.points.append({
+            'number': t,
+            'value': value
+        })
 
-
+#OK
 def get_hann_windowed_rms(sound, tmid, widthLeft, widthRight):
 
     if (edges := get_window_samples(sound, tmid - widthLeft, tmid + widthRight)) is None:
@@ -38,7 +39,7 @@ def get_hann_windowed_rms(sound, tmid, widthLeft, widthRight):
 
     return np.sqrt(sumOfSquares / windowSumOfSquares)
 
-
+#OK
 def get_window_samples(sound, tmin, tmax):
     imin = np.ceil((tmin - sound['x1']) / sound['dx'])
     imax = np.floor((tmax - sound['x1']) / sound['dx'])
@@ -48,63 +49,63 @@ def get_window_samples(sound, tmin, tmax):
         return None
     return imin, imax
 
-
+#OK
 def point_to_amplitude_period(pulse, sound, tmin, tmax, pmin, pmax, maximumPeriodFactor):
     try:
         tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-        left, right = get_window_points(pulse, tmin, tmax)
-        if right - left < 2:
+        first, last = get_window_points(pulse, tmin, tmax)
+        if last - first < 2:
             raise ValueError(f"Too few pulses between {tmin} and {tmax} seconds.")
 
         amplitude = AmplitudeTier(tmin, tmax)
-        for i in range(1, right - left):
+        for i in range(first + 1, last):
             p1 = pulse['t'][i] - pulse['t'][i - 1]
             p2 = pulse['t'][i + 1] - pulse['t'][i]
             intervalFactor = p1 / p2 if p1 > p2 else p2 / p1
             if pmin == pmax or (pmin <= p1 <= pmax and pmin <= p2 <= pmax and intervalFactor <= maximumPeriodFactor):
                 peak = get_hann_windowed_rms(sound, pulse['t'][i], 0.2 * p1, 0.2 * p2)
                 if peak is not None and peak > 0.0:
-                    amplitude.addPoint(pulse.t[i], peak)
+                    amplitude.addPoint(pulse['t'][i], peak)
 
         return amplitude
     except Exception as e:
         raise ValueError(f"{pulse} & {sound}: not converted to AmplitudeTier.") from e
 
 
-def PointProcess_Sound_getShimmer_local(pulse, thee, tmin, tmax, pmin, pmax, maximumPeriodFactor, maximumAmplitudeFactor):
+def point_get_shimmer_local(pulse, sound, tmin, tmax, pmin, pmax, maximumPeriodFactor, maximumAmplitudeFactor):
     try:
         tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
-        peaks = point_to_amplitude_period(pulse, thee, tmin, tmax, pmin, pmax, maximumPeriodFactor)
-        return AmplitudeTier_getShimmer_local(peaks, pmin, pmax, maximumAmplitudeFactor)
+        peaks = point_to_amplitude_period(pulse, sound, tmin, tmax, pmin, pmax, maximumPeriodFactor)
+        return amplitude_get_shimmer_local(peaks, pmin, pmax, maximumAmplitudeFactor)
     except Exception as e:
         if "Too few pulses between" in str(e):
-            return np.nan
+            return None
         else:
-            raise Exception(f"{pulse} & {thee}: shimmer (local) not computed.")
+            raise Exception(f"{pulse} & {sound}: shimmer (local) not computed.")
 
 
-def AmplitudeTier_getShimmer_local(me, pmin, pmax, maximumAmplitudeFactor):
+def amplitude_get_shimmer_local(peaks, pmin, pmax, maximumAmplitudeFactor):
     numberOfPeaks = 0
     numerator = 0.0
     denominator = 0.0
-    points = me.points
+    points = peaks.points
     for i in range(1, len(points)):
-        p = points[i].number - points[i-1].number
+        p = points[i]['number'] - points[i-1]['number']
         if pmin == pmax or (p >= pmin and p <= pmax):
-            a1 = points[i-1].value
-            a2 = points[i].value
+            a1 = points[i-1]['value']
+            a2 = points[i]['value']
             amplitudeFactor = a1 / a2 if a1 > a2 else a2 / a1
             if amplitudeFactor <= maximumAmplitudeFactor:
                 numerator += abs(a1 - a2)
                 numberOfPeaks += 1
     if numberOfPeaks < 1:
-        return float('nan')
+        return None
     numerator /= numberOfPeaks
     numberOfPeaks = 0
     for point in points:
-        denominator += point.value
+        denominator += point['value']
         numberOfPeaks += 1
     denominator /= numberOfPeaks
     if denominator == 0.0:
-        return float('nan')
+        return None
     return numerator / denominator
