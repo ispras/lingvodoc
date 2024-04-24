@@ -9,7 +9,6 @@ voiced_ceiling = 800
 pmin = 0.8 / voiced_ceiling
 pmax = 1.25 / voiced_floor
 maximumPeriodFactor = 1.3
-maximumAmplitudeFactor = 1.6
 
 
 def is_period(pulse, ileft):

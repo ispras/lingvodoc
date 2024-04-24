@@ -4,11 +4,11 @@ from lingvodoc.views.v2.jitter import (
     get_window_points,
     pmin, pmax,
     maximumPeriodFactor,
-    maximumAmplitudeFactor
 )
 from math import pi
 
-#OK
+maximumAmplitudeFactor = 1.6
+
 class AmplitudeTier:
     def __init__(self, tmin, tmax):
         self.xmin = tmin
@@ -21,7 +21,7 @@ class AmplitudeTier:
             'value': value
         })
 
-#OK
+
 def get_hann_windowed_rms(sound, tmid, widthLeft, widthRight):
 
     if (edges := get_window_samples(sound, tmid - widthLeft, tmid + widthRight)) is None:
@@ -45,7 +45,7 @@ def get_hann_windowed_rms(sound, tmid, widthLeft, widthRight):
 
     return np.sqrt(sumOfSquares / windowSumOfSquares)
 
-#OK
+
 def get_window_samples(sound, tmin, tmax):
     imin = np.ceil((tmin - sound['x1']) / sound['dx'])
     imax = np.floor((tmax - sound['x1']) / sound['dx'])
@@ -55,7 +55,7 @@ def get_window_samples(sound, tmin, tmax):
         return None
     return imin, imax
 
-#OK
+
 def point_to_amplitude_period(pulse, sound, tmin, tmax):
     try:
         tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
@@ -79,39 +79,35 @@ def point_to_amplitude_period(pulse, sound, tmin, tmax):
 
 
 def get_shimmer_local(pulse, sound, tmin, tmax):
+    numberOfPeaks = 0
+    numerator = 0.0
+    denominator = 0.0
     try:
         tmin, tmax = unidirectional_autowindow(pulse, tmin, tmax)
         peaks = point_to_amplitude_period(pulse, sound, tmin, tmax)
-        return amplitude_get_shimmer_local(peaks)
+        points = peaks.points
+        for i in range(1, len(points)):
+            p = points[i]['number'] - points[i-1]['number']
+            if pmin == pmax or (p >= pmin and p <= pmax):
+                a1 = points[i-1]['value']
+                a2 = points[i]['value']
+                amplitudeFactor = a1 / a2 if a1 > a2 else a2 / a1
+                if amplitudeFactor <= maximumAmplitudeFactor:
+                    numerator += abs(a1 - a2)
+                    numberOfPeaks += 1
+        if numberOfPeaks < 1:
+            return None
+        numerator /= numberOfPeaks
+        numberOfPeaks = 0
+        for point in points:
+            denominator += point['value']
+            numberOfPeaks += 1
+        denominator /= numberOfPeaks
+        if denominator == 0.0:
+            return None
+        return numerator / denominator
     except Exception as e:
         if "Too few pulses between" in str(e):
             return None
         else:
             raise Exception(f"{pulse} & {sound}: shimmer (local) not computed.")
-
-
-def amplitude_get_shimmer_local(peaks):
-    numberOfPeaks = 0
-    numerator = 0.0
-    denominator = 0.0
-    points = peaks.points
-    for i in range(1, len(points)):
-        p = points[i]['number'] - points[i-1]['number']
-        if pmin == pmax or (p >= pmin and p <= pmax):
-            a1 = points[i-1]['value']
-            a2 = points[i]['value']
-            amplitudeFactor = a1 / a2 if a1 > a2 else a2 / a1
-            if amplitudeFactor <= maximumAmplitudeFactor:
-                numerator += abs(a1 - a2)
-                numberOfPeaks += 1
-    if numberOfPeaks < 1:
-        return None
-    numerator /= numberOfPeaks
-    numberOfPeaks = 0
-    for point in points:
-        denominator += point['value']
-        numberOfPeaks += 1
-    denominator /= numberOfPeaks
-    if denominator == 0.0:
-        return None
-    return numerator / denominator
