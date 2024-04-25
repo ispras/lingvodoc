@@ -48,6 +48,7 @@ services:
     volumes:
       - ./frontend/dist:/dist
       - /opt/apertium:/opt/apertium
+      - /opt/hfst:/opt/hfst
       - ./sock:/sock
       - /api/build/
       - ../:/api
