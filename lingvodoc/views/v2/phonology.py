@@ -2180,6 +2180,7 @@ class Tier_Result(object):
         max_length_str,
         max_length_r_length,
         max_length_jt_local,
+        max_length_sh_local,
         max_length_p_mean,
         max_length_i_list,
         max_length_f_list,
@@ -2187,6 +2188,7 @@ class Tier_Result(object):
         max_intensity_str,
         max_intensity_r_length,
         max_intensity_jt_local,
+        max_intensity_sh_local,
         max_intensity_p_mean,
         max_intensity_i_list,
         max_intensity_f_list,
@@ -2203,6 +2205,7 @@ class Tier_Result(object):
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
         self.max_length_jt_local = max_length_jt_local
+        self.max_length_sh_local = max_length_sh_local
         self.max_length_p_mean = max_length_p_mean
         self.max_length_i_list = max_length_i_list
         self.max_length_f_list = max_length_f_list
@@ -2211,6 +2214,7 @@ class Tier_Result(object):
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
         self.max_intensity_jt_local = max_intensity_jt_local
+        self.max_intensity_sh_local = max_intensity_sh_local
         self.max_intensity_p_mean = max_intensity_p_mean
         self.max_intensity_i_list = max_intensity_i_list
         self.max_intensity_f_list = max_intensity_f_list
@@ -2232,11 +2236,12 @@ class Tier_Result(object):
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
                 j_local,
+                s_local,
                 p_mean,
                 i_list,
                 f_list)
 
-                for interval_str, r_length, j_local, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, j_local, s_local, p_mean, i_list, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -2375,6 +2380,8 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
             max_length_f_list = []
             max_intensity_jt_local = 0
             max_length_jt_local = 0
+            max_intensity_sh_local = 0
+            max_length_sh_local = 0
             interval_data_list = []
 
             if vowel_selection is None or vowel_selection == True:
@@ -2396,6 +2403,12 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     get_jitter_local(pulse, *max_intensity_interval[:2]))
 
                 max_length_jt_local = (
+                    get_jitter_local(pulse, *max_length_interval[:2]))
+
+                max_intensity_sh_local = (
+                    get_jitter_local(pulse, *max_intensity_interval[:2]))
+
+                max_length_sh_local = (
                     get_jitter_local(pulse, *max_length_interval[:2]))
 
             if vowel_selection is None or vowel_selection == False:
@@ -2443,6 +2456,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     (interval_str,
                         (end - begin) / mean_interval_length,
                         f'{j_local:.3f}',
+                        f'{s_local:.3f}',
                         f'{p_mean:.3f}',
                         [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                         list(map('{0:.3f}'.format, f_list)),
@@ -2454,6 +2468,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                             index,
                                 (interval_str,
                                  j_local,
+                                 s_local,
                                  p_mean,
                                  (_, i_min, i_max),
                                  f_list,
@@ -2464,6 +2479,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                                 zip(
                                     str_list,
                                     jitter_list,
+                                    shimmer_list,
                                     pitch_means,
                                     intensity_list,
                                     formant_list,
@@ -2498,6 +2514,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     max_length_str,
                     max_length / mean_interval_length,
                     f'{max_length_jt_local:.3f}',
+                    f'{max_length_sh_local:.3f}',
                     f'{xl_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_length_i_list)),
                     list(map('{0:.3f}'.format, max_length_f_list)),
@@ -2505,6 +2522,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     max_intensity_str,
                     (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
                     f'{max_intensity_jt_local:.3f}',
+                    f'{max_intensity_sh_local:.3f}',
                     f'{xi_p_mean:.3f}',
                     list(map('{0:.3f}'.format, max_intensity_i_list)),
                     list(map('{0:.3f}'.format, max_intensity_f_list)),
@@ -3190,6 +3208,7 @@ def compile_workbook(
             'Longest (seconds) interval',
             'Relative length',
             'Jitter local',
+            'Shimmer local',
             'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
@@ -3198,6 +3217,7 @@ def compile_workbook(
             'Highest intensity (dB) interval',
             'Relative length',
             'Jitter local',
+            'Shimmer local',
             'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
@@ -3212,6 +3232,7 @@ def compile_workbook(
             'Interval',
             'Relative length',
             'Jitter local',
+            'Shimmer local',
             'Pitch mean (Hz)',
             'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
             'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
@@ -3236,25 +3257,25 @@ def compile_workbook(
         if args.vowel_selection:
 
             worksheet_results.set_column(0, 2, 20)
-            worksheet_results.set_column(3, 4, 8, format_percent)
-            worksheet_results.set_column(5, 8, 8)
-            worksheet_results.set_column(9, 11, 10)
-            worksheet_results.set_column(12, 12, 4)
-            worksheet_results.set_column(13, 13, 20)
-            worksheet_results.set_column(14, 14, 8, format_percent)
-            worksheet_results.set_column(15, 18, 8)
-            worksheet_results.set_column(19, 21, 10)
-            worksheet_results.set_column(22, 23, 4)
-            worksheet_results.set_column(24, 24, 8, format_percent)
+            worksheet_results.set_column(3, 5, 8, format_percent)
+            worksheet_results.set_column(6, 9, 8)
+            worksheet_results.set_column(10, 12, 10)
+            worksheet_results.set_column(13, 13, 4)
+            worksheet_results.set_column(14, 14, 20)
+            worksheet_results.set_column(15, 15, 8, format_percent)
+            worksheet_results.set_column(16, 19, 8)
+            worksheet_results.set_column(20, 22, 10)
+            worksheet_results.set_column(23, 24, 4)
+            worksheet_results.set_column(25, 25, 8, format_percent)
 
         else:
 
             worksheet_results.set_column(0, 2, 20)
-            worksheet_results.set_column(3, 4, 8, format_percent)
-            worksheet_results.set_column(5, 8, 8)
-            worksheet_results.set_column(9, 11, 10)
-            worksheet_results.set_column(12, 14, 4)
-            worksheet_results.set_column(15, 15, 8, format_percent)
+            worksheet_results.set_column(3, 5, 8, format_percent)
+            worksheet_results.set_column(6, 9, 8)
+            worksheet_results.set_column(10, 12, 10)
+            worksheet_results.set_column(13, 15, 4)
+            worksheet_results.set_column(16, 16, 8, format_percent)
 
         worksheet_dict[group] = (
 
@@ -3383,6 +3404,7 @@ def compile_workbook(
                                 round(tier_result.max_length_r_length, 4)] +
 
                             [ float(tier_result.max_length_jt_local)] +
+                            [ float(tier_result.max_length_sh_local)] +
                             [ float(tier_result.max_length_p_mean) ] +
                             i_list_a +
                             f_list_a +
@@ -3392,6 +3414,7 @@ def compile_workbook(
                                 round(tier_result.max_intensity_r_length, 4)] +
 
                             [ float(tier_result.max_intensity_jt_local)] +
+                            [ float(tier_result.max_intensity_sh_local)] +
                             [ float(tier_result.max_intensity_p_mean) ] +
                             i_list_b +
                             f_list_b +
@@ -3442,7 +3465,7 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            j_local, p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
+                            j_local, s_local, p_mean, i_list, f_list, sign_longest, sign_highest, source_index) in (
 
                             enumerate(tier_result.interval_data_list)):
 
@@ -3465,6 +3488,7 @@ def compile_workbook(
                                     round(interval_r_length, 4)] +
 
                                 [float(j_local)] +
+                                [float(s_local)] +
                                 [float(p_mean)] +
                                 i_list +
                                 f_list +
