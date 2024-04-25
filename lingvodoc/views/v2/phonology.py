@@ -2412,12 +2412,11 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                 jitter_list = [
                     get_jitter_local(pulse, begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
+                log.debug(f"jitter_list: {jitter_list}")
 
                 shimmer_list = [
                     get_shimmer_local(pulse, sound_dict, begin_sec, end_sec)
                         for begin_sec, end_sec, text in interval_list]
-
-                log.debug(f"jitter_list: {jitter_list}")
                 log.debug(f"shimmer_list: {shimmer_list}")
 
                 # Preparing data of all other intervals.

@@ -100,7 +100,7 @@ def get_shimmer_local(pulse, sound, tmin, tmax):
             return None
         numerator /= numberOfPeaks
         numberOfPeaks = 0
-        for point in points[:-1]:
+        for point in points[:-1]:  # why -1?
             denominator += point['value']
             numberOfPeaks += 1
         denominator /= numberOfPeaks
