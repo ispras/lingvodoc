@@ -2406,10 +2406,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     get_jitter_local(pulse, *max_length_interval[:2]))
 
                 max_intensity_sh_local = (
-                    get_shimmer_local(pulse, *max_intensity_interval[:2]))
+                    get_shimmer_local(pulse, sound_dict, *max_intensity_interval[:2]))
 
                 max_length_sh_local = (
-                    get_shimmer_local(pulse, *max_length_interval[:2]))
+                    get_shimmer_local(pulse, sound_dict, *max_length_interval[:2]))
 
             if vowel_selection is None or vowel_selection == False:
                 print('Calculating lists for all intervals...')
