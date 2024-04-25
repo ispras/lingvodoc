@@ -2406,10 +2406,10 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
                     get_jitter_local(pulse, *max_length_interval[:2]))
 
                 max_intensity_sh_local = (
-                    get_jitter_local(pulse, *max_intensity_interval[:2]))
+                    get_shimmer_local(pulse, *max_intensity_interval[:2]))
 
                 max_length_sh_local = (
-                    get_jitter_local(pulse, *max_length_interval[:2]))
+                    get_shimmer_local(pulse, *max_length_interval[:2]))
 
             if vowel_selection is None or vowel_selection == False:
                 print('Calculating lists for all intervals...')
@@ -3262,11 +3262,11 @@ def compile_workbook(
             worksheet_results.set_column(10, 12, 10)
             worksheet_results.set_column(13, 13, 4)
             worksheet_results.set_column(14, 14, 20)
-            worksheet_results.set_column(15, 15, 8, format_percent)
-            worksheet_results.set_column(16, 19, 8)
-            worksheet_results.set_column(20, 22, 10)
-            worksheet_results.set_column(23, 24, 4)
-            worksheet_results.set_column(25, 25, 8, format_percent)
+            worksheet_results.set_column(15, 17, 8, format_percent)
+            worksheet_results.set_column(18, 21, 8)
+            worksheet_results.set_column(22, 24, 10)
+            worksheet_results.set_column(25, 26, 4)
+            worksheet_results.set_column(27, 27, 8, format_percent)
 
         else:
 
