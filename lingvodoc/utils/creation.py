@@ -60,6 +60,7 @@ from lingvodoc.utils.elan_functions import eaf_wordlist
 from lingvodoc.utils.search import translation_gist_search
 
 from lingvodoc.views.v2.utils import storage_file
+from pdb import set_trace as A
 
 
 # Setting up logging.
@@ -551,17 +552,27 @@ def create_parser_result(
 
         r = requests.post(url=dedoc_url, files=files, data=data)
         dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
+        #A()
+        #pass
 
+    arguments['format'] = "json"
     if parser.method.find("timarkh") != -1:
         result = parse_method(dedoc_output, **arguments)
 
     elif parser.method.find("apertium") != -1:
         result = parse_method(dedoc_output, apertium_path, **arguments)
 
-    dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
-                                  parser_object_id=parser_object_id, parser_client_id=parser_client_id,
-                                  entity_client_id=entity_client_id, entity_object_id=entity_object_id,
-                                  arguments=arguments, content=result)
+    if arguments.get('format') == "json":
+        dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
+                                      parser_object_id=parser_object_id, parser_client_id=parser_client_id,
+                                      entity_client_id=entity_client_id, entity_object_id=entity_object_id,
+                                      arguments=arguments, content=dedoc_output, additional_metadata=result)
+    else:
+        dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
+                                      parser_object_id=parser_object_id, parser_client_id=parser_client_id,
+                                      entity_client_id=entity_client_id, entity_object_id=entity_object_id,
+                                      arguments=arguments, content=result)
+
     if not dbparserresult.object_id:
         dbparserresult.object_id = get_client_counter(client_id)
     if save_object:

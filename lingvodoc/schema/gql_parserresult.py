@@ -108,6 +108,8 @@ from lingvodoc.views.v2.utils import (
     as_storage_file,
     storage_file)
 
+from pdb import set_trace as A
+
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -228,7 +230,7 @@ class ExecuteParser(graphene.Mutation):
         cur_args['storage'] = request.registry.settings['storage']
 
         async_execution = args.get("async_execution")
-        if async_execution == None or async_execution == True:
+        if (async_execution == None or async_execution == True) and False:
             task = TaskStatus(user_id, "Parsing entity", "", 2)
             cur_args["task_key"] = task.key
             cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
