@@ -12,6 +12,7 @@ import shutil
 import string
 import time
 import urllib
+import bs4
 
 # Library imports.
 
@@ -551,9 +552,21 @@ def create_parser_result(
         data = {'return_html': True}
 
         r = requests.post(url=dedoc_url, files=files, data=data)
-        dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
-        #A()
-        #pass
+
+    #dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
+    dedoc_tags = bs4.BeautifulSoup(r.content.decode('utf-8'), 'html.parser')('p')
+
+    def get_paragraph_id():
+        import types
+        my_namespace = types.SimpleNamespace()
+        my_namespace.id, my_namespace.root, my_namespace.raw_text = None, 0, 1
+        for p in dedoc_tags:
+            if p.sub:
+                exec(p.sub.extract().text.strip(), my_namespace.__dict__)  # get values from <sub> tag text
+            print(my_namespace.id, ' | ', p.text)
+
+    get_paragraph_id()
+    dedoc_output = ''.join(str(p) for p in dedoc_tags)
 
     arguments['format'] = "json"
     if parser.method.find("timarkh") != -1:
@@ -561,6 +574,8 @@ def create_parser_result(
 
     elif parser.method.find("apertium") != -1:
         result = parse_method(dedoc_output, apertium_path, **arguments)
+
+    A()
 
     if arguments.get('format') == "json":
         dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
