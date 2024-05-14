@@ -13,7 +13,6 @@ import tempfile
 import bs4
 import requests
 import io
-from pdb import set_trace as A
 
 def print_to_str(*args, **kwargs):
 
@@ -78,7 +77,7 @@ def insert_parser_output_to_text(text, parser_output, lang=""):
     return result
 
 
-def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False, format="xml"):
+def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
 
     wordlist = list()
     tokenizer = RegexpTokenizer(r'(?!\w+(?:-\w+)+)\w+|\w+(?:-\w+)+')
@@ -117,15 +116,12 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False, 
             offset += len(parts) - 1
 
     if has_disamb:
-        parser_output = analyzer.analyze_words(wordlist, format=format, disambiguate=disambiguate)
+        parser_output = analyzer.analyze_words(wordlist, format="xml", disambiguate=disambiguate)
     else:
-        parser_output = analyzer.analyze_words(wordlist, format=format)
+        parser_output = analyzer.analyze_words(wordlist, format="xml")
+    parser_output_str = print_to_str(parser_output)
 
-    if format == "xml":
-        parser_output_str = print_to_str(parser_output)
-        return insert_parser_output_to_text(dedoc_output, parser_output_str, lang=lang)
-    else:
-        return parser_output
+    return insert_parser_output_to_text(dedoc_output, parser_output_str, lang=lang)
 
 def apertium_parser(dedoc_output, apertium_path, lang):
 
@@ -363,35 +359,36 @@ def apertium_parser(dedoc_output, apertium_path, lang):
     return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
 
-def timarkh_udm(dedoc_output, **arguments):
-    return timarkh_uniparser(dedoc_output, 'udm', **arguments)
+def timarkh_udm(dedoc_output):
+    return timarkh_uniparser(dedoc_output, 'udm')
 
-def timarkh_erzya(dedoc_output, **arguments):
-    return timarkh_uniparser(dedoc_output, 'erzya', **arguments)
+def timarkh_erzya(dedoc_output):
+    return timarkh_uniparser(dedoc_output, 'erzya')
 
-def timarkh_moksha(dedoc_output, **arguments):
-    return timarkh_uniparser(dedoc_output, 'moksha', **arguments)
+def timarkh_moksha(dedoc_output):
+    return timarkh_uniparser(dedoc_output, 'moksha')
 
-def timarkh_komi_zyryan(dedoc_output, **arguments):
-    return timarkh_uniparser(dedoc_output, 'komi_zyryan', **arguments)
+def timarkh_komi_zyryan(dedoc_output):
+    return timarkh_uniparser(dedoc_output, 'komi_zyryan')
 
-def timarkh_meadow_mari(dedoc_output, **arguments):
-    return timarkh_uniparser(dedoc_output, 'meadow_mari', **arguments)
+def timarkh_meadow_mari(dedoc_output):
+    return timarkh_uniparser(dedoc_output, 'meadow_mari')
 
-def apertium_tat_rus(dedoc_output, apertium_path, **arguments):
-    return apertium_parser(dedoc_output, apertium_path, 'tat', **arguments)
+def apertium_tat_rus(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'tat')
 
-def apertium_kaz_rus(dedoc_output, apertium_path, **arguments):
-    return apertium_parser(dedoc_output, apertium_path, 'kaz', **arguments)
+def apertium_kaz_rus(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'kaz')
 
-def apertium_sah(dedoc_output, apertium_path, **arguments):
-    return apertium_parser(dedoc_output, apertium_path, 'sah', **arguments)
+def apertium_sah(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'sah')
 
-def apertium_bak_tat(dedoc_output, apertium_path, **arguments):
-    return apertium_parser(dedoc_output, apertium_path, 'bak-tat', **arguments)
+def apertium_bak_tat(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'bak-tat')
 
-def apertium_bak(dedoc_output, apertium_path, **arguments):
-    return apertium_parser(dedoc_output, apertium_path, 'bak', **arguments)
+def apertium_bak(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'bak')
 
-def apertium_rus(dedoc_output, apertium_path, **arguments):
-    return apertium_parser(dedoc_output, apertium_path, 'rus', **arguments)
+def apertium_rus(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'rus')
+
