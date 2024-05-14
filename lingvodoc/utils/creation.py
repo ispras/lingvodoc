@@ -13,6 +13,7 @@ import string
 import time
 import urllib
 import bs4
+import types
 
 # Library imports.
 
@@ -554,19 +555,25 @@ def create_parser_result(
         r = requests.post(url=dedoc_url, files=files, data=data)
 
     #dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
-    dedoc_tags = bs4.BeautifulSoup(r.content.decode('utf-8'), 'html.parser')('p')
 
-    def get_paragraph_id():
-        import types
+    def get_dedoc_data(tags):
+        struct = []
         my_namespace = types.SimpleNamespace()
         my_namespace.id, my_namespace.root, my_namespace.raw_text = None, 0, 1
-        for p in dedoc_tags:
+        for p in tags:
+            # get values from <sub> tag's text and erase <sub> tags
             if p.sub:
-                exec(p.sub.extract().text.strip(), my_namespace.__dict__)  # get values from <sub> tag text
-            print(my_namespace.id, ' | ', p.text)
+                exec(p.sub.extract().text.strip(), my_namespace.__dict__)
+            dedoc_struct.append({
+                "id": my_namespace.id,
+                "paragraph": p.text
+            })
+        html = ''.join(str(p) for p in tags)  # here dedoc_tags is already without <sub>
+        return struct, html
 
-    get_paragraph_id()
-    dedoc_output = ''.join(str(p) for p in dedoc_tags)
+    dedoc_struct, dedoc_output = (
+        get_dedoc_data(bs4.BeautifulSoup(r.content.decode('utf-8'), 'html.parser')('p'))
+    )
 
     arguments['format'] = "json"
     if parser.method.find("timarkh") != -1:
