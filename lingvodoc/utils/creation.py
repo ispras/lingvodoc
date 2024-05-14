@@ -15,8 +15,7 @@ import string
 import time
 import urllib
 from bs4 import BeautifulSoup
-from bs4.element import Tag, NavigableString as Text
-import types
+from bs4.element import Tag
 
 # Library imports.
 
@@ -565,72 +564,53 @@ def create_parser_result(
     elif "apertium" in parser.method:
         result = parse_method(dedoc_output, apertium_path, **arguments)
 
-    '''
-    def get_dedoc_data(tags):
-        struct = []
-        my_namespace = types.SimpleNamespace()
-        my_namespace.id, my_namespace.root, my_namespace.raw_text = None, 0, 1
-        for p in tags:
-            # get values from <sub> tag's text and erase <sub> tags
-            if p.sub:
-                exec(p.sub.extract().text.strip(), my_namespace.__dict__)
-            struct.append({
-                "id": my_namespace.id,
-                "paragraph": p.text
-            })
-        html = ''.join(str(p) for p in tags)  # here tags are already without <sub>
-        return struct, html
+    def get_result_json(annotated_html):
+        parags_list = []
+        for parag in BeautifulSoup(annotated_html, 'html.parser')('p'):
+            words_list = []
+            for note in parag.contents:
+                prefix = postfix = ""
+                annots = []
+                status = None
+                word_dict = collections.defaultdict(list)
+                while type(note) is Tag:
+                    if note.name != 'span':
+                        prefix = f'{prefix}<{note.name}>'
+                        postfix = f'</{note.name}>{postfix}'
+                    if len(note.contents) > 0:
+                        status = note.get('class')
+                        annots = note.contents[:-1]
+                        # iterate to last nested tag
+                        note = note.contents[-1]
+                    else:
+                        note = ""
 
-    dedoc_struct, dedoc_output = (
-        get_dedoc_data(BeautifulSoup(r.content.decode('utf-8'), 'html.parser')('p'))
-    )
-    #bs4.BeautifulSoup(result, 'html.parser')('p')[4].select('span:not(.result)')[8]('span')[0].contents
-    '''
+                word_dict['text'] = prefix + str(note) + postfix
+                if status is not None:
+                    word_dict['status'] = status
 
-    parags_list = []
-    for parag in BeautifulSoup(result, 'html.parser')('p'):
-        words_list = []
-        for note in parag.contents:
-            prefix = postfix = ""
-            annots = []
-            status = None
-            word_dict = collections.defaultdict(list)
-            while type(note) is Tag:
-                if note.name != 'span':
-                    prefix = f'{prefix}<{note.name}>'
-                    postfix = f'</{note.name}>{postfix}'
-                if len(note.contents) > 0:
-                    status = note.get('class')
-                    annots = note.contents[:-1]
-                    # iterate to last nested tag
-                    note = note.contents[-1]
+                for ann in annots:
+                    if type(ann) is Tag:
+                        res = json.loads(ann.text)
+                        res['state'] = ann.get('class')
+                        word_dict['results'].append(res)
+
+                if word_dict.get('results'):
+                    words_list.append(word_dict)
                 else:
-                    note = ""
+                    words_list.append(word_dict.get('text', ""))
 
-            word_dict['text'] = prefix + str(note) + postfix
-            if status is not None:
-                word_dict['status'] = status
+            parags_list.append(words_list)
 
-            for ann in annots:
-                if type(ann) is Tag:
-                    res = json.loads(ann.text)
-                    res['state'] = ann.get('class')
-                    word_dict['results'].append(res)
-
-            if word_dict.get('results'):
-                words_list.append(word_dict)
-            else:
-                words_list.append(word_dict.get('text', ""))
-
-        parags_list.append(words_list)
-    A()
+        return parags_list
 
     arguments['format'] = "json"
+
     if arguments.get('format') == "json":
         dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                       entity_client_id=entity_client_id, entity_object_id=entity_object_id,
-                                      arguments=arguments, content=str(parags_list))
+                                      arguments=arguments, content=str(get_result_json(result)))
     else:
         dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
