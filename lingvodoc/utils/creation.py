@@ -12,7 +12,8 @@ import shutil
 import string
 import time
 import urllib
-import bs4
+from bs4 import BeautifulSoup
+from bs4.element import Tag, NavigableString as Text
 import types
 
 # Library imports.
@@ -548,13 +549,20 @@ def create_parser_result(
         files = {
             'file': (
                 os.path.basename(urllib.parse.urlparse(entity.content).path),
-                source_stream)}
+                source_stream)
+        }
 
         data = {'return_html': True}
-
         r = requests.post(url=dedoc_url, files=files, data=data)
 
-    #dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
+    dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
+
+    #arguments['format'] = "json"
+    if "timarkh" in parser.method:
+        result = parse_method(dedoc_output, **arguments)
+
+    elif "apertium" in parser.method:
+        result = parse_method(dedoc_output, apertium_path, **arguments)
 
     def get_dedoc_data(tags):
         struct = []
@@ -564,23 +572,34 @@ def create_parser_result(
             # get values from <sub> tag's text and erase <sub> tags
             if p.sub:
                 exec(p.sub.extract().text.strip(), my_namespace.__dict__)
-            dedoc_struct.append({
+            struct.append({
                 "id": my_namespace.id,
                 "paragraph": p.text
             })
-        html = ''.join(str(p) for p in tags)  # here dedoc_tags is already without <sub>
+        html = ''.join(str(p) for p in tags)  # here tags are already without <sub>
         return struct, html
 
     dedoc_struct, dedoc_output = (
-        get_dedoc_data(bs4.BeautifulSoup(r.content.decode('utf-8'), 'html.parser')('p'))
+        get_dedoc_data(BeautifulSoup(r.content.decode('utf-8'), 'html.parser')('p'))
     )
+    #bs4.BeautifulSoup(result, 'html.parser')('p')[4].select('span:not(.result)')[8]('span')[0].contents
 
-    arguments['format'] = "json"
-    if parser.method.find("timarkh") != -1:
-        result = parse_method(dedoc_output, **arguments)
+    for parag in BeautifulSoup(result, 'html.parser')('p'):
+        for note in parag.contents:
+            prefix = postfix = ""
+            while type(note) is Tag:
+                A()
+                if note.name != 'span':
+                    prefix = f'{prefix}<{note.name}>'
+                    postfix = f'</{note.name}>{postfix}'
+                if annots := note.contents:
+                    note = annots[-1]
+                else:
+                    note = ""
+            word = prefix + str(note) + postfix
 
-    elif parser.method.find("apertium") != -1:
-        result = parse_method(dedoc_output, apertium_path, **arguments)
+            print(word, end="")
+        print("\n")
 
     A()
 
