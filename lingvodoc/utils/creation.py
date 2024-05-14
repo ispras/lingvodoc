@@ -2,7 +2,9 @@
 # Standard library imports.
 
 import base64
+import collections
 import hashlib
+import json
 import logging
 import os
 import random
@@ -564,6 +566,7 @@ def create_parser_result(
     elif "apertium" in parser.method:
         result = parse_method(dedoc_output, apertium_path, **arguments)
 
+    '''
     def get_dedoc_data(tags):
         struct = []
         my_namespace = types.SimpleNamespace()
@@ -583,24 +586,40 @@ def create_parser_result(
         get_dedoc_data(BeautifulSoup(r.content.decode('utf-8'), 'html.parser')('p'))
     )
     #bs4.BeautifulSoup(result, 'html.parser')('p')[4].select('span:not(.result)')[8]('span')[0].contents
+    '''
 
+    parags_list = []
     for parag in BeautifulSoup(result, 'html.parser')('p'):
+        words_list = []
         for note in parag.contents:
             prefix = postfix = ""
+            annots = []
+            status = None
+            word_dict = collections.defaultdict(list)
             while type(note) is Tag:
-                A()
                 if note.name != 'span':
                     prefix = f'{prefix}<{note.name}>'
                     postfix = f'</{note.name}>{postfix}'
-                if annots := note.contents:
-                    note = annots[-1]
+                if len(note.contents) > 0:
+                    status = note.get('class')
+                    annots = note.contents[:-1]
+                    # iterate to last nested tag
+                    note = note.contents[-1]
                 else:
                     note = ""
-            word = prefix + str(note) + postfix
 
-            print(word, end="")
-        print("\n")
+            word_dict['text'] = prefix + str(note) + postfix
+            if status is not None:
+                word_dict['status'] = status
 
+            for ann in annots:
+                if type(ann) is Tag:
+                    result = json.loads(ann.text)
+                    result['state'] = ann.get('class')
+                    word_dict['results'].append(result)
+
+            words_list.append(word_dict)
+        parags_list.append(words_list)
     A()
 
     if arguments.get('format') == "json":
