@@ -570,39 +570,52 @@ def create_parser_result(
             words_list = []
             for note in parag.contents:
                 prefix = postfix = ""
-                annots = []
-                status = None
-                word_dict = collections.defaultdict(list)
-                while type(note) is Tag:
-                    if note.name != 'span':
-                        prefix = f'{prefix}<{note.name}>'
-                        postfix = f'</{note.name}>{postfix}'
-                    if len(note.contents) > 0:
-                        status = note.get('class')
-                        annots = note.contents[:-1]
-                        # iterate to last nested tag
-                        note = note.contents[-1]
-                    else:
-                        note = ""
 
-                word_dict['text'] = prefix + str(note) + postfix
-                if status is not None:
+                def f(tag):
+                    nonlocal prefix, postfix
+                    annots = []
+                    status = None
+                    word_dict = collections.defaultdict(list)
+                    while type(tag) is Tag:
+                        if tag.name != 'span':
+                            prefix = f'{prefix}<{tag.name}>'
+                            postfix = f'</{tag.name}>{postfix}'
+                            # calling f() recursively because inside
+                            # e.g. <b></b> tags several words may be
+                            for t in tag.contents:
+                                f(t)
+
+                        if len(tag.contents) > 0:
+                            status = tag.get('class')
+                            annots = tag.contents[:-1]
+                            # iterate to last nested tag
+                            tag = tag.contents[-1]
+                        else:
+                            tag = ""
+
+                    word_dict['text'] = prefix + str(tag) + postfix
+                    print(f'*** {str(tag)}')
                     word_dict['status'] = status
 
-                for ann in annots:
-                    if type(ann) is Tag:
-                        res = json.loads(ann.text)
-                        res['state'] = ann.get('class')
-                        word_dict['results'].append(res)
+                    for ann in annots:
+                        if type(ann) is Tag:
+                            #print(f'*** {ann}')
+                            res = json.loads(ann.text)
+                            res['state'] = ann.get('class')
+                            word_dict['results'].append(res)
 
-                if word_dict.get('results'):
-                    words_list.append(word_dict)
-                else:
-                    words_list.append(word_dict.get('text', ""))
+                    if word_dict.get('results'):
+                        words_list.append(word_dict)
+                    else:
+                        words_list.append(word_dict.get('text', ""))
+
+                f(note)
 
             parags_list.append(words_list)
 
         return parags_list
+
+    A()
 
     arguments['format'] = "json"
 
