@@ -463,3 +463,6 @@ def apertium_rus(dedoc_output, apertium_path):
 
 def hfst_kalmyk(dedoc_output):
     return hfst_parser(dedoc_output, 'xal')
+
+def hfst_ancient_kalmyk(dedoc_output):
+    return hfst_parser(dedoc_output, 'anc_xal')
