@@ -584,6 +584,7 @@ def create_parser_result(
                             # e.g. <b></b> tags several words may be
                             for t in tag.contents:
                                 f(t)
+                            return
 
                         if len(tag.contents) > 0:
                             status = tag.get('class')
@@ -615,8 +616,6 @@ def create_parser_result(
 
         return parags_list
 
-    A()
-
     arguments['format'] = "json"
 
     if arguments.get('format') == "json":
@@ -629,6 +628,8 @@ def create_parser_result(
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                       entity_client_id=entity_client_id, entity_object_id=entity_object_id,
                                       arguments=arguments, content=result)
+
+    A()
 
     if not dbparserresult.object_id:
         dbparserresult.object_id = get_client_counter(client_id)
