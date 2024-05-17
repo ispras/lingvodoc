@@ -566,8 +566,12 @@ def create_parser_result(
 
     def get_result_json(annotated_html):
         parags_list = []
+        # iteration by <p></p> tags
         for parag in BeautifulSoup(annotated_html, 'html.parser')('p'):
             words_list = []
+            # iteration by <span></span> for single words
+            # or by some other tags e.g. <b></b> with several words inside
+            # or by simple text parts without any tag
             for note in parag.contents:
                 prefix = postfix = ""
 
@@ -580,13 +584,14 @@ def create_parser_result(
                         if tag.name != 'span':
                             prefix = f'{prefix}<{tag.name}>'
                             postfix = f'</{tag.name}>{postfix}'
-                            # calling f() recursively because inside
-                            # e.g. <b></b> tags several words may be
+                            # calling f() recursively because several words
+                            # may be inside e.g. <b></b> tags
                             for t in tag.contents:
                                 f(t)
                             return
 
                         if len(tag.contents) > 0:
+                            id = tag.get('id')
                             status = tag.get('class')
                             annots = tag.contents[:-1]
                             # iterate to last nested tag
@@ -594,14 +599,14 @@ def create_parser_result(
                         else:
                             tag = ""
 
+                    word_dict['id'] = id
                     word_dict['text'] = prefix + str(tag) + postfix
-                    print(f'*** {str(tag)}')
                     word_dict['status'] = status
 
                     for ann in annots:
                         if type(ann) is Tag:
-                            #print(f'*** {ann}')
                             res = json.loads(ann.text)
+                            res['id'] = ann.get('id')
                             res['state'] = ann.get('class')
                             word_dict['results'].append(res)
 
@@ -628,8 +633,6 @@ def create_parser_result(
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                       entity_client_id=entity_client_id, entity_object_id=entity_object_id,
                                       arguments=arguments, content=result)
-
-    A()
 
     if not dbparserresult.object_id:
         dbparserresult.object_id = get_client_counter(client_id)
