@@ -578,7 +578,7 @@ def create_parser_result(
                 def f(tag):
                     nonlocal prefix, postfix
                     annots = []
-                    status = None
+                    id = status = None
                     word_dict = collections.defaultdict(list)
                     while type(tag) is Tag:
                         if tag.name != 'span':
@@ -599,10 +599,10 @@ def create_parser_result(
                         else:
                             tag = ""
 
-                    word_dict['id'] = id
+                    # last tag from the loop above should be a textual string
                     word_dict['text'] = prefix + str(tag) + postfix
-                    word_dict['status'] = status
 
+                    # last annots from the loop above should contain results list
                     for ann in annots:
                         if type(ann) is Tag:
                             res = json.loads(ann.text)
@@ -611,9 +611,11 @@ def create_parser_result(
                             word_dict['results'].append(res)
 
                     if word_dict.get('results'):
+                        word_dict['id'] = id
+                        word_dict['status'] = status
                         words_list.append(word_dict)
                     else:
-                        words_list.append(word_dict.get('text', ""))
+                        words_list.append(word_dict.get('text'))
 
                 f(note)
 
@@ -627,7 +629,7 @@ def create_parser_result(
         dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                       entity_client_id=entity_client_id, entity_object_id=entity_object_id,
-                                      arguments=arguments, content=str(get_result_json(result)))
+                                      arguments=arguments, content=json.dumps(get_result_json(result)))
     else:
         dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
