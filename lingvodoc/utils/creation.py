@@ -573,17 +573,16 @@ def create_parser_result(
             # or by some other tags e.g. <b></b> with several words inside
             # or by simple text parts without any tag
             for note in parag.contents:
-                prefix = postfix = ""
+                prefix = []
 
                 def f(tag):
-                    nonlocal prefix, postfix
+                    nonlocal prefix
                     annots = []
                     id = status = None
                     word_dict = collections.defaultdict(list)
                     while type(tag) is Tag:
                         if tag.name != 'span':
-                            prefix = f'{prefix}<{tag.name}>'
-                            postfix = f'</{tag.name}>{postfix}'
+                            prefix.append(tag.name)
                             # calling f() recursively because several words
                             # may be inside e.g. <b></b> tags
                             for t in tag.contents:
@@ -600,7 +599,7 @@ def create_parser_result(
                             tag = ""
 
                     # last tag from the loop above should be a textual string
-                    word_dict['text'] = prefix + str(tag) + postfix
+                    word_dict['text'] = str(tag)
 
                     # last annots from the loop above should contain results list
                     for ann in annots:
@@ -610,12 +609,15 @@ def create_parser_result(
                             res['state'] = ann.get('class')
                             word_dict['results'].append(res)
 
+                    item_to_store = word_dict.get('text')
                     if word_dict.get('results'):
                         word_dict['id'] = id
                         word_dict['status'] = status
-                        words_list.append(word_dict)
-                    else:
-                        words_list.append(word_dict.get('text'))
+                        item_to_store = word_dict
+                    if prefix:
+                        word_dict['prefix'] = prefix
+                        item_to_store = word_dict
+                    words_list.append(item_to_store)
 
                 f(note)
 
