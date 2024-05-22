@@ -525,9 +525,70 @@ def async_create_parser_result_method(id, parser_id, entity_id, apertium_path, s
 
     task_status.set(2, 100, "Parsing of file " + content_filename + " finished")
 
+
+def get_result_json(annotated_html):
+    parags_list = []
+    # iteration by <p></p> tags
+    for parag in BeautifulSoup(annotated_html, 'html.parser')('p'):
+        words_list = []
+        # iteration by <span></span> for single words
+        # or by some other tags e.g. <b></b> with several words inside
+        # or by simple text parts without any tag
+        for note in parag.contents:
+            prefix = []
+
+            def f(tag):
+                nonlocal prefix
+                annots = []
+                id = status = None
+                word_dict = collections.defaultdict(list)
+                while type(tag) is Tag:
+                    if tag.name != 'span':
+                        prefix.append(tag.name)
+                        # calling f() recursively because several words
+                        # may be inside e.g. <b></b> tags
+                        for t in tag.contents:
+                            f(t)
+                        return
+
+                    if len(tag.contents) > 0:
+                        id = tag.get('id')
+                        status = tag.get('class')
+                        annots = tag.contents[:-1]
+                        # iterate to last nested tag
+                        tag = tag.contents[-1]
+                    else:
+                        tag = ""
+
+                # last tag from the loop above should be a textual string
+                word_dict['text'] = str(tag)
+
+                # last annots from the loop above should contain results list
+                for ann in annots:
+                    if type(ann) is Tag:
+                        res = json.loads(ann.text)
+                        res['id'] = ann.get('id')
+                        res['state'] = ann.get('class')
+                        word_dict['results'].append(res)
+
+                item_to_store = word_dict.get('text')
+                if word_dict.get('results'):
+                    word_dict['id'] = id
+                    word_dict['status'] = status
+                    item_to_store = word_dict
+                if prefix:
+                    word_dict['prefix'] = prefix
+                    item_to_store = word_dict
+                words_list.append(item_to_store)
+
+            f(note)
+
+        parags_list.append(words_list)
+
+    return parags_list
+
+
 # Downloads a document by the URL in an entity's content and saves the result of its parsing
-
-
 def create_parser_result(
     id, parser_id, entity_id, dedoc_url, apertium_path, storage, arguments = None, save_object = True):
 
@@ -563,67 +624,6 @@ def create_parser_result(
 
     elif "apertium" in parser.method:
         result = parse_method(dedoc_output, apertium_path, **arguments)
-
-    def get_result_json(annotated_html):
-        parags_list = []
-        # iteration by <p></p> tags
-        for parag in BeautifulSoup(annotated_html, 'html.parser')('p'):
-            words_list = []
-            # iteration by <span></span> for single words
-            # or by some other tags e.g. <b></b> with several words inside
-            # or by simple text parts without any tag
-            for note in parag.contents:
-                prefix = []
-
-                def f(tag):
-                    nonlocal prefix
-                    annots = []
-                    id = status = None
-                    word_dict = collections.defaultdict(list)
-                    while type(tag) is Tag:
-                        if tag.name != 'span':
-                            prefix.append(tag.name)
-                            # calling f() recursively because several words
-                            # may be inside e.g. <b></b> tags
-                            for t in tag.contents:
-                                f(t)
-                            return
-
-                        if len(tag.contents) > 0:
-                            id = tag.get('id')
-                            status = tag.get('class')
-                            annots = tag.contents[:-1]
-                            # iterate to last nested tag
-                            tag = tag.contents[-1]
-                        else:
-                            tag = ""
-
-                    # last tag from the loop above should be a textual string
-                    word_dict['text'] = str(tag)
-
-                    # last annots from the loop above should contain results list
-                    for ann in annots:
-                        if type(ann) is Tag:
-                            res = json.loads(ann.text)
-                            res['id'] = ann.get('id')
-                            res['state'] = ann.get('class')
-                            word_dict['results'].append(res)
-
-                    item_to_store = word_dict.get('text')
-                    if word_dict.get('results'):
-                        word_dict['id'] = id
-                        word_dict['status'] = status
-                        item_to_store = word_dict
-                    if prefix:
-                        word_dict['prefix'] = prefix
-                        item_to_store = word_dict
-                    words_list.append(item_to_store)
-
-                f(note)
-
-            parags_list.append(words_list)
-
-        return parags_list
 
     arguments['format'] = "json"
 

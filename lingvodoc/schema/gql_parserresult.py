@@ -98,6 +98,7 @@ import lingvodoc.utils as utils
 
 from lingvodoc.utils.creation import (
     create_parser_result,
+    get_result_json,
     async_create_parser_result)
 
 import lingvodoc.utils.doc_parser as ParseMethods
@@ -448,6 +449,7 @@ class UpdateParserResult(graphene.Mutation):
         content = graphene.String()
         reexecute = graphene.Boolean()
         synchronous = graphene.Boolean()
+        to_json = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -459,6 +461,7 @@ class UpdateParserResult(graphene.Mutation):
         content_from_args = args.get('content')
         reexecute = args.get('reexecute')
         synchronous = args.get('synchronous', False)
+        synchronous = args.get('to_json', False)
 
         request = info.context.request
 
