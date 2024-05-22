@@ -553,7 +553,7 @@ def get_result_json(annotated_html):
 
                     if len(tag.contents) > 0:
                         id = tag.get('id')
-                        status = tag.get('class')
+                        status = ' '.join(tag.get('class'))
                         annots = tag.contents[:-1]
                         # iterate to last nested tag
                         tag = tag.contents[-1]
@@ -568,7 +568,7 @@ def get_result_json(annotated_html):
                     if type(ann) is Tag:
                         res = json.loads(ann.text)
                         res['id'] = ann.get('id')
-                        res['state'] = ann.get('class')
+                        res['state'] = ' '.join(ann.get('class'))
                         word_dict['results'].append(res)
 
                 item_to_store = word_dict.get('text')
@@ -585,7 +585,7 @@ def get_result_json(annotated_html):
 
         parags_list.append(words_list)
 
-    return parags_list
+    return json.dumps(parags_list)
 
 
 # Downloads a document by the URL in an entity's content and saves the result of its parsing
@@ -631,7 +631,7 @@ def create_parser_result(
         dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                       entity_client_id=entity_client_id, entity_object_id=entity_object_id,
-                                      arguments=arguments, content=json.dumps(get_result_json(result)))
+                                      arguments=arguments, content=get_result_json(result))
     else:
         dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                       parser_object_id=parser_object_id, parser_client_id=parser_client_id,
