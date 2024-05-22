@@ -417,7 +417,7 @@ def reexecute_parser(old_result, parse_method, apertium_path):
 
 @celery.task
 def async_reexecute_parser(parser_result_id, content, parse_method,
-                           task_key, cache_kwargs, sqlalchemy_url, apertium_path):
+                           task_key, cache_kwargs, sqlalchemy_url, apertium_path, to_json=False):
 
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
@@ -433,6 +433,9 @@ def async_reexecute_parser(parser_result_id, content, parse_method,
     try:
 
         parser_result.content = reexecute_parser(content, parse_method, apertium_path)
+        if to_json:
+            parser_result.content = get_result_json(parser_result.content)
+            parser_result.arguments['format'] = "json"
         transaction.commit()
 
     except Exception as err:
@@ -461,7 +464,7 @@ class UpdateParserResult(graphene.Mutation):
         content_from_args = args.get('content')
         reexecute = args.get('reexecute')
         synchronous = args.get('synchronous', False)
-        synchronous = args.get('to_json', False)
+        to_json = args.get('to_json', False)
 
         request = info.context.request
 
@@ -475,6 +478,9 @@ class UpdateParserResult(graphene.Mutation):
 
         if content_from_args and not element_id:
             parser_result.content = content_from_args[:]
+            if to_json:
+                parser_result.content = get_result_json(parser_result.content)
+                parser_result.arguments['format'] = "json"
             transaction.commit()
             return UpdateParserResult(triumph=True)
 
@@ -506,6 +512,7 @@ class UpdateParserResult(graphene.Mutation):
                 cur_args['content'] = content
                 cur_args['parse_method'] = parser.method
                 cur_args['apertium_path'] = apertium_path
+                cur_args['to_json'] = to_json
 
                 if synchronous:
                     raise NotImplementedError
@@ -522,6 +529,9 @@ class UpdateParserResult(graphene.Mutation):
                 return UpdateParserResult(triumph=True)
 
             parser_result.content = parse_and_insert_element(content, element_id, parser.method, apertium_path)
+            if to_json:
+                parser_result.content = get_result_json(parser_result.content)
+                parser_result.arguments['format'] = "json"
             transaction.commit()
 
         return UpdateParserResult(triumph=True)
