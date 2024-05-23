@@ -302,10 +302,10 @@ class DeleteParserResult(graphene.Mutation):
 
 def get_parser_result_for_text(text, parse_method, apertium_path):
     method = getattr(ParseMethods, parse_method)
-    if parse_method.find("timarkh") != -1:
-        result = method(text)
-    elif parse_method.find("apertium") != -1:
+    if parse_method.find("apertium") != -1:
         result = method(text, apertium_path)
+    else:
+        result = method(text)
     return result
 
 

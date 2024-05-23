@@ -7,6 +7,8 @@ from uniparser_udmurt import UdmurtAnalyzer
 from uniparser_moksha import MokshaAnalyzer
 from uniparser_komi_zyrian import KomiZyrianAnalyzer
 from nltk.tokenize import RegexpTokenizer
+from hfst_dev import HfstTransducer
+from lxml.html import fromstring
 import csv
 import os
 import tempfile
@@ -24,7 +26,7 @@ def print_to_str(*args, **kwargs):
 
 
 span_id_counter = 0
-def generate_html_wrap(word, ana_tag_list, lang=""):
+def generate_html_wrap(word, ana_tag_list, lang="", extra_state=""):
 
     json_list = list()
     for ana_tag in ana_tag_list:
@@ -40,16 +42,16 @@ def generate_html_wrap(word, ana_tag_list, lang=""):
 
     global span_id_counter
     span_id_counter += 1
-    wrap = "<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">"
+    wrap = f"<span class=\"unverified {extra_state}\"" + " id=" + str(span_id_counter) + ">"
     for attr_json in json_list:
         span_id_counter += 1
         encoded_attrs = ((json.dumps(attr_json, ensure_ascii=False)).encode('utf8')).decode()
-        wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs + "</span>"
+        wrap += f"<span class=\"result {extra_state}\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs + "</span>"
 
         if lang == 'udm' and 'nom' in encoded_attrs:
             flag = True
             span_id_counter += 1
-            wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs.replace('nom', 'acc0') + "</span>"
+            wrap += f"<span class=\"result {extra_state}\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs.replace('nom', 'acc0') + "</span>"
 
     wrap += word + "</span>"
     return wrap
@@ -68,8 +70,9 @@ def insert_parser_output_to_text(text, parser_output, lang=""):
             if text[match_index-len(ESC_PAT):match_index] == ESC_PAT and text[match_index+len(word):match_index+len(word)+len(ESC_PAT)] == ESC_PAT:
                 continue
         result_list.append(text[search_start_index:match_index])
-        if (len(w_tag.contents) > 1):
-            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1], lang=lang))
+        if len(w_tag.contents) > 1:
+            extra_state = "broken" if any([a.get('gr') == "Unknown" for a in w_tag.find_all('ana')]) else ""
+            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1], lang=lang, extra_state=extra_state))
         search_start_index = match_index + len(word)
     result_list.append(text[search_start_index:])
     result = "".join(result_list)
@@ -358,6 +361,72 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
     return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
+def hfst_parser(dedoc_output, lang, debug_flag=False):
+
+    if debug_flag:
+        with open("dedoc_output", 'w') as f:
+            print(dedoc_output, file=f)
+
+    parser_path = f"/opt/hfst/{lang}"
+
+    with open(f"{parser_path}/lexicon.lexc", 'r') as f:
+        lexicon = f.read()
+
+    xfst = HfstTransducer.read_from_file(f"{parser_path}/rules.xfst.hfst")
+    xfst.invert()
+
+    sent_regex = re.compile(r'[.|!|?|...]')
+    word_regex = re.compile(r'[,| |:|"|-|*]')
+
+    words = 0
+    analyzed = 0
+    parser_list = []
+
+    # remove html tags from dedoc_output
+    text = fromstring(dedoc_output).text_content()
+    sentences = filter(lambda t: t, [t.strip() for t in sent_regex.split(text)])
+    for s in sentences:
+        wordlist = filter(lambda t: t, [t.strip() for t in word_regex.split(s)])
+        for w in wordlist:
+            words = words + 1
+            lookup = xfst.lookup(w)
+            if len(lookup) == 0:
+                lookup = xfst.lookup(w.lower())
+            if len(lookup) > 0:
+                analyzed = analyzed + 1
+                section = "'<w>"
+                for lkp in map(lambda l: l[0], lookup):
+
+                    if '+' in lkp:
+                        plus_pos = lkp.index('+')
+                        lex = lkp[:plus_pos]
+                        gr = lkp[plus_pos + 1:].replace('+', ',')
+                    else:
+                        lex = lkp
+                        gr = "Unknown"
+
+                    # Get translation
+                    if ((xln := re.search(f"[\r\n]{lex}:{w} .*!([^0].*)[\r\n]", lexicon)) or
+                        (xln := re.search(f"[\r\n]{lex}:{w.lower()} .*!([^0].*)[\r\n]", lexicon)) or
+                        (xln := re.search(f"[\r\n]{lex}:.*!([^0].*)[\r\n]", lexicon))):
+                        xln = xln.group(1)
+                    else:
+                        xln = "Unknown"
+
+                    section += f'<ana lex={lex} gr={gr} parts="" gloss="" trans_ru={xln}></ana>'
+                section += f"{w}</w>'"
+                parser_list.append(section)
+            else:
+                parser_list.append(f'\'<w><ana lex="" gr="" parts="" gloss=""></ana>{w}</w>\'')
+
+    parser_output = ", ".join(parser_list)
+
+    if debug_flag:
+        with open("parser_output", 'w') as f:
+            print(parser_output, file=f)
+        print(f"Analyzed per word: {analyzed / words}")
+
+    return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
 def timarkh_udm(dedoc_output):
     return timarkh_uniparser(dedoc_output, 'udm')
@@ -392,3 +461,8 @@ def apertium_bak(dedoc_output, apertium_path):
 def apertium_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'rus')
 
+def hfst_kalmyk(dedoc_output):
+    return hfst_parser(dedoc_output, 'xal')
+
+def hfst_ancient_kalmyk(dedoc_output):
+    return hfst_parser(dedoc_output, 'anc_xal')
