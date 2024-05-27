@@ -4656,7 +4656,8 @@ class SwadeshAnalysis(graphene.Mutation):
                         dbEntity.parent_id == dbLexicalEntry.id,
                         dbEntity.field_id == transcription_field_id,
                         dbEntity.marked_for_deletion == False,
-                        dbPublishingEntity.id == dbEntity.id,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
                         dbPublishingEntity.published == True,
                         dbPublishingEntity.accepted == True)
                     .add_columns(
@@ -4675,7 +4676,8 @@ class SwadeshAnalysis(graphene.Mutation):
                         dbEntity.parent_id == dbLexicalEntry.id,
                         dbEntity.field_id == translation_field_id,
                         dbEntity.marked_for_deletion == False,
-                        dbPublishingEntity.id == dbEntity.id,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
                         dbPublishingEntity.published == True,
                         dbPublishingEntity.accepted == True)
                     .add_columns(
@@ -4694,7 +4696,8 @@ class SwadeshAnalysis(graphene.Mutation):
                         dbEntity.parent_id == dbLexicalEntry.id,
                         dbEntity.field_id == lexeme_field_id,
                         dbEntity.marked_for_deletion == False,
-                        dbPublishingEntity.id == dbEntity.id,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
                         dbPublishingEntity.published == True,
                         dbPublishingEntity.accepted == True)
                     .add_columns(
