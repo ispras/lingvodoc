@@ -1800,6 +1800,9 @@ class Save_Context(object):
 
             for field_cid, field_oid, name_dict in field_name_info_list:
 
+                if field_cid == 66 and field_oid == 6:
+                    lexeme_fid = (field_cid, field_oid)
+
                 if field_cid == 66 and field_oid == 8:
                     transcription_fid = (field_cid, field_oid)
 
@@ -1818,12 +1821,14 @@ class Save_Context(object):
 
                 en_xcript_fid = None
                 en_xlat_fid = None
+                en_word_fid = None
 
                 en_snd_fid = None
                 en_mrkp_fid = None
 
                 ru_xcript_fid = None
                 ru_xlat_fid = None
+                ru_word_fid = None
 
                 ru_snd_fid = None
                 ru_mrkp_fid = None
@@ -1840,6 +1845,9 @@ class Save_Context(object):
 
                         elif en_name == 'meaning':
                             en_xlat_fid = (field_cid, field_oid)
+
+                        elif en_name == 'word':
+                            en_word_fid = (field_cid, field_oid)
 
                         elif en_name == 'sound':
                             en_snd_fid = (field_cid, field_oid)
@@ -1858,6 +1866,9 @@ class Save_Context(object):
                         elif ru_name == 'значение':
                             ru_xlat_fid = (field_cid, field_oid)
 
+                        elif ru_name == 'лексема':
+                            ru_word_fid = (field_cid, field_oid)
+
                         elif ru_name == 'звук':
                             ru_snd_fid = (field_cid, field_oid)
 
@@ -1868,6 +1879,7 @@ class Save_Context(object):
 
                     transcription_fid = en_xcript_fid
                     translation_fid = en_xlat_fid
+                    lexeme_fid = en_word_fid
 
                     sound_fid = en_snd_fid
                     markup_fid = en_mrkp_fid
@@ -1876,6 +1888,7 @@ class Save_Context(object):
 
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
+                    lexeme_fid = ru_word_fid
 
                     sound_fid = ru_snd_fid
                     markup_fid = ru_mrkp_fid
@@ -1887,12 +1900,14 @@ class Save_Context(object):
 
                 en_xcript_fid = None
                 en_xlat_fid = None
+                #en_word_fid = None
 
                 en_snd_fid = None
                 en_mrkp_fid = None
 
                 ru_xcript_fid = None
                 ru_xlat_fid = None
+                #ru_word_fid = None
 
                 ru_snd_fid = None
                 ru_mrkp_fid = None
