@@ -826,7 +826,7 @@ class CognateAnalysis(graphene.Mutation):
 
         # All tags for tagged lexical entries in specified perspectives.
 
-        for perspective_id, transcription_field_id, translation_field_id in perspective_info_list:
+        for perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
 
             tag_query = (
 
@@ -1136,7 +1136,7 @@ class CognateAnalysis(graphene.Mutation):
 
         perspective_id_list = [
             perspective_id
-            for perspective_id, _, _ in perspective_info_list]
+            for perspective_id, _, _, _ in perspective_info_list]
 
         if not perspective_id_list:
 
@@ -2775,7 +2775,7 @@ class CognateAnalysis(graphene.Mutation):
         sg_both_count = 0
 
         source_perspective_index = None
-        for index, (perspective_id, transcription_field_id, translation_field_id) in \
+        for index, (perspective_id, transcription_field_id, translation_field_id, _) in \
             enumerate(perspective_info_list):
 
             if perspective_id == source_perspective_id:
@@ -3079,7 +3079,7 @@ class CognateAnalysis(graphene.Mutation):
         perspective_id_list = []
         perspective_name_list = []
 
-        for perspective_id, transcription_field_id, translation_field_id in perspective_info_list:
+        for perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
 
             perspective_id_list.append(perspective_id)
             perspective_data = perspective_dict[perspective_id]
@@ -4064,7 +4064,7 @@ class CognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _ in perspective_info_list))
+                for (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -4221,11 +4221,13 @@ class CognateAnalysis(graphene.Mutation):
 
                 (tuple(perspective_id),
                     tuple(transcription_field_id),
-                    tuple(translation_field_id))
+                    tuple(translation_field_id),
+                    None)
 
                 for perspective_id,
                     transcription_field_id,
-                    translation_field_id in perspective_info_list]
+                    translation_field_id,
+                    _ in perspective_info_list]
 
             multi_list = [
                 [tuple(language_id), perspective_count]
@@ -4627,7 +4629,7 @@ class SwadeshAnalysis(graphene.Mutation):
         swadesh_total = {}
         result_pool = {}
         tiny_dicts = set()
-        for index, (perspective_id, transcription_field_id, translation_field_id) in \
+        for index, (perspective_id, transcription_field_id, translation_field_id, lexeme_field_id) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -4649,16 +4651,12 @@ class SwadeshAnalysis(graphene.Mutation):
                         dbLexicalEntry.client_id,
                         dbLexicalEntry.object_id)
                     .filter(
-                        dbLexicalEntry.parent_client_id == perspective_id[0],
-                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.parent_id == perspective_id,
                         dbLexicalEntry.marked_for_deletion == False,
-                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                        dbEntity.field_client_id == transcription_field_id[0],
-                        dbEntity.field_object_id == transcription_field_id[1],
+                        dbEntity.parent_id == dbLexicalEntry.id,
+                        dbEntity.field_id == transcription_field_id,
                         dbEntity.marked_for_deletion == False,
-                        dbPublishingEntity.client_id == dbEntity.client_id,
-                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.id == dbEntity.id,
                         dbPublishingEntity.published == True,
                         dbPublishingEntity.accepted == True)
                     .add_columns(
@@ -4672,16 +4670,12 @@ class SwadeshAnalysis(graphene.Mutation):
                         dbLexicalEntry.client_id,
                         dbLexicalEntry.object_id)
                     .filter(
-                        dbLexicalEntry.parent_client_id == perspective_id[0],
-                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.parent_id == perspective_id,
                         dbLexicalEntry.marked_for_deletion == False,
-                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                        dbEntity.field_client_id == translation_field_id[0],
-                        dbEntity.field_object_id == translation_field_id[1],
+                        dbEntity.parent_id == dbLexicalEntry.id,
+                        dbEntity.field_id == translation_field_id,
                         dbEntity.marked_for_deletion == False,
-                        dbPublishingEntity.client_id == dbEntity.client_id,
-                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.id == dbEntity.id,
                         dbPublishingEntity.published == True,
                         dbPublishingEntity.accepted == True)
                     .add_columns(
@@ -4689,15 +4683,38 @@ class SwadeshAnalysis(graphene.Mutation):
                     .group_by(dbLexicalEntry)
                     .subquery())
 
-            # Main query for transcription/translation data.
+            lexeme_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_id == perspective_id,
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_id == dbLexicalEntry.id,
+                        dbEntity.field_id == lexeme_field_id,
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.id == dbEntity.id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('lexeme'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
+            # Main query for transcription/translation/lexeme data.
             data_query = (
                 DBSession
                     .query(transcription_query)
                     .outerjoin(translation_query, and_(
                         transcription_query.c.client_id == translation_query.c.client_id,
                         transcription_query.c.object_id == translation_query.c.object_id))
+                    .outerjoin(lexeme_query, and_(
+                        transcription_query.c.client_id == lexeme_query.c.client_id,
+                        transcription_query.c.object_id == lexeme_query.c.object_id))
                     .add_columns(
-                        translation_query.c.translation)
+                        translation_query.c.translation,
+                        lexeme_query.c.lexeme)
                     .all())
 
             # GC
@@ -4710,7 +4727,7 @@ class SwadeshAnalysis(graphene.Mutation):
             result_pool[perspective_id] = {'name': dictionary_name}
             for row_index, row in enumerate(data_query):
                 entry_id = tuple(row[:2])
-                transcription_list, translation_list = row[2:4]
+                transcription_list, translation_list, lexeme_list = row[2:5]
 
                 # If we have no transcriptions for this lexical entry, we skip it altogether.
                 if not transcription_list:
@@ -4724,13 +4741,14 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 # Parsing translations and matching with Swadesh's words
                 transcription_lex = ', '.join(transcription_list)
+                lexeme_lex = ', '.join(lexeme_list or [])
                 for swadesh_num, swadesh_lex in enumerate(swadesh_list):
                     for translation_lex in translation_list:
                         if compare_translations(swadesh_lex, translation_lex):
                             # Store the entry's content in human-readable format
                             result_pool[perspective_id][entry_id] = {
                                 'group': None,
-                                'borrowed': (" заим." in f" {transcription_lex} {translation_lex}"),
+                                'borrowed': (" заим." in f" {transcription_lex} {translation_lex} {lexeme_lex}"),
                                 'swadesh': swadesh_lex,
                                 'transcription': transcription_lex,
                                 'translation': translation_lex
@@ -4888,7 +4906,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _ in perspective_info_list))
+                for (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -4949,11 +4967,13 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 (tuple(perspective_id),
                     tuple(transcription_field_id),
-                    tuple(translation_field_id))
+                    tuple(translation_field_id),
+                    tuple(lexeme_field_id))
 
                 for perspective_id,
                     transcription_field_id,
-                    translation_field_id in perspective_info_list]
+                    translation_field_id,
+                    lexeme_field_id in perspective_info_list]
 
             return SwadeshAnalysis.swadesh_statistics(
                 language_str,
@@ -5065,7 +5085,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         meaning_re = re.compile('[.\dA-Z]+')
         meaning_with_comment_re = re.compile('[.\dA-Z]+ *\([.,:;\d\w ]+\)')
 
-        for index, (perspective_id, affix_field_id, meaning_field_id) in \
+        for index, (perspective_id, affix_field_id, meaning_field_id, _) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -5325,7 +5345,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _ in perspective_info_list))
+                for (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -5386,11 +5406,13 @@ class MorphCognateAnalysis(graphene.Mutation):
 
                 (tuple(perspective_id),
                     tuple(affix_field_id),
-                    tuple(meaning_field_id))
+                    tuple(meaning_field_id),
+                    None)
 
                 for perspective_id,
                     affix_field_id,
-                    meaning_field_id in perspective_info_list]
+                    meaning_field_id,
+                    _ in perspective_info_list]
 
             return MorphCognateAnalysis.morph_cognate_statistics(
                 language_str,
