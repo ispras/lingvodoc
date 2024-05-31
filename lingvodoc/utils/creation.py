@@ -540,7 +540,7 @@ def get_result_json(annotated_html):
             def f(tag):
                 nonlocal prefix
                 annots = []
-                id = status = None
+                id = state = None
                 word_dict = collections.defaultdict(list)
                 while type(tag) is Tag:
                     if tag.name != 'span':
@@ -553,7 +553,7 @@ def get_result_json(annotated_html):
 
                     if len(tag.contents) > 0:
                         id = tag.get('id')
-                        status = ' '.join(tag.get('class'))
+                        state = ' '.join(tag.get('class'))
                         annots = tag.contents[:-1]
                         # iterate to last nested tag
                         tag = tag.contents[-1]
@@ -574,7 +574,7 @@ def get_result_json(annotated_html):
                 item_to_store = word_dict.get('text')
                 if word_dict.get('results'):
                     word_dict['id'] = id
-                    word_dict['status'] = status
+                    word_dict['state'] = state
                     item_to_store = word_dict
                 if prefix:
                     word_dict['prefix'] = prefix
