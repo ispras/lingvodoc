@@ -619,6 +619,7 @@ def create_parser_result(
 
     dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
 
+    # we get result as html
     if "timarkh" in parser.method:
         result = parse_method(dedoc_output, **arguments)
 
@@ -627,16 +628,10 @@ def create_parser_result(
 
     arguments['format'] = "json"
 
-    if arguments.get('format') == "json":
-        dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
-                                      parser_object_id=parser_object_id, parser_client_id=parser_client_id,
-                                      entity_client_id=entity_client_id, entity_object_id=entity_object_id,
-                                      arguments=arguments, content=get_result_json(result))
-    else:
-        dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
-                                      parser_object_id=parser_object_id, parser_client_id=parser_client_id,
-                                      entity_client_id=entity_client_id, entity_object_id=entity_object_id,
-                                      arguments=arguments, content=result)
+    dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
+                                  parser_object_id=parser_object_id, parser_client_id=parser_client_id,
+                                  entity_client_id=entity_client_id, entity_object_id=entity_object_id,
+                                  arguments=arguments, content=get_result_json(result))
 
     if not dbparserresult.object_id:
         dbparserresult.object_id = get_client_counter(client_id)

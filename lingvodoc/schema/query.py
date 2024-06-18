@@ -4790,11 +4790,11 @@ class Query(graphene.ObjectType):
                                                             ).first()
         if not result or result.marked_for_deletion:
             return None
-        '''
+
         if result.arguments.get('format') != 'json':
             result.content = get_result_json(result.content)
             result.arguments['format'] = 'json'
-        '''
+
         parser_result = ParserResult(id=[result.client_id, result.object_id])
         parser_result.dbObject = result
         return parser_result
