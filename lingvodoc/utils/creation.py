@@ -528,6 +528,7 @@ def async_create_parser_result_method(id, parser_id, entity_id, apertium_path, s
 
 def get_result_json(annotated_html):
     parags_list = []
+    pfx_id = 0
     # iteration by <p></p> tags
     for parag in BeautifulSoup(annotated_html, 'html.parser')('p'):
         words_list = []
@@ -539,6 +540,7 @@ def get_result_json(annotated_html):
 
             def f(tag):
                 nonlocal prefix
+                nonlocal pfx_id
                 annots = []
                 id = state = None
                 word_dict = collections.defaultdict(list)
@@ -572,11 +574,9 @@ def get_result_json(annotated_html):
                         word_dict['results'].append(res)
 
                 item_to_store = word_dict.get('text')
-                if word_dict.get('results'):
-                    word_dict['id'] = id
-                    word_dict['state'] = state
-                    item_to_store = word_dict
-                if prefix:
+                if word_dict.get('results') or prefix:
+                    word_dict['id'] = id or (pfx_id := pfx_id - 1)
+                    word_dict['state'] = state or "highlighted"
                     word_dict['prefix'] = prefix
                     item_to_store = word_dict
                 words_list.append(item_to_store)
