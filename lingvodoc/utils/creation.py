@@ -526,6 +526,52 @@ def async_create_parser_result_method(id, parser_id, entity_id, apertium_path, s
     task_status.set(2, 100, "Parsing of file " + content_filename + " finished")
 
 
+def json_to_html(content):
+    
+    html_output = BeautifulSoup()
+    attrs = {'id': 'id', 'state': 'class'}
+
+    for prg in content:
+        p_tag = html_output.new_tag("p")
+        for wrd in prg:
+            # if word has some attributes
+            if type(wrd) is dict:
+                w_span_tag = html_output.new_tag("span")
+                for key, attr in attrs.items():
+                    if key in wrd:
+                        w_span_tag[attr] = wrd[key]
+
+                # iterate by result spans
+                for res in wrd.get('results', []):
+                    r_span_tag = html_output.new_tag("span")
+                    for key, attr in attrs.items():
+                        r_span_tag[attr] = res.get(key)
+
+                    data = {k: v for k, v in res.items() if k not in attrs}
+                    r_span_tag.append(json.dumps(data))
+
+                    w_span_tag.append(r_span_tag)
+
+                text = wrd.get('text')
+
+                # wrap text in prefix tags if any
+                for prefix in wrd.get('prefix', []):
+                    pfx_tag = html_output.new_tag(prefix)
+                    pfx_tag.append(text)
+                    text = pfx_tag
+
+                # append text to word and word to paragraph
+                w_span_tag.append(text)
+                p_tag.append(w_span_tag)
+
+            elif type(wrd) is string:
+                p_tag.append(wrd)
+
+        html_output.append(p_tag)
+
+    return str(html_output)
+
+
 def get_result_json(annotated_html):
     parags_list = []
     # iteration by <p></p> tags
