@@ -461,7 +461,7 @@ class UpdateParserResult(graphene.Mutation):
         content_from_args = args.get('content')
         content_fmt = args.get('content_fmt', 'html')
         # incoming content may have json format
-        if len(content_from_args) > 0 and content_fmt == 'json':
+        if len(content_from_args or []) > 0 and content_fmt == 'json':
             content_from_args = json_to_html(json.loads(content_from_args))
         reexecute = args.get('reexecute')
         synchronous = args.get('synchronous', False)
