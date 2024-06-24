@@ -4792,7 +4792,6 @@ class Query(graphene.ObjectType):
             return None
 
         if exact_fmt == 'json':
-            print('Exacted json')
             result = copy.copy(result_orig)
             result.content = get_result_json(result.content)
         else:

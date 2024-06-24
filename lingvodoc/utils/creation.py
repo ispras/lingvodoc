@@ -552,19 +552,18 @@ def json_to_html(content):
 
                     w_span_tag.append(r_span_tag)
 
-                text = wrd.get('text')
+                w_span_tag.append(wrd.get('text', ""))
 
-                # wrap text in prefix tags if any
+                # wrap w_span_tag in prefix tags if any
                 for prefix in wrd.get('prefix', []):
                     pfx_tag = html_output.new_tag(prefix)
-                    pfx_tag.append(text)
-                    text = pfx_tag
+                    pfx_tag.append(w_span_tag)
+                    w_span_tag = pfx_tag
 
-                # append text to word and word to paragraph
-                w_span_tag.append(text)
+                # append word to paragraph
                 p_tag.append(w_span_tag)
 
-            elif type(wrd) is string:
+            elif type(wrd) is str:
                 p_tag.append(wrd)
 
         html_output.append(p_tag)
@@ -599,7 +598,7 @@ def get_result_json(annotated_html):
 
                     if len(tag.contents) > 0:
                         id = tag.get('id')
-                        state = ' '.join(tag.get('class'))
+                        state = tag.get('class')
                         annots = tag.contents[:-1]
                         # iterate to last nested tag
                         tag = tag.contents[-1]
@@ -609,22 +608,28 @@ def get_result_json(annotated_html):
                 # last tag from the loop above should be a textual string
                 word_dict['text'] = str(tag)
 
+                item_to_store = word_dict['text']
+                if id and state:
+                    word_dict['id'] = id
+                    word_dict['state'] = state
+                    if type(word_dict['state']) == list:
+                        word_dict['state'] = ' '.join(word_dict['state'])
+                    word_dict['results'] = []
+                    item_to_store = word_dict
+                if prefix:
+                    word_dict['prefix'] = prefix
+                    item_to_store = word_dict
+
                 # last annots from the loop above should contain results list
                 for ann in annots:
                     if type(ann) is Tag:
                         res = json.loads(ann.text)
                         res['id'] = ann.get('id')
-                        res['state'] = ' '.join(ann.get('class'))
+                        res['state'] = ann.get('class')
+                        if type(res['state'] == list):
+                            res['state'] = ' '.join(res['state'])
                         word_dict['results'].append(res)
 
-                item_to_store = word_dict.get('text')
-                if word_dict.get('results'):
-                    word_dict['id'] = id
-                    word_dict['state'] = state
-                    item_to_store = word_dict
-                if prefix:
-                    word_dict['prefix'] = prefix
-                    item_to_store = word_dict
                 words_list.append(item_to_store)
 
             f(note)
@@ -657,13 +662,10 @@ def create_parser_result(
         files = {
             'file': (
                 os.path.basename(urllib.parse.urlparse(entity.content).path),
-                source_stream)
-        }
+                source_stream)}
 
-        data = {'return_html': True}
-        r = requests.post(url=dedoc_url, files=files, data=data)
-
-    dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
+        r = requests.post(url=dedoc_url, files=files, data={'return_html': True})
+        dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
 
     # we get result as html
     if "timarkh" in parser.method:
