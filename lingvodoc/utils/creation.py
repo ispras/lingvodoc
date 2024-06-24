@@ -672,12 +672,10 @@ def create_parser_result(
     elif "apertium" in parser.method:
         result = parse_method(dedoc_output, apertium_path, **arguments)
 
-    arguments['format'] = "json"
-
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                   entity_client_id=entity_client_id, entity_object_id=entity_object_id,
-                                  arguments=arguments, content=get_result_json(result))
+                                  arguments=arguments, content=result)
 
     if not dbparserresult.object_id:
         dbparserresult.object_id = get_client_counter(client_id)
