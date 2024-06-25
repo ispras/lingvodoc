@@ -313,6 +313,7 @@ from lingvodoc.utils import (
 
 from lingvodoc.utils.creation import (
     create_entity,
+    get_result_json,
     edit_role)
 
 from lingvodoc.utils.elan_functions import tgt_to_eaf
@@ -596,7 +597,7 @@ class Query(graphene.ObjectType):
             client_id_list = graphene.List(graphene.Int, required = True)))
     parser_results = graphene.Field((graphene.List(ParserResult)),
                                     entity_id = LingvodocID(), parser_id=LingvodocID())
-    parser_result = graphene.Field(ParserResult, id=LingvodocID())
+    parser_result = graphene.Field(ParserResult, id=LingvodocID(), exact_fmt=graphene.String())
     parsers = graphene.Field(graphene.List(Parser))
 
     unstructured_data = (
@@ -4782,13 +4783,20 @@ class Query(graphene.ObjectType):
             return_list.append(new_parser_result)
         return return_list
 
-    def resolve_parser_result(self, info, id):
+    def resolve_parser_result(self, info, id, exact_fmt='html'):
         client_id, object_id = id
-        result = DBSession.query(dbParserResult).filter_by(client_id=client_id,
-                                                            object_id=object_id,
-                                                            ).first()
-        if not result or result.marked_for_deletion:
+        result_orig = DBSession.query(dbParserResult).filter_by(client_id=client_id,
+                                                                object_id=object_id,
+                                                                ).first()
+        if not result_orig or result_orig.marked_for_deletion:
             return None
+
+        if exact_fmt == 'json':
+            result = copy.copy(result_orig)
+            result.content = get_result_json(result.content)
+        else:
+            result = result_orig
+
         parser_result = ParserResult(id=[result.client_id, result.object_id])
         parser_result.dbObject = result
         return parser_result

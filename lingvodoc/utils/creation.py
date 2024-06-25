@@ -2,7 +2,9 @@
 # Standard library imports.
 
 import base64
+import collections
 import hashlib
+import json
 import logging
 import os
 import random
@@ -12,6 +14,8 @@ import shutil
 import string
 import time
 import urllib
+from bs4 import BeautifulSoup
+from bs4.element import Tag
 
 # Library imports.
 
@@ -60,6 +64,7 @@ from lingvodoc.utils.elan_functions import eaf_wordlist
 from lingvodoc.utils.search import translation_gist_search
 
 from lingvodoc.views.v2.utils import storage_file
+from pdb import set_trace as A
 
 
 # Setting up logging.
@@ -520,9 +525,124 @@ def async_create_parser_result_method(id, parser_id, entity_id, apertium_path, s
 
     task_status.set(2, 100, "Parsing of file " + content_filename + " finished")
 
+
+def json_to_html(content):
+    
+    html_output = BeautifulSoup()
+    attrs = {'id': 'id', 'state': 'class'}
+
+    for prg in content:
+        p_tag = html_output.new_tag("p")
+        for wrd in prg:
+            # if word has some attributes
+            if type(wrd) is dict:
+                w_span_tag = html_output.new_tag("span")
+                for key, attr in attrs.items():
+                    if key in wrd:
+                        w_span_tag[attr] = wrd[key]
+
+                # iterate by result spans
+                for res in wrd.get('results', []):
+                    r_span_tag = html_output.new_tag("span")
+                    for key, attr in attrs.items():
+                        r_span_tag[attr] = res.get(key)
+
+                    data = {k: v for k, v in res.items() if k not in attrs}
+                    r_span_tag.append(json.dumps(data))
+
+                    w_span_tag.append(r_span_tag)
+
+                w_span_tag.append(wrd.get('text', ""))
+
+                # wrap w_span_tag in prefix tags if any
+                for prefix in wrd.get('prefix', []):
+                    pfx_tag = html_output.new_tag(prefix)
+                    pfx_tag.append(w_span_tag)
+                    w_span_tag = pfx_tag
+
+                # append word to paragraph
+                p_tag.append(w_span_tag)
+
+            elif type(wrd) is str:
+                p_tag.append(wrd)
+
+        html_output.append(p_tag)
+
+    return str(html_output)
+
+
+def get_result_json(annotated_html):
+    parags_list = []
+    # iteration by <p></p> tags
+    for parag in BeautifulSoup(annotated_html, 'html.parser')('p'):
+        words_list = []
+        # iteration by <span></span> for single words
+        # or by some other tags e.g. <b></b> with several words inside
+        # or by simple text parts without any tag
+        for note in parag.contents:
+            prefix = []
+
+            def f(tag):
+                nonlocal prefix
+                annots = []
+                id = state = None
+                word_dict = collections.defaultdict(list)
+
+                if type(tag) is Tag:
+
+                    while tag.name != 'span':
+                        prefix.append(tag.name)
+                        # calling f() recursively because several words
+                        # may be inside e.g. <b></b> tags
+                        for t in tag.contents:
+                            f(t)
+                        return
+
+                    id = tag.get('id')
+                    state = tag.get('class')
+                    annots = tag.contents
+                    text = ""
+                    for i, t in enumerate(tag.contents):
+                        if type(t) is not Tag:
+                            annots.pop(i)
+                            text += t
+                    tag = text
+
+                # last tag from the loop above should be a textual string
+                word_dict['text'] = str(tag)
+
+                item_to_store = word_dict['text']
+                if id and state:
+                    word_dict['id'] = id
+                    word_dict['state'] = state
+                    if type(word_dict['state']) == list:
+                        word_dict['state'] = ' '.join(word_dict['state'])
+                    word_dict['results'] = []
+                    item_to_store = word_dict
+                if prefix:
+                    word_dict['prefix'] = prefix
+                    item_to_store = word_dict
+
+                # last annots from the loop above should contain results list
+                for ann in annots:
+                    if type(ann) is Tag:
+                        res = json.loads(ann.text)
+                        res['id'] = ann.get('id')
+                        res['state'] = ann.get('class')
+                        if type(res['state'] == list):
+                            res['state'] = ' '.join(res['state'])
+                        word_dict['results'].append(res)
+
+                words_list.append(item_to_store)
+
+            f(note)
+
+        parags_list.append(words_list)
+
+    return json.dumps(parags_list)
+
+
 # Downloads a document by the URL in an entity's content and saves the result of its parsing
-
-
 def create_parser_result(
     id, parser_id, entity_id, dedoc_url, apertium_path, storage, arguments = None, save_object = True):
 
@@ -547,20 +667,21 @@ def create_parser_result(
                 os.path.basename(urllib.parse.urlparse(entity.content).path),
                 source_stream)}
 
-        data = {'return_html': True}
-
-        r = requests.post(url=dedoc_url, files=files, data=data)
+        r = requests.post(url=dedoc_url, files=files, data={'return_html': True})
         dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
 
-    if parser.method.find("apertium") != -1:
-        result = parse_method(dedoc_output, apertium_path, **arguments)
-    else:
+    # we get result as html
+    if "timarkh" in parser.method:
         result = parse_method(dedoc_output, **arguments)
+
+    elif "apertium" in parser.method:
+        result = parse_method(dedoc_output, apertium_path, **arguments)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                   entity_client_id=entity_client_id, entity_object_id=entity_object_id,
                                   arguments=arguments, content=result)
+
     if not dbparserresult.object_id:
         dbparserresult.object_id = get_client_counter(client_id)
     if save_object:

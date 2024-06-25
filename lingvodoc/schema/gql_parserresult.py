@@ -98,6 +98,7 @@ import lingvodoc.utils as utils
 
 from lingvodoc.utils.creation import (
     create_parser_result,
+    json_to_html,
     async_create_parser_result)
 
 import lingvodoc.utils.doc_parser as ParseMethods
@@ -107,6 +108,8 @@ from lingvodoc.utils.elan_functions import tgt_to_eaf
 from lingvodoc.views.v2.utils import (
     as_storage_file,
     storage_file)
+
+from pdb import set_trace as A
 
 
 # Setting up logging.
@@ -444,6 +447,7 @@ class UpdateParserResult(graphene.Mutation):
         id = LingvodocID(required=True)
         element_id = graphene.String()
         content = graphene.String()
+        content_fmt = graphene.String()
         reexecute = graphene.Boolean()
         synchronous = graphene.Boolean()
 
@@ -455,6 +459,10 @@ class UpdateParserResult(graphene.Mutation):
         parser_result_id = args.get('id')
         element_id = args.get('element_id')
         content_from_args = args.get('content')
+        content_fmt = args.get('content_fmt', 'html')
+        # incoming content may have json format
+        if len(content_from_args or []) > 0 and content_fmt == 'json':
+            content_from_args = json_to_html(json.loads(content_from_args))
         reexecute = args.get('reexecute')
         synchronous = args.get('synchronous', False)
 
