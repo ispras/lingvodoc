@@ -615,7 +615,7 @@ def get_result_json(annotated_html):
                 if id and state:
                     word_dict['id'] = id
                     word_dict['state'] = state
-                    if type(word_dict['state']) == list:
+                    if type(word_dict['state']) is list:
                         word_dict['state'] = ' '.join(word_dict['state'])
                     word_dict['results'] = []
                     item_to_store = word_dict
@@ -629,7 +629,7 @@ def get_result_json(annotated_html):
                         res = json.loads(ann.text)
                         res['id'] = ann.get('id')
                         res['state'] = ann.get('class')
-                        if type(res['state'] == list):
+                        if type(res['state'] is list):
                             res['state'] = ' '.join(res['state'])
                         word_dict['results'].append(res)
 
