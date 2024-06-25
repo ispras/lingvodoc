@@ -587,8 +587,10 @@ def get_result_json(annotated_html):
                 annots = []
                 id = state = None
                 word_dict = collections.defaultdict(list)
-                while type(tag) is Tag:
-                    if tag.name != 'span':
+
+                if type(tag) is Tag:
+
+                    while tag.name != 'span':
                         prefix.append(tag.name)
                         # calling f() recursively because several words
                         # may be inside e.g. <b></b> tags
@@ -596,14 +598,15 @@ def get_result_json(annotated_html):
                             f(t)
                         return
 
-                    if len(tag.contents) > 0:
-                        id = tag.get('id')
-                        state = tag.get('class')
-                        annots = tag.contents[:-1]
-                        # iterate to last nested tag
-                        tag = tag.contents[-1]
-                    else:
-                        tag = ""
+                    id = tag.get('id')
+                    state = tag.get('class')
+                    annots = tag.contents
+                    text = ""
+                    for i, t in enumerate(tag.contents):
+                        if type(t) is not Tag:
+                            annots.pop(i)
+                            text += t
+                    tag = text
 
                 # last tag from the loop above should be a textual string
                 word_dict['text'] = str(tag)
