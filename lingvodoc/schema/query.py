@@ -73,6 +73,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 import sqlalchemy.types
 
+from zope.sqlalchemy import mark_changed
 import sqlite3
 
 import transaction
@@ -304,6 +305,7 @@ from lingvodoc.schema.gql_userrequest import (
 from lingvodoc.scripts import elan_parser
 
 import lingvodoc.scripts.adverb as adverb
+import lingvodoc.scripts.valency as valency
 import lingvodoc.scripts.docx_import as docx_import
 import lingvodoc.scripts.docx_to_xlsx as docx_to_xlsx
 
@@ -7556,18 +7558,18 @@ class CreateAdverbData(graphene.Mutation):
             DBSession
 
                 .query(
-                dbValencyParserData,
-                dbValencySourceData)
+                    dbValencyParserData,
+                    dbValencySourceData)
 
                 .filter(
-                dbValencySourceData.perspective_client_id == perspective_id[0],
-                dbValencySourceData.perspective_object_id == perspective_id[1],
-                dbValencySourceData.id == dbValencyParserData.id,
-                # TODO: for now we can compare just with tuple_ or by client_id/object_id
-                # other way is still not implemented in model itself
-                tuple_(dbValencyParserData.parser_result_client_id,
-                       dbValencyParserData.parser_result_object_id)
-                .notin_([s['id'] for s in sentence_data_list]))
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1],
+                    dbValencySourceData.id == dbValencyParserData.id,
+                    # TODO: for now we can compare just with tuple_ or by client_id/object_id
+                    # other way is still not implemented in model itself
+                    tuple_(dbValencyParserData.parser_result_client_id,
+                           dbValencyParserData.parser_result_object_id)
+                    .notin_([s['id'] for s in sentence_data_list]))
 
                 .all())
 
@@ -7606,15 +7608,15 @@ class CreateAdverbData(graphene.Mutation):
                 DBSession
 
                     .query(
-                    dbValencyParserData,
-                    dbValencySourceData)
+                        dbValencyParserData,
+                        dbValencySourceData)
 
                     .filter(
-                    dbValencySourceData.perspective_client_id == perspective_id[0],
-                    dbValencySourceData.perspective_object_id == perspective_id[1],
-                    dbValencySourceData.id == dbValencyParserData.id,
-                    dbValencyParserData.parser_result_client_id == parser_result_id[0],
-                    dbValencyParserData.parser_result_object_id == parser_result_id[1])
+                        dbValencySourceData.perspective_client_id == perspective_id[0],
+                        dbValencySourceData.perspective_object_id == perspective_id[1],
+                        dbValencySourceData.id == dbValencyParserData.id,
+                        dbValencyParserData.parser_result_client_id == parser_result_id[0],
+                        dbValencyParserData.parser_result_object_id == parser_result_id[1])
 
                     .all())
 
@@ -7668,13 +7670,13 @@ class CreateAdverbData(graphene.Mutation):
                 DBSession
 
                     .query(
-                    dbValencySentenceData)
+                        dbValencySentenceData)
 
                     .filter_by(
-                    source_id=valency_source_data.id)
+                        source_id=valency_source_data.id)
 
                     .order_by(
-                    dbValencySentenceData.id)
+                        dbValencySentenceData.id)
 
                     .all()) if reusing_source else []
 
@@ -7802,14 +7804,14 @@ class CreateAdverbData(graphene.Mutation):
                     DBSession
 
                         .query(
-                        dbAdverbInstanceData)
+                            dbAdverbInstanceData)
 
                         .filter_by(
-                        sentence_id=db_sentence_obj.id)
+                            sentence_id=db_sentence_obj.id)
 
                         .order_by(
-                        dbAdverbInstanceData.sentence_id,
-                        dbAdverbInstanceData.index)
+                            dbAdverbInstanceData.sentence_id,
+                            dbAdverbInstanceData.index)
 
                         .all()) if reusing_sentence else []
 
@@ -7915,6 +7917,7 @@ class CreateAdverbData(graphene.Mutation):
         instance_delete_list = []
         sentence_delete_list = []
         parser_source_delete_list = []
+        valency_instance_delete_list = []
 
         CreateAdverbData.process_parser(
             perspective_id,
@@ -7937,33 +7940,54 @@ class CreateAdverbData(graphene.Mutation):
             sentence_delete_list.extend(
                 DBSession
                     .query(
-                    dbValencySentenceData)
+                        dbValencySentenceData)
                     .filter(
-                    dbValencySentenceData.source_id
+                        dbValencySentenceData.source_id
                         .in_([sr.id for (pr, sr) in parser_source_delete_list]))
                     .all())
 
+        # if we are going to delete a sentence, we have to delete instances and annotations
+        # both for verbs and for adverbs
         if sentence_delete_list:
+            valency_instance_delete_list.extend(
+                DBSession
+                    .query(
+                        dbValencyInstanceData)
+                    .filter(
+                        dbValencyInstanceData.sentence_id
+                        .in_([sent.id for sent in sentence_delete_list]))
+                    .all())
+
             instance_delete_list.extend(
                 DBSession
                     .query(
-                    dbAdverbInstanceData)
+                        dbAdverbInstanceData)
                     .filter(
-                    dbAdverbInstanceData.sentence_id
+                        dbAdverbInstanceData.sentence_id
                         .in_([sent.id for sent in sentence_delete_list]))
                     .all())
+
+        if valency_instance_delete_list:
+            DBSession.execute(
+                dbValencyAnnotationData.__table__
+                    .delete()
+                    .where(
+                        dbValencyAnnotationData.instance_id
+                        .in_([inst.id for inst in valency_instance_delete_list])))
+
+            DBSession.flush()
 
         if instance_delete_list:
             DBSession.execute(
                 dbAdverbAnnotationData.__table__
                     .delete()
                     .where(
-                    dbAdverbAnnotationData.instance_id
+                        dbAdverbAnnotationData.instance_id
                         .in_([inst.id for inst in instance_delete_list])))
 
             DBSession.flush()
 
-        for instance in instance_delete_list:
+        for instance in (instance_delete_list + valency_instance_delete_list):
             DBSession.delete(instance)
 
         DBSession.flush()
@@ -8008,33 +8032,33 @@ class CreateAdverbData(graphene.Mutation):
             DBSession
 
                 .query(
-                dbLexicalEntry.parent_client_id,
-                dbLexicalEntry.parent_object_id)
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
 
                 .filter(
-                dbLexicalEntry.marked_for_deletion == False,
-                dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                dbEntity.marked_for_deletion == False,
-                dbEntity.content.op('~*')('.*\.(doc|docx|odt)'),
-                dbPublishingEntity.client_id == dbEntity.client_id,
-                dbPublishingEntity.object_id == dbEntity.object_id,
-                dbPublishingEntity.published == True,
-                dbPublishingEntity.accepted == True,
-                dbParserResult.entity_client_id == dbEntity.client_id,
-                dbParserResult.entity_object_id == dbEntity.object_id,
-                dbParserResult.marked_for_deletion == False)
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbEntity.content.op('~*')('.*\.(doc|docx|odt)'),
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True,
+                    dbParserResult.entity_client_id == dbEntity.client_id,
+                    dbParserResult.entity_object_id == dbEntity.object_id,
+                    dbParserResult.marked_for_deletion == False)
 
                 .group_by(
-                dbLexicalEntry.parent_client_id,
-                dbLexicalEntry.parent_object_id))
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id))
 
         adverb_data_query = (
             DBSession
 
                 .query(
-                dbValencySourceData.perspective_client_id,
-                dbValencySourceData.perspective_object_id)
+                    dbValencySourceData.perspective_client_id,
+                    dbValencySourceData.perspective_object_id)
 
                 .distinct())
 
@@ -8042,10 +8066,10 @@ class CreateAdverbData(graphene.Mutation):
             DBSession
 
                 .query(
-                dbPerspective)
+                    dbPerspective)
 
                 .filter(
-                dbPerspective.marked_for_deletion == False,
+                    dbPerspective.marked_for_deletion == False,
 
                 tuple_(
                     dbPerspective.client_id,
@@ -8064,8 +8088,8 @@ class CreateAdverbData(graphene.Mutation):
                         DBSession.query(eaf_corpus_query.cte()))))
 
                 .order_by(
-                dbPerspective.client_id,
-                dbPerspective.object_id)
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
 
                 .all())
 
@@ -8228,14 +8252,14 @@ class SaveAdverbData(graphene.Mutation):
                 DBSession
 
                     .query(
-                    dbAdverbAnnotationData)
+                        dbAdverbAnnotationData)
 
                     .filter(
-                    dbAdverbAnnotationData.accepted != None,
-                    dbAdverbAnnotationData.instance_id == dbAdverbInstanceData.id,
-                    dbAdverbInstanceData.sentence_id == dbValencySentenceData.id,
-                    dbValencySentenceData.source_id == dbValencySourceData.id,
-                    dbValencySourceData.perspective_id == perspective_id)
+                        dbAdverbAnnotationData.accepted != None,
+                        dbAdverbAnnotationData.instance_id == dbAdverbInstanceData.id,
+                        dbAdverbInstanceData.sentence_id == dbValencySentenceData.id,
+                        dbValencySentenceData.source_id == dbValencySourceData.id,
+                        dbValencySourceData.perspective_id == perspective_id)
 
                     .all())
 
@@ -8253,12 +8277,12 @@ class SaveAdverbData(graphene.Mutation):
                     DBSession
 
                         .query(
-                        dbAdverbInstanceData)
+                            dbAdverbInstanceData)
 
                         .filter(
-                        dbAdverbInstanceData.id.in_(
-                            utils.values_query(
-                                instance_id_set, models.SLBigInteger)))
+                            dbAdverbInstanceData.id.in_(
+                                utils.values_query(
+                                    instance_id_set, models.SLBigInteger)))
 
                         .all())
 
@@ -8269,12 +8293,12 @@ class SaveAdverbData(graphene.Mutation):
                     DBSession
 
                         .query(
-                        dbUser.id, dbUser.name)
+                            dbUser.id, dbUser.name)
 
                         .filter(
-                        dbUser.id.in_(
-                            utils.values_query(
-                                user_id_set, models.SLBigInteger)))
+                            dbUser.id.in_(
+                                utils.values_query(
+                                    user_id_set, models.SLBigInteger)))
 
                         .all())
 
@@ -8288,12 +8312,12 @@ class SaveAdverbData(graphene.Mutation):
                     DBSession
 
                         .query(
-                        dbValencySentenceData)
+                            dbValencySentenceData)
 
                         .filter(
-                        dbValencySentenceData.id.in_(
-                            utils.values_query(
-                                sentence_id_set, models.SLBigInteger)))
+                            dbValencySentenceData.id.in_(
+                                utils.values_query(
+                                    sentence_id_set, models.SLBigInteger)))
 
                         .all())
 
