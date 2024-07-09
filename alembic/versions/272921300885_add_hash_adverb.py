@@ -15,18 +15,18 @@ import sqlalchemy as sa
 
 
 def upgrade():
-        op.execute('''
-                ALTER TABLE valency_parser_data
-                          ADD hash_adverb TEXT;
-                                  UPDATE valency_parser_data
-                                            SET hash_adverb = ''
-                                                      WHERE hash_adverb IS NULL;
-                                                              ALTER TABLE valency_parser_data
-                                                                        ALTER COLUMN hash_adverb SET NOT NULL;
-                                                                            ''')
+    op.execute('''
+        ALTER TABLE valency_parser_data
+          ADD hash_adverb TEXT;
+        UPDATE valency_parser_data
+          SET hash_adverb = ''
+          WHERE hash_adverb IS NULL;
+        ALTER TABLE valency_parser_data
+          ALTER COLUMN hash_adverb SET NOT NULL;
+    ''')
 
-        def downgrade():
-                op.execute('''
-                        ALTER TABLE valency_parser_data
-                                  DROP COLUMN hash_adverb;
-                                      ''')
+def downgrade():
+    op.execute('''
+        ALTER TABLE valency_parser_data
+          DROP COLUMN hash_adverb;
+    ''')
