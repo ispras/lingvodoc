@@ -51,7 +51,9 @@ from lingvodoc.models import (
     user_to_group_association,
     ValencyEafData as dbValencyEafData,
     ValencyParserData as dbValencyParserData,
-    ValencySourceData as dbValencySourceData)
+    ValencySourceData as dbValencySourceData,
+    ValencySentenceData as dbValencySentenceData,
+    AdverbInstanceData as dbAdverbInstanceData)
 
 from lingvodoc.schema.gql_column import Column
 from lingvodoc.schema.gql_dictionary import Dictionary
@@ -239,7 +241,9 @@ class DictionaryPerspective(LingvodocObjectType):
 
     is_hidden_for_client = graphene.Boolean()
     has_valency_data = graphene.Boolean()
+    has_adverb_data = graphene.Boolean()
     new_valency_data_count = graphene.Int()
+    new_adverb_data_count = graphene.Int()
 
     dbType = dbPerspective
 
@@ -566,6 +570,30 @@ class DictionaryPerspective(LingvodocObjectType):
                 .query(exists_query)
                 .scalar())
 
+    def resolve_has_adverb_data(self, info):
+        """
+        If the perspective has adverb annotation data.
+        """
+
+        exists_query = (
+            DBSession
+
+                .query(
+                    literal(1))
+
+                .filter(
+                    dbValencySourceData.perspective_client_id == self.id[0],
+                    dbValencySourceData.perspective_object_id == self.id[1],
+                    dbValencyParserData.id == dbValencySourceData.id,
+                    dbValencyParserData.hash_adverb != '')
+
+                .exists())
+
+        return (
+            DBSession
+                .query(exists_query)
+                .scalar())
+
     def resolve_new_valency_data_count(self, info):
         """
         How many unprocessed valency sources perspective has.
@@ -702,6 +730,92 @@ class DictionaryPerspective(LingvodocObjectType):
                 f'new_hash_count: {new_hash_count}')
 
         return new_hash_count
+
+    def resolve_new_adverb_data_count(self, info):
+        """
+        How many unprocessed adverb sources perspective has.
+        """
+
+        debug_flag = False
+
+        ready_hash_subquery = (
+            DBSession
+
+                .query(
+
+                    func.encode(
+                        func.digest(
+                            dbParserResult.content, 'sha256'),
+                        'hex')
+
+                        .label('hash'))
+
+                .filter(
+                    dbLexicalEntry.parent_client_id == self.id[0],
+                    dbLexicalEntry.parent_object_id == self.id[1],
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True,
+                    dbParserResult.entity_client_id == dbEntity.client_id,
+                    dbParserResult.entity_object_id == dbEntity.object_id,
+                    dbParserResult.marked_for_deletion == False)
+
+                .subquery())
+
+        ready_hash_count = (
+            DBSession
+                .query(ready_hash_subquery)
+                .count())
+
+        has_hash_subquery = (
+            DBSession
+
+                .query(
+                    dbValencyParserData.hash_adverb)
+
+                .filter(
+                    dbValencySourceData.perspective_client_id == self.id[0],
+                    dbValencySourceData.perspective_object_id == self.id[1],
+                    dbValencyParserData.id == dbValencySourceData.id,
+                    dbValencyParserData.hash_adverb != '')
+
+                .subquery())
+
+        has_hash_count = (
+            DBSession
+                .query(has_hash_subquery)
+                .count())
+
+        if debug_flag:
+            log.debug(
+                f'ready_hash_count: {ready_hash_count}\n'
+                f'has_hash_count: {has_hash_count}')
+
+        new_hash_count = (
+            DBSession
+
+                .query(
+                    ready_hash_subquery.c.hash)
+
+                .filter(
+                    ready_hash_subquery.c.hash.notin_(
+                        has_hash_subquery))
+
+                .count())
+
+        if debug_flag:
+
+            log.debug(
+                f'new_hash_count: {new_hash_count}')
+
+        # Actually here we answer if database has sources with old hash_adverbs,
+        # with wrong (maybe deleted) related parser results or duplicate sources
+        return new_hash_count + (has_hash_count > ready_hash_count)
 
     @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
