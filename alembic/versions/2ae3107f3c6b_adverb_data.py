@@ -1,12 +1,14 @@
-"""Adverb data
-Revision ID: 9a82fe69ceee
-Revises: be06149acd44
-Create Date: 2023-03-22 21:47:10.366535
+"""adverb_data
+
+Revision ID: 2ae3107f3c6b
+Revises: 707b6ebc663f
+Create Date: 2024-07-10 13:08:57.178607
+
 """
 
 # revision identifiers, used by Alembic.
-revision = '9a82fe69ceee'
-down_revision = 'be06149acd44'
+revision = '2ae3107f3c6b'
+down_revision = '707b6ebc663f'
 branch_labels = None
 depends_on = None
 
