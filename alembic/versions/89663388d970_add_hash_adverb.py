@@ -1,12 +1,14 @@
 """add_hash_adverb
-Revision ID: 483f9330348c
-Revises: 9a82fe69ceee
-Create Date: 2023-04-03 17:07:49.155801
+
+Revision ID: 89663388d970
+Revises: 2ae3107f3c6b
+Create Date: 2024-07-10 13:09:14.235377
+
 """
 
 # revision identifiers, used by Alembic.
-revision = '483f9330348c'
-down_revision = '9a82fe69ceee'
+revision = '89663388d970'
+down_revision = '2ae3107f3c6b'
 branch_labels = None
 depends_on = None
 
