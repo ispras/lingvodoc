@@ -7524,32 +7524,34 @@ class ReorderColumns(graphene.Mutation):
                 ResponseError(
                     'Exception:\n' + traceback_string))
 
+class ValencyKind(graphene.Enum):
+    VERB = 'verb'
+    ADVERB = 'adverb'
 
-class ValencyAttributes(graphene.Enum):
+class ValencyAttributes():
 
-    VERB = {'instance_data': dbValencyInstanceData,
+    verb = {'instance_data': dbValencyInstanceData,
             'annotation_data': dbValencyAnnotationData,
             'title': 'verb',
             'Title': 'Verb',
             'hash_col': 'hash',
             'lex_col': 'verb_lex',
             'cases': valency.cases,
-            'sentence_instance_gen': valency.sentence_instance_gen()}
+            'sentence_instance_gen': valency.sentence_instance_gen}
 
-    ADVERB = {'instance_data': dbAdverbInstanceData,
+    adverb = {'instance_data': dbAdverbInstanceData,
               'annotation_data': dbAdverbAnnotationData,
               'title': 'adverb',
               'Title': 'Adverb',
               'hash_col': 'hash_adverb',
               'lex_col': 'adverb_lex',
               'cases': adverb.cases,
-              'sentence_instance_gen': adverb.sentence_instance_gen()}
-
+              'sentence_instance_gen': adverb.sentence_instance_gen}
 
 class CreateComplexData(graphene.Mutation):
     class Arguments:
         perspective_id = LingvodocID(required=True)
-        attributes = ValencyAttributes()
+        valency_kind = ValencyKind()
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -8164,8 +8166,9 @@ class CreateComplexData(graphene.Mutation):
                 return ResponseError(message=f'Only registered users can create {title} valency statistics.')
 
             perspective_id = args['perspective_id']
-            attributes = args.get('attributes', ValencyAttributes.ADVERB)
+            valency_kind = args.get('valency_kind', ValencyKind.ADVERB)
             debug_flag = args.get('debug_flag', False)
+            attributes = getattr(ValencyAttributes, valency_kind.value)
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
