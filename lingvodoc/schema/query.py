@@ -7525,9 +7525,31 @@ class ReorderColumns(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
-class CreateAdverbData(graphene.Mutation):
+class ValencyAttributes(graphene.Enum):
+
+    VERB = {'instance_data': dbValencyInstanceData,
+            'annotation_data': dbValencyAnnotationData,
+            'title': 'verb',
+            'Title': 'Verb',
+            'hash_col': 'hash',
+            'lex_col': 'verb_lex',
+            'cases': valency.cases,
+            'sentence_instance_gen': valency.sentence_instance_gen()}
+
+    ADVERB = {'instance_data': dbAdverbInstanceData,
+              'annotation_data': dbAdverbAnnotationData,
+              'title': 'adverb',
+              'Title': 'Adverb',
+              'hash_col': 'hash_adverb',
+              'lex_col': 'adverb_lex',
+              'cases': adverb.cases,
+              'sentence_instance_gen': adverb.sentence_instance_gen()}
+
+
+class CreateComplexData(graphene.Mutation):
     class Arguments:
         perspective_id = LingvodocID(required=True)
+        attributes = ValencyAttributes()
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -7536,11 +7558,20 @@ class CreateAdverbData(graphene.Mutation):
     def process_parser(
             perspective_id,
             data_case_set,
+            attributes,
             instance_insert_list,
             instance_delete_list,
             sentence_delete_list,
             parser_source_delete_list,
             debug_flag):
+
+        db_instance_data, hash_col, lex_col, sentence_instance_gen, title = (
+            attributes['instance_data'],
+            attributes['hash_col'],
+            attributes['lex_col'],
+            attributes['sentence_instance_gen'],
+            attributes['title']
+        )
 
         # Getting parser result data.
         parser_result_list = (
@@ -7577,7 +7608,7 @@ class CreateAdverbData(graphene.Mutation):
 
         if debug_flag:
             parser_result_file_name = (
-                f'create adverb statistics {perspective_id[0]} {perspective_id[1]} parser result.json')
+                f'create {title} valency statistics {perspective_id[0]} {perspective_id[1]} parser result.json')
 
             with open(parser_result_file_name, 'w') as parser_result_file:
                 json.dump(
@@ -7587,7 +7618,7 @@ class CreateAdverbData(graphene.Mutation):
                     indent=2)
 
             sentence_data_file_name = (
-                f'create adverb statistics {perspective_id[0]} {perspective_id[1]} sentence data.json')
+                f'create {title} valency statistics {perspective_id[0]} {perspective_id[1]} sentence data.json')
 
             with open(sentence_data_file_name, 'w') as sentence_data_file:
                 json.dump(
@@ -7632,9 +7663,9 @@ class CreateAdverbData(graphene.Mutation):
 
                 # Updating hash if required
 
-                if valency_parser_data.hash_adverb != i['hash']:
-                    valency_parser_data.hash_adverb = i['hash']
-                    flag_modified(valency_parser_data, 'hash_adverb')
+                if getattr(valency_parser_data, hash_col) != i['hash']:
+                    setattr(valency_parser_data, hash_col, i['hash'])
+                    flag_modified(valency_parser_data, hash_col)
 
             else:
 
@@ -7656,9 +7687,12 @@ class CreateAdverbData(graphene.Mutation):
                         parser_result_client_id=parser_result_id[0],
                         parser_result_object_id=parser_result_id[1],
                         hash='',
-                        hash_adverb=i['hash']))
+                        hash_adverb=''))
+
+                setattr(valency_parser_data, hash_col, i['hash'])
 
                 DBSession.add(valency_parser_data)
+                DBSession.flush()
 
                 # Onwards we can skip waste requests to database
                 reusing_source = False
@@ -7773,8 +7807,8 @@ class CreateAdverbData(graphene.Mutation):
                 # Generating instance list for pr_sentence
 
                 pr_instance_list = []
-                for index, (lex, cs, indent, ind, r) in (
-                        enumerate(adverb.sentence_instance_gen(pr_sentence))):
+                for index, (lex, cs, indent, ind, r, _) in (
+                        enumerate(sentence_instance_gen(pr_sentence))):
                     pr_instance_list.append({
                         'index': index,
                         'location': (ind, r),
@@ -7804,19 +7838,19 @@ class CreateAdverbData(graphene.Mutation):
                     DBSession
 
                         .query(
-                            dbAdverbInstanceData)
+                            db_instance_data)
 
                         .filter_by(
                             sentence_id=db_sentence_obj.id)
 
                         .order_by(
-                            dbAdverbInstanceData.sentence_id,
-                            dbAdverbInstanceData.index)
+                            db_instance_data.sentence_id,
+                            db_instance_data.index)
 
                         .all()) if reusing_sentence else []
 
                 db_instance_obj_dict = {
-                    (db_instance_obj.adverb_lex, db_instance_obj.case_str): db_instance_obj
+                    (getattr(db_instance_obj, lex_col), db_instance_obj.case_str): db_instance_obj
                     for db_instance_obj in (db_instance_obj_list or [])}
 
                 # Starting by processing each instance we just got from processed parser result, trying
@@ -7828,11 +7862,11 @@ class CreateAdverbData(graphene.Mutation):
                     pr_instance_dict = {
                         'sentence_id': db_sentence_obj.id,
                         'index': pr_instance['index'],
-                        'adverb_lex': pr_sentence[pr_instance['location'][0]]['lex'].lower(),
+                        lex_col: pr_sentence[pr_instance['location'][0]]['lex'].lower(),
                         'case_str': pr_instance['case'].lower()}
 
                     pr_instance_key = (
-                        (pr_instance_dict['adverb_lex'], pr_instance_dict['case_str']))
+                        (getattr(pr_instance_dict, lex_col), pr_instance_dict['case_str']))
 
                     # We can re-use existing info for this instance.
 
@@ -7869,18 +7903,18 @@ class CreateAdverbData(graphene.Mutation):
                             pr_instance_new_list,
                             db_instance_unused_list)):
 
-                    index, adverb_lex, case_str = (
+                    index, lex, case_str = (
                         pr_instance_dict['index'],
-                        pr_instance_dict['adverb_lex'],
+                        pr_instance_dict[lex_col],
                         pr_instance_dict['case_str'])
 
                     if db_instance_obj.index != index:
                         db_instance_obj.index = index
                         flag_modified(db_instance_obj, 'index')
 
-                    if db_instance_obj.adverb_lex != adverb_lex:
-                        db_instance_obj.adverb_lex = adverb_lex
-                        flag_modified(db_instance_obj, 'adverb_lex')
+                    if getattr(db_instance_obj, lex_col) != lex:
+                        setattr(db_instance_obj, lex_col, lex)
+                        flag_modified(db_instance_obj, lex_col)
 
                     if db_instance_obj.case_str != case_str:
                         db_instance_obj.case_str = case_str
@@ -7910,27 +7944,39 @@ class CreateAdverbData(graphene.Mutation):
     def process(
             info,
             perspective_id,
+            attributes,
             debug_flag):
+
+        title, order_case_set, db_instance_data = (
+            attributes['title'],
+            set(attributes['cases']),
+            attributes['instance_data']
+        )
 
         data_case_set = set()
         instance_insert_list = []
         instance_delete_list = []
         sentence_delete_list = []
         parser_source_delete_list = []
-        valency_instance_delete_list = []
 
-        CreateAdverbData.process_parser(
+        CreateComplexData.process_parser(
             perspective_id,
             data_case_set,
+            attributes,
             instance_insert_list,
             instance_delete_list,
             sentence_delete_list,
             parser_source_delete_list,
             debug_flag)
 
+        verb_instance_delete_list, adverb_instance_delete_list = (
+            (instance_delete_list, []) if title == 'verb' else ([], instance_delete_list)
+        )
+
         log.debug(
             f'\ndata_case_set:\n{data_case_set}'
-            f'\norder_case_set - data_case_set:\n{set(adverb.cases) - data_case_set}')
+            f'\ndata_case_set - order_case_set:\n{data_case_set - order_case_set}'
+            f'\norder_case_set - data_case_set:\n{order_case_set - data_case_set}')
 
         # Now we can delete sentences collected in sentence_delete_list
         # And going to delete any unused instances and related annotations
@@ -7949,7 +7995,7 @@ class CreateAdverbData(graphene.Mutation):
         # if we are going to delete a sentence, we have to delete instances and annotations
         # both for verbs and for adverbs
         if sentence_delete_list:
-            valency_instance_delete_list.extend(
+            verb_instance_delete_list.extend(
                 DBSession
                     .query(
                         dbValencyInstanceData)
@@ -7958,7 +8004,7 @@ class CreateAdverbData(graphene.Mutation):
                         .in_([sent.id for sent in sentence_delete_list]))
                     .all())
 
-            instance_delete_list.extend(
+            adverb_instance_delete_list.extend(
                 DBSession
                     .query(
                         dbAdverbInstanceData)
@@ -7967,27 +8013,27 @@ class CreateAdverbData(graphene.Mutation):
                         .in_([sent.id for sent in sentence_delete_list]))
                     .all())
 
-        if valency_instance_delete_list:
+        if verb_instance_delete_list:
             DBSession.execute(
                 dbValencyAnnotationData.__table__
                     .delete()
                     .where(
                         dbValencyAnnotationData.instance_id
-                        .in_([inst.id for inst in valency_instance_delete_list])))
+                        .in_([inst.id for inst in verb_instance_delete_list])))
 
             DBSession.flush()
 
-        if instance_delete_list:
+        if adverb_instance_delete_list:
             DBSession.execute(
                 dbAdverbAnnotationData.__table__
                     .delete()
                     .where(
                         dbAdverbAnnotationData.instance_id
-                        .in_([inst.id for inst in instance_delete_list])))
+                        .in_([inst.id for inst in adverb_instance_delete_list])))
 
             DBSession.flush()
 
-        for instance in (instance_delete_list + valency_instance_delete_list):
+        for instance in (verb_instance_delete_list + adverb_instance_delete_list):
             DBSession.delete(instance)
 
         DBSession.flush()
@@ -8006,7 +8052,7 @@ class CreateAdverbData(graphene.Mutation):
         if debug_flag:
             log.debug(f"Deleted sources: {len(parser_source_delete_list)}\n"
                       f"Deleted sentences: {len(sentence_delete_list)}\n"
-                      f"Deleted instances: {len(instance_delete_list)}")
+                      f"Deleted instances: {len(verb_instance_delete_list) + len(adverb_instance_delete_list)}")
 
         # Or, if we have new instances, we are going to create their info.
         if instance_insert_list:
@@ -8014,7 +8060,7 @@ class CreateAdverbData(graphene.Mutation):
             # print(f"We'll create {len(instance_insert_list)} instances")
 
             DBSession.execute(
-                dbAdverbInstanceData.__table__
+                db_instance_data.__table__
                     .insert()
                     .values(instance_insert_list))
 
@@ -8026,7 +8072,7 @@ class CreateAdverbData(graphene.Mutation):
         return len(instance_insert_list)
 
     @staticmethod
-    def test(info, debug_flag):
+    def test(info, attributes, debug_flag):
 
         parser_result_query = (
             DBSession
@@ -8101,8 +8147,8 @@ class CreateAdverbData(graphene.Mutation):
             log.debug(
                 f'\nperspective_id: {perspective.id}')
 
-            CreateAdverbData.process(
-                info, perspective.id, debug_flag)
+            CreateComplexData.process(
+                info, perspective.id, attributes, debug_flag)
 
             if utils.get_resident_memory() > 2 * 2 ** 30:
                 break
@@ -8115,9 +8161,10 @@ class CreateAdverbData(graphene.Mutation):
             client = DBSession.query(Client).filter_by(id=client_id).first()
 
             if not client:
-                return ResponseError(message='Only registered users can create adverb statistics.')
+                return ResponseError(message=f'Only registered users can create {title} valency statistics.')
 
             perspective_id = args['perspective_id']
+            attributes = args.get('attributes', ValencyAttributes.ADVERB)
             debug_flag = args.get('debug_flag', False)
 
             perspective = (
@@ -8154,17 +8201,19 @@ class CreateAdverbData(graphene.Mutation):
                         perspective.client_id,
                         perspective.object_id)))
 
-            CreateAdverbData.process(
+            CreateComplexData.process(
                 info,
                 perspective_id,
+                attributes,
                 debug_flag)
 
             if False:
-                CreateAdverbData.test(
+                CreateComplexData.test(
                     info,
+                    attributes,
                     debug_flag)
 
-            return CreateAdverbData(triumph=True)
+            return CreateComplexData(triumph=True)
 
         except Exception as exception:
             traceback_string = (
@@ -8172,7 +8221,7 @@ class CreateAdverbData(graphene.Mutation):
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
 
-            log.warning('create_adverb_data: exception')
+            log.warning(f'create_{title}_data: exception')
             log.warning(traceback_string)
 
             transaction.abort()
@@ -8695,7 +8744,7 @@ class MyMutations(graphene.ObjectType):
     save_valency_data = SaveValencyData.Field()
     set_valency_annotation = SetValencyAnnotation.Field()
     valency_verb_cases = ValencyVerbCases.Field()
-    create_adverb_data = CreateAdverbData.Field()
+    create_adverb_data = CreateComplexData.Field()
     save_adverb_data = SaveAdverbData.Field()
     set_adverb_annotation = SetAdverbAnnotation.Field()
     bidirectional_links = BidirectionalLinks.Field()

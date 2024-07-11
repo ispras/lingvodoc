@@ -69,4 +69,4 @@ def sentence_instance_gen(token_list):
             except IndexError:
                 continue
 
-            yield lex, cs, indent, ind, r
+            yield lex, cs, indent, ind, r, None

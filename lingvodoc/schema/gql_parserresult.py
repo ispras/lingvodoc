@@ -2151,12 +2151,7 @@ class CreateValencyData(graphene.Mutation):
         perspective_id,
         debug_flag):
 
-        order_case_set = (
-
-            set([
-                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
-                'comp', 'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr', 'lat',
-                'allat']))
+        order_case_set = set(valency.cases)
 
         data_case_set = set()
         instance_insert_list = []
