@@ -1348,15 +1348,16 @@ class ValencyAttributes:
             )
         )
 
+
 class CreateValencyData(graphene.Mutation):
 
-    case_list = [
+    verb_case_list = [
         'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
         'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
 
-    case_index_dict = {
+    verb_case_index_dict = {
         case: index
-        for index, case in enumerate(case_list)}
+        for index, case in enumerate(verb_case_list)}
 
     class Arguments:
         perspective_id = LingvodocID(required=True)
@@ -1970,7 +1971,7 @@ class CreateValencyData(graphene.Mutation):
         case_re = (
 
             re.compile(
-                f'{delimiter_re}\\b({"|".join(CreateValencyData.case_list)})\\b',
+                f'{delimiter_re}\\b({"|".join(CreateValencyData.verb_case_list)})\\b',
                 re.IGNORECASE))
 
         lex_xlat_dict = collections.defaultdict(set)
@@ -2431,10 +2432,11 @@ class CreateValencyData(graphene.Mutation):
         if merge_insert_list:
 
             DBSession.execute(
-
                 dbValencyMergeData.__table__
                     .insert()
                     .values(merge_insert_list))
+
+            DBSession.flush()
 
     @staticmethod
     def process(
@@ -2465,12 +2467,13 @@ class CreateValencyData(graphene.Mutation):
             parser_source_delete_list,
             debug_flag)
 
-        CreateValencyData.process_eaf(
-            info,
-            perspective_id,
-            data_case_set,
-            instance_insert_list,
-            debug_flag)
+        if title == 'verb':
+            CreateValencyData.process_eaf(
+                info,
+                perspective_id,
+                data_case_set,
+                instance_insert_list,
+                debug_flag)
 
         verb_instance_delete_list, adverb_instance_delete_list = (
             (instance_delete_list, []) if title == 'verb' else ([], instance_delete_list)
@@ -3431,7 +3434,7 @@ class ValencyVerbCases(graphene.Mutation):
 
             sorted(
                 case_verb_dict.items(),
-                key = lambda item: CreateValencyData.case_index_dict[item[0]])):
+                key = lambda item: CreateValencyData.verb_case_index_dict[item[0]])):
 
             verb_sentence_list = (
 
