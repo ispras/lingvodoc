@@ -7636,9 +7636,6 @@ class MyMutations(graphene.ObjectType):
     create_valency_data = CreateValencyData.Field()
     save_valency_data = SaveValencyData.Field()
     set_valency_annotation = SetValencyAnnotation.Field()
-    create_adverb_data = CreateValencyData.Field()
-    save_adverb_data = SaveValencyData.Field()
-    set_adverb_annotation = SetValencyAnnotation.Field()
     bidirectional_links = BidirectionalLinks.Field()
 
 
