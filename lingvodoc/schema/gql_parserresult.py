@@ -17,6 +17,7 @@ import traceback
 import unicodedata
 import urllib
 import zipfile
+import copy
 
 # Library imports.
 
@@ -31,6 +32,7 @@ from graphql.language.ast import (
 
 import minio
 
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import (
     create_engine,
     tuple_,
@@ -93,6 +95,7 @@ from lingvodoc.schema.gql_parser import ParameterType
 from lingvodoc.scripts import elan_parser
 
 import lingvodoc.scripts.export_parser_result as export_parser_result
+import lingvodoc.scripts.adverb as adverb
 import lingvodoc.scripts.valency as valency
 import lingvodoc.scripts.valency_verb_cases as valency_verb_cases
 
@@ -1303,7 +1306,7 @@ def diacritic_xform(value_str):
             unicodedata.normalize('NFKD', value_str)))
 
 
-class ValencyAttributes():
+class ValencyAttributes:
 
     attributes = {
 
@@ -2911,6 +2914,14 @@ class SaveValencyData(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
 
+        attributes = ValencyAttributes.get_part(args['valency_kind'])
+
+        # return if error
+        if type(attributes) is type:
+            return attributes
+
+        title = attributes['title']
+
         try:
 
             client_id = info.context.get('client_id')
@@ -2921,14 +2932,6 @@ class SaveValencyData(graphene.Mutation):
 
                     ResponseError(
                         message=f'Only registered users can save valency data.'))
-
-            attributes = ValencyAttributes.get_part(args['valency_kind'])
-
-            # return if error
-            if type(attributes) is type:
-                return attributes
-
-            title = attributes['title']
 
             perspective_id = args['perspective_id']
             debug_flag = args.get('debug_flag', False)
@@ -3145,6 +3148,17 @@ class SetValencyAnnotation(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
 
+        attributes = ValencyAttributes.get_part(args['valency_kind'])
+
+        # return if error
+        if type(attributes) is type:
+            return attributes
+
+        prefix, title = (
+            attributes['prefix'],
+            attributes['title']
+        )
+
         try:
 
             client_id = info.context.get('client_id')
@@ -3155,17 +3169,6 @@ class SetValencyAnnotation(graphene.Mutation):
 
                     ResponseError(
                         message=f'Only registered users can set valency annotations.'))
-
-            attributes = ValencyAttributes.get_part(args['valency_kind'])
-
-            # return if error
-            if type(attributes) is type:
-                return attributes
-
-            prefix, title = (
-                attributes['prefix'],
-                attributes['title']
-            )
 
             annotation_list = args['annotation_list']
 

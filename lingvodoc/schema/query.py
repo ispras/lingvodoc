@@ -19,14 +19,7 @@ import string
 import tempfile
 import time
 import traceback
-
-# for valency
-import datetime
-import json
-import os
-import unicodedata
-import urllib
-import zipfile
+import uuid
 
 # Library imports.
 
