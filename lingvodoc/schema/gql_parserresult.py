@@ -2648,21 +2648,21 @@ class CreateValencyData(graphene.Mutation):
                 .filter(
                     dbPerspective.marked_for_deletion == False,
 
-                tuple_(
-                    dbPerspective.client_id,
-                    dbPerspective.object_id)
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
 
-                .notin_(
-                    DBSession.query(valency_data_query.cte())),
+                        .notin_(
+                            DBSession.query(valency_data_query.cte())),
 
-                tuple_(
-                    dbPerspective.client_id,
-                    dbPerspective.object_id)
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
 
-                .in_(
-                    union(
-                        DBSession.query(parser_result_query.cte()),
-                        DBSession.query(eaf_corpus_query.cte()))))
+                        .in_(
+                            union(
+                                DBSession.query(parser_result_query.cte()),
+                                DBSession.query(eaf_corpus_query.cte()))))
 
                 .order_by(
                     dbPerspective.client_id,
