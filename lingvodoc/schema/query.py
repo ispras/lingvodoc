@@ -7555,15 +7555,16 @@ class ValencyAttributes():
     }
 
     @classmethod
-    def get_attrs(cls, valency_kind):
+    def get_part(cls, valency_kind):
 
         valency_kind = valency_kind.lower()
 
         return (
             cls.attributes.get(
-            valency_kind,
-            ValueError(
-                message = f"Valency kind '{valency_kind}' is not in {list(cls.attributes.keys())}."))
+                valency_kind,
+                ValueError(
+                    f"Valency kind '{valency_kind}' is not in {list(cls.attributes.keys())}.")
+            )
         )
 
 class CreateComplexData(graphene.Mutation):
@@ -8183,9 +8184,10 @@ class CreateComplexData(graphene.Mutation):
             if not client:
                 return ResponseError(message=f'Only registered users can create valency statistics.')
 
-            valency_kind = args['valency_kind']
-            if type(attributes := ValencyAttributes.get_attrs(valency_kind)) is type:
-                # return if error
+            attributes = ValencyAttributes.get_part(args['valency_kind'])
+
+            # return if error
+            if type(attributes) is type:
                 return attributes
 
             perspective_id = args['perspective_id']
@@ -8277,9 +8279,10 @@ class SaveComplexData(graphene.Mutation):
                     ResponseError(
                         message=f'Only registered users can save valency data.'))
 
-            valency_kind = args['valency_kind']
-            if type(attributes := ValencyAttributes.get_attrs(valency_kind)) is type:
-                # return if error
+            attributes = ValencyAttributes.get_part(args['valency_kind'])
+
+            # return if error
+            if type(attributes) is type:
                 return attributes
 
             db_instance_data, db_annotation_data, lex_col, title, prefix = (
@@ -8619,9 +8622,10 @@ class SetComplexAnnotation(graphene.Mutation):
                     ResponseError(
                         message=f'Only registered users can set valency annotations.'))
 
-            valency_kind = args['valency_kind']
-            if type(attributes := ValencyAttributes.get_attrs(valency_kind)) is type:
-                # return if error
+            attributes = ValencyAttributes.get_part(args['valency_kind'])
+
+            # return if error
+            if type(attributes) is type:
                 return attributes
 
             prefix, title = (
