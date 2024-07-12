@@ -17,6 +17,7 @@ import traceback
 import unicodedata
 import urllib
 import zipfile
+import copy
 
 # Library imports.
 
@@ -31,6 +32,7 @@ from graphql.language.ast import (
 
 import minio
 
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import (
     create_engine,
     tuple_,
@@ -68,7 +70,9 @@ from lingvodoc.models import (
     ValencyMergeIdSequence as dbValencyMergeIdSequence,
     ValencyParserData as dbValencyParserData,
     ValencySentenceData as dbValencySentenceData,
-    ValencySourceData as dbValencySourceData)
+    ValencySourceData as dbValencySourceData,
+    AdverbAnnotationData as dbAdverbAnnotationData,
+    AdverbInstanceData as dbAdverbInstanceData)
 
 from lingvodoc.queue.celery import celery
 
@@ -91,6 +95,7 @@ from lingvodoc.schema.gql_parser import ParameterType
 from lingvodoc.scripts import elan_parser
 
 import lingvodoc.scripts.export_parser_result as export_parser_result
+import lingvodoc.scripts.adverb as adverb
 import lingvodoc.scripts.valency as valency
 import lingvodoc.scripts.valency_verb_cases as valency_verb_cases
 
@@ -1301,19 +1306,62 @@ def diacritic_xform(value_str):
             unicodedata.normalize('NFKD', value_str)))
 
 
+class ValencyAttributes:
+
+    attributes = {
+
+        'verb': {
+            'instance_data': dbValencyInstanceData,
+            'annotation_data': dbValencyAnnotationData,
+            'title': 'verb',
+            'Title': 'Verb',
+            'prefix': 'valency',
+            'hash_col': 'hash',
+            'lex_col': 'verb_lex',
+            'cases': valency.cases,
+            'sentence_instance_gen': valency.sentence_instance_gen
+        },
+
+        'adverb': {
+            'instance_data': dbAdverbInstanceData,
+            'annotation_data': dbAdverbAnnotationData,
+            'title': 'adverb',
+            'Title': 'Adverb',
+            'prefix': 'adverb',
+            'hash_col': 'hash_adverb',
+            'lex_col': 'adverb_lex',
+            'cases': adverb.cases,
+            'sentence_instance_gen': adverb.sentence_instance_gen
+        }
+    }
+
+    @classmethod
+    def get_part(cls, valency_kind):
+
+        valency_kind = valency_kind.lower()
+
+        return (
+            cls.attributes.get(
+                valency_kind,
+                ValueError(
+                    f"Valency kind '{valency_kind}' is not in {list(cls.attributes.keys())}.")
+            )
+        )
+
+
 class CreateValencyData(graphene.Mutation):
 
-    case_list = [
+    verb_case_list = [
         'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
         'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
 
-    case_index_dict = {
+    verb_case_index_dict = {
         case: index
-        for index, case in enumerate(case_list)}
+        for index, case in enumerate(verb_case_list)}
 
     class Arguments:
-
-        perspective_id = LingvodocID(required = True)
+        perspective_id = LingvodocID(required=True)
+        valency_kind = graphene.String(required=True)
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -1456,61 +1504,91 @@ class CreateValencyData(graphene.Mutation):
 
     @staticmethod
     def process_parser(
-        perspective_id,
-        data_case_set,
-        instance_insert_list,
-        debug_flag):
+            perspective_id,
+            data_case_set,
+            attributes,
+            instance_insert_list,
+            instance_delete_list,
+            sentence_delete_list,
+            parser_source_delete_list,
+            debug_flag):
+
+        db_instance_data, hash_col, lex_col, sentence_instance_gen, title = (
+            attributes['instance_data'],
+            attributes['hash_col'],
+            attributes['lex_col'],
+            attributes['sentence_instance_gen'],
+            attributes['title']
+        )
 
         # Getting parser result data.
-
         parser_result_list = (
-
             Valency.get_parser_result_data(
                 perspective_id, debug_flag))
 
         sentence_data_list = (
             valency.corpus_to_sentences(parser_result_list))
 
+        # Get sources from database for specified perspective
+        # with related parser_result not in obtained results
+        # these results might be manually deleted or so on
+
+        parser_source_delete_list.extend(
+            DBSession
+
+                .query(
+                    dbValencyParserData,
+                    dbValencySourceData)
+
+                .filter(
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1],
+                    dbValencySourceData.id == dbValencyParserData.id,
+                    # TODO: for now we can compare just with tuple_ or by client_id/object_id
+                    # other way is still not implemented in model itself
+                    tuple_(dbValencyParserData.parser_result_client_id,
+                           dbValencyParserData.parser_result_object_id)
+                    .notin_([s['id'] for s in sentence_data_list]))
+
+                .all())
+
+        # print(f"Waste sources number: {len(parser_source_delete_list)}")
+
         if debug_flag:
-
             parser_result_file_name = (
-                f'create valency {perspective_id[0]} {perspective_id[1]} parser result.json')
+                f'create {title} valency statistics {perspective_id[0]} {perspective_id[1]} parser result.json')
 
-            with open(
-                parser_result_file_name, 'w') as parser_result_file:
-
+            with open(parser_result_file_name, 'w') as parser_result_file:
                 json.dump(
                     parser_result_list,
                     parser_result_file,
-                    ensure_ascii = False,
-                    indent = 2)
+                    ensure_ascii=False,
+                    indent=2)
 
             sentence_data_file_name = (
-                f'create valency {perspective_id[0]} {perspective_id[1]} sentence data.json')
+                f'create {title} valency statistics {perspective_id[0]} {perspective_id[1]} sentence data.json')
 
-            with open(
-                sentence_data_file_name, 'w') as sentence_data_file:
-
+            with open(sentence_data_file_name, 'w') as sentence_data_file:
                 json.dump(
                     sentence_data_list,
                     sentence_data_file,
-                    ensure_ascii = False,
-                    indent = 2)
+                    ensure_ascii=False,
+                    indent=2)
 
         # Initializing annotation data from parser results.
-
-        for i in sentence_data_list:
-
+        for m, i in enumerate(sentence_data_list):
             parser_result_id = i['id']
+
+            reusing_source = True
 
             # Checking if we already have such parser result valency data.
 
-            valency_parser_data = (
-
+            parser_source_data_list = (
                 DBSession
 
                     .query(
-                        dbValencyParserData)
+                        dbValencyParserData,
+                        dbValencySourceData)
 
                     .filter(
                         dbValencySourceData.perspective_client_id == perspective_id[0],
@@ -1519,82 +1597,296 @@ class CreateValencyData(graphene.Mutation):
                         dbValencyParserData.parser_result_client_id == parser_result_id[0],
                         dbValencyParserData.parser_result_object_id == parser_result_id[1])
 
-                    .first())
+                    .all())
 
-            if valency_parser_data:
+            # We are straightforwardly creating new data or getting found one
 
-                # The same hash, we just skip it.
+            if parser_source_data_list:
 
-                if valency_parser_data.hash == i['hash']:
+                # Get first found parser and source data
+                (valency_parser_data, valency_source_data) = parser_source_data_list.pop(0)
+
+                # Extend list for removing if more than one source were found
+                parser_source_delete_list.extend(parser_source_data_list)
+
+                # Updating hash if required
+
+                if getattr(valency_parser_data, hash_col) != i['hash']:
+                    setattr(valency_parser_data, hash_col, i['hash'])
+                    flag_modified(valency_parser_data, hash_col)
+
+            else:
+
+                # print("We'll create a source")
+
+                valency_source_data = (
+                    dbValencySourceData(
+                        perspective_client_id=perspective_id[0],
+                        perspective_object_id=perspective_id[1]))
+
+                DBSession.add(valency_source_data)
+
+                # We have to flush here to get valency_source_data.id
+                DBSession.flush()
+
+                valency_parser_data = (
+                    dbValencyParserData(
+                        id=valency_source_data.id,
+                        parser_result_client_id=parser_result_id[0],
+                        parser_result_object_id=parser_result_id[1],
+                        hash='',
+                        hash_adverb=''))
+
+                setattr(valency_parser_data, hash_col, i['hash'])
+
+                DBSession.add(valency_parser_data)
+                DBSession.flush()
+
+                # Onwards we can skip waste requests to database
+                reusing_source = False
+
+            # We are updating existing data, and we start by checking one-to-one correspondence
+            # between already existing sentences and sentences from processed parser result.
+
+            db_sentence_obj_list = (
+                DBSession
+
+                    .query(
+                        dbValencySentenceData)
+
+                    .filter_by(
+                        source_id=valency_source_data.id)
+
+                    .order_by(
+                        dbValencySentenceData.id)
+
+                    .all()) if reusing_source else []
+
+            pr_sentence_list = [s for p in i['paragraphs']
+                                for s in p['sentences']]
+
+            # Database state must not mutate on list changes, so we'll create a copy
+            sentence_obj_list = copy.copy(db_sentence_obj_list)
+
+            for n, pr_sentence in enumerate(pr_sentence_list or []):
+
+                if debug_flag:
+                    log.debug(f'Processing {n + 1} of {len(pr_sentence_list)} sentence'
+                              f' ({m + 1}/{len(sentence_data_list)} source)')
+
+                reusing_sentence = reusing_source
+
+                # Check if we have releted sentence in db
+
+                pr_token_list = pr_sentence
+                pr_sent_word_set = set(item['token'].lower()
+                                       for item in pr_token_list
+                                       if re.match('^[\w-]+$', item['token']))
+
+                # Should we skip "...!!!" ?
+                if not pr_sent_word_set:
                     continue
 
-                # Not the same hash, we actually should update it, but for now we leave it for later.
+                db_sentence_obj = None
+                for index, sentence_obj in enumerate(sentence_obj_list or []):
 
-                continue
+                    db_token_list = sentence_obj.data['tokens']
+                    db_sent_word_set = set(item['token'].lower()
+                                           for item in db_token_list
+                                           if re.match('^[\w-]+$', item['token']))
 
-            valency_source_data = (
+                    # Should we skip "...!!!" ?
+                    if not db_sent_word_set:
+                        continue
 
-                dbValencySourceData(
-                    perspective_client_id = perspective_id[0],
-                    perspective_object_id = perspective_id[1]))
+                    sent_word_intsec = db_sent_word_set & pr_sent_word_set
 
-            DBSession.add(valency_source_data)
-            DBSession.flush()
+                    if (len(sent_word_intsec) / len(db_sent_word_set) >= 0.75 and
+                            len(sent_word_intsec) / len(pr_sent_word_set) >= 0.75):
+                        db_sentence_obj = sentence_obj
+                        sentence_obj_list.pop(index)  # we've created a copy before
 
-            valency_parser_data = (
+                        if debug_flag:
+                            log.debug(f"Common part is found: {sent_word_intsec}")
 
-                dbValencyParserData(
-                    id = valency_source_data.id,
-                    parser_result_client_id = parser_result_id[0],
-                    parser_result_object_id = parser_result_id[1],
-                    hash = i['hash']))
+                        break
 
-            DBSession.add(valency_parser_data)
-            DBSession.flush()
+                # INFO:
+                # Onwards if db_sentence_obj is stil None then pr_sentence would be added in to db,
+                # with that remaining in sentence_obj_list elements have to be deleted from db
 
-            for p in i['paragraphs']:
+                # Add a new sentence into db if related sentence was not found before
+                if db_sentence_obj is None:
+                    # print("We'll create a sentence")
 
-                for s in p['sentences']:
-
-                    instance_list = []
-
-                    for index, (lex, cs, indent, ind, r, animacy) in (
-                        enumerate(valency.sentence_instance_gen(s))):
-
-                        instance_list.append({
-                            'index': index,
-                            'location': (ind, r),
-                            'case': cs})
-
-                        data_case_set.add(cs)
-
-                    sentence_data = {
-                        'tokens': s,
-                        'instances': instance_list}
-
-                    valency_sentence_data = (
-
+                    db_sentence_obj = (
                         dbValencySentenceData(
-                            source_id = valency_source_data.id,
-                            data = sentence_data,
-                            instance_count = len(instance_list)))
+                            source_id=valency_source_data.id,
+                            data={},
+                            instance_count=0))
 
-                    DBSession.add(valency_sentence_data)
+                    DBSession.add(db_sentence_obj)
                     DBSession.flush()
 
-                    for instance in instance_list:
+                    # Onwards we can skip waste requests to database
+                    reusing_sentence = False
 
-                        instance_insert_list.append({
-                            'sentence_id': valency_sentence_data.id,
-                            'index': instance['index'],
-                            'verb_lex': s[instance['location'][0]]['lex'].lower(),
-                            'case_str': instance['case'].lower()})
+                # Now we have a new or existent db_sentence_obj and can going on
 
+                db_sentence_key = (
+                    tuple(
+                        tuple(sorted(t.items()))
+                        for t in db_sentence_obj.data.get('tokens', [])))
+
+                pr_sentence_key = (
+                    tuple(
+                        tuple(sorted(t.items()))
+                        for t in pr_sentence))
+
+                # No difference in sentence structure including grammar, meaning no difference in
+                # instances either, we can go on to the next sentence.
+
+                if db_sentence_key == pr_sentence_key:
+                    continue
+
+                # Processing sentence and instance data by sentences if we have difference.
+                # Now we need to modify sentence data and compare instance sets.
+
+                # Generating instance list for pr_sentence
+
+                pr_instance_list = []
+                for index, (lex, cs, indent, ind, r, _) in (
+                        enumerate(sentence_instance_gen(pr_sentence))):
+                    pr_instance_list.append({
+                        'index': index,
+                        'location': (ind, r),
+                        'case': ",".join(cs)})
+
+                    # collect new cases if found
+                    data_case_set |= set(cs)
+
+                if debug_flag:
                     log.debug(
-                        '\n' +
-                        pprint.pformat(
-                            (valency_source_data.id, len(instance_list), sentence_data),
-                            width = 192))
+                        '\ntokens:'
+                        f'\n{[t["token"] for t in pr_sentence]}'
+                        '\ndb_instances:'
+                        f'\n{pprint.pformat(db_sentence_obj.data.get("instances_adv", []), width=192)}'
+                        '\npr_instances:'
+                        f'\n{pprint.pformat(pr_instance_list, width=192)}')
+
+                # Storing tokens and instances into db_sentence_obj
+
+                db_sentence_obj.data['tokens'] = pr_sentence
+                db_sentence_obj.data['instances_adv'] = pr_instance_list
+                flag_modified(db_sentence_obj, 'data')
+
+                # Now we're going to get instance data and look for differences we would have to update.
+
+                db_instance_obj_list = (
+                    DBSession
+
+                        .query(
+                            db_instance_data)
+
+                        .filter_by(
+                            sentence_id=db_sentence_obj.id)
+
+                        .order_by(
+                            db_instance_data.sentence_id,
+                            db_instance_data.index)
+
+                        .all()) if reusing_sentence else []
+
+                db_instance_obj_dict = {
+                    (getattr(db_instance_obj, lex_col), db_instance_obj.case_str): db_instance_obj
+                    for db_instance_obj in (db_instance_obj_list or [])}
+
+                # Starting by processing each instance we just got from processed parser result, trying
+                # to re-use existing instance data.
+
+                pr_instance_new_list = []
+                for pr_instance in pr_instance_list:
+
+                    pr_instance_dict = {
+                        'sentence_id': db_sentence_obj.id,
+                        'index': pr_instance['index'],
+                        lex_col: pr_sentence[pr_instance['location'][0]]['lex'].lower(),
+                        'case_str': pr_instance['case'].lower()}
+
+                    pr_instance_key = (
+                        (pr_instance_dict[lex_col], pr_instance_dict['case_str']))
+
+                    # We can re-use existing info for this instance.
+
+                    if pr_instance_key in db_instance_obj_dict:
+
+                        db_instance_obj = (
+                            db_instance_obj_dict.pop(pr_instance_key))
+
+                        index = pr_instance_dict['index']
+
+                        if db_instance_obj.index != index:
+                            db_instance_obj.index = index
+                            flag_modified(db_instance_obj, 'index')
+
+                    # We do not have existing info for this instance, we'll re-use unrelated info or
+                    # create a new one later.
+
+                    else:
+
+                        pr_instance_new_list.append(
+                            (pr_instance, pr_instance_dict))
+
+                # Re-using any unrelated instance info, remembering to delete any annotations of these
+                # instances later.
+
+                db_instance_unused_list = (
+                    sorted(
+                        db_instance_obj_dict.values(),
+                        key=lambda db_instance_obj: db_instance_obj.id))
+
+                for (pr_instance, pr_instance_dict), db_instance_obj in (
+
+                        zip(
+                            pr_instance_new_list,
+                            db_instance_unused_list)):
+
+                    index, lex, case_str = (
+                        pr_instance_dict['index'],
+                        pr_instance_dict[lex_col],
+                        pr_instance_dict['case_str'])
+
+                    if db_instance_obj.index != index:
+                        db_instance_obj.index = index
+                        flag_modified(db_instance_obj, 'index')
+
+                    if getattr(db_instance_obj, lex_col) != lex:
+                        setattr(db_instance_obj, lex_col, lex)
+                        flag_modified(db_instance_obj, lex_col)
+
+                    if db_instance_obj.case_str != case_str:
+                        db_instance_obj.case_str = case_str
+                        flag_modified(db_instance_obj, 'case_str')
+
+                # Getting rest of pr_instance_new_list if it is longer than db_instance_unused_list
+                # to extend list of instances for creation
+
+                instance_insert_list.extend(
+                    pr_instance_dict
+                    for pr_instance, pr_instance_dict in
+                    pr_instance_new_list[len(db_instance_unused_list):])
+
+                # Getting rest of db_instance_unused_list if it is longer than pr_instance_new_list
+                # to extend list of instances for removing
+
+                instance_delete_list.extend(
+                    db_instance_unused_list[len(pr_instance_new_list):])
+
+            # Adding sentences without pairs into sentence_delete_list
+            sentence_delete_list.extend(sentence_obj_list)
+
+        # And finally commit changes into database if any
+        DBSession.flush()
 
     @staticmethod
     def process_eaf(
@@ -1679,7 +1971,7 @@ class CreateValencyData(graphene.Mutation):
         case_re = (
 
             re.compile(
-                f'{delimiter_re}\\b({"|".join(CreateValencyData.case_list)})\\b',
+                f'{delimiter_re}\\b({"|".join(CreateValencyData.verb_case_list)})\\b',
                 re.IGNORECASE))
 
         lex_xlat_dict = collections.defaultdict(set)
@@ -2140,61 +2432,156 @@ class CreateValencyData(graphene.Mutation):
         if merge_insert_list:
 
             DBSession.execute(
-
                 dbValencyMergeData.__table__
                     .insert()
                     .values(merge_insert_list))
 
+            DBSession.flush()
+
     @staticmethod
     def process(
-        info,
-        perspective_id,
-        debug_flag):
+            info,
+            perspective_id,
+            attributes,
+            debug_flag):
 
-        order_case_set = (
-
-            set([
-                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
-                'comp', 'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr', 'lat',
-                'allat']))
+        title, order_case_set, db_instance_data = (
+            attributes['title'],
+            set(attributes['cases']),
+            attributes['instance_data']
+        )
 
         data_case_set = set()
         instance_insert_list = []
+        instance_delete_list = []
+        sentence_delete_list = []
+        parser_source_delete_list = []
 
         CreateValencyData.process_parser(
             perspective_id,
             data_case_set,
+            attributes,
             instance_insert_list,
+            instance_delete_list,
+            sentence_delete_list,
+            parser_source_delete_list,
             debug_flag)
 
-        CreateValencyData.process_eaf(
-            info,
-            perspective_id,
-            data_case_set,
-            instance_insert_list,
-            debug_flag)
+        if title == 'verb':
+            CreateValencyData.process_eaf(
+                info,
+                perspective_id,
+                data_case_set,
+                instance_insert_list,
+                debug_flag)
 
-        if instance_insert_list:
-
-            DBSession.execute(
-
-                dbValencyInstanceData.__table__
-                    .insert()
-                    .values(instance_insert_list))
+        verb_instance_delete_list, adverb_instance_delete_list = (
+            (instance_delete_list, []) if title == 'verb' else ([], instance_delete_list)
+        )
 
         log.debug(
             f'\ndata_case_set:\n{data_case_set}'
             f'\ndata_case_set - order_case_set:\n{data_case_set - order_case_set}'
             f'\norder_case_set - data_case_set:\n{order_case_set - data_case_set}')
 
+        # Now we can delete sentences collected in sentence_delete_list
+        # And going to delete any unused instances and related annotations
+        # Also we will remove unused source_data
+
+        if parser_source_delete_list:
+            sentence_delete_list.extend(
+                DBSession
+                    .query(
+                        dbValencySentenceData)
+                    .filter(
+                        dbValencySentenceData.source_id
+                        .in_([sr.id for (pr, sr) in parser_source_delete_list]))
+                    .all())
+
+        # if we are going to delete a sentence, we have to delete instances and annotations
+        # both for verbs and for adverbs
+        if sentence_delete_list:
+            verb_instance_delete_list.extend(
+                DBSession
+                    .query(
+                        dbValencyInstanceData)
+                    .filter(
+                        dbValencyInstanceData.sentence_id
+                        .in_([sent.id for sent in sentence_delete_list]))
+                    .all())
+
+            adverb_instance_delete_list.extend(
+                DBSession
+                    .query(
+                        dbAdverbInstanceData)
+                    .filter(
+                        dbAdverbInstanceData.sentence_id
+                        .in_([sent.id for sent in sentence_delete_list]))
+                    .all())
+
+        if verb_instance_delete_list:
+            DBSession.execute(
+                dbValencyAnnotationData.__table__
+                    .delete()
+                    .where(
+                        dbValencyAnnotationData.instance_id
+                        .in_([inst.id for inst in verb_instance_delete_list])))
+
+            DBSession.flush()
+
+        if adverb_instance_delete_list:
+            DBSession.execute(
+                dbAdverbAnnotationData.__table__
+                    .delete()
+                    .where(
+                        dbAdverbAnnotationData.instance_id
+                        .in_([inst.id for inst in adverb_instance_delete_list])))
+
+            DBSession.flush()
+
+        for instance in (verb_instance_delete_list + adverb_instance_delete_list):
+            DBSession.delete(instance)
+
+        DBSession.flush()
+
+        for sentence in sentence_delete_list:
+            DBSession.delete(sentence)
+
+        DBSession.flush()
+
+        for (parser, source) in parser_source_delete_list:
+            DBSession.delete(source)
+            DBSession.delete(parser)
+
+        DBSession.flush()
+
+        if debug_flag:
+            log.debug(f"Deleted sources: {len(parser_source_delete_list)}\n"
+                      f"Deleted sentences: {len(sentence_delete_list)}\n"
+                      f"Deleted instances: {len(verb_instance_delete_list) + len(adverb_instance_delete_list)}")
+
+        # Or, if we have new instances, we are going to create their info.
+        if instance_insert_list:
+
+            # print(f"We'll create {len(instance_insert_list)} instances")
+
+            DBSession.execute(
+                db_instance_data.__table__
+                    .insert()
+                    .values(instance_insert_list))
+
+            DBSession.flush()
+
+            if debug_flag:
+                log.debug(f"Inserted instances: {instance_insert_list}")
+
         return len(instance_insert_list)
 
+
     @staticmethod
-    def test(
-        info, debug_flag):
+    def test(info, attributes, debug_flag):
 
         parser_result_query = (
-
             DBSession
 
                 .query(
@@ -2244,7 +2631,6 @@ class CreateValencyData(graphene.Mutation):
                     dbLexicalEntry.parent_object_id))
 
         valency_data_query = (
-
             DBSession
 
                 .query(
@@ -2254,7 +2640,6 @@ class CreateValencyData(graphene.Mutation):
                 .distinct())
 
         perspective_list = (
-
             DBSession
 
                 .query(
@@ -2263,21 +2648,21 @@ class CreateValencyData(graphene.Mutation):
                 .filter(
                     dbPerspective.marked_for_deletion == False,
 
-                    tuple_(
-                        dbPerspective.client_id,
-                        dbPerspective.object_id)
+                tuple_(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
 
-                        .notin_(
-                            DBSession.query(valency_data_query.cte())),
+                .notin_(
+                    DBSession.query(valency_data_query.cte())),
 
-                    tuple_(
-                        dbPerspective.client_id,
-                        dbPerspective.object_id)
+                tuple_(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
 
-                        .in_(
-                            union(
-                                DBSession.query(parser_result_query.cte()),
-                                DBSession.query(eaf_corpus_query.cte()))))
+                .in_(
+                    union(
+                        DBSession.query(parser_result_query.cte()),
+                        DBSession.query(eaf_corpus_query.cte()))))
 
                 .order_by(
                     dbPerspective.client_id,
@@ -2294,29 +2679,29 @@ class CreateValencyData(graphene.Mutation):
                 f'\nperspective_id: {perspective.id}')
 
             CreateValencyData.process(
-                info, perspective.id, debug_flag)
+                info, perspective.id, attributes, debug_flag)
 
-            if utils.get_resident_memory() > 2 * 2**30:
+            if utils.get_resident_memory() > 2 * 2 ** 30:
                 break
 
     @staticmethod
-    def mutate(
-        root,
-        info,
-        perspective_id,
-        debug_flag = False):
+    def mutate(root, info, **args):
 
         try:
-
-            client_id = info.context.client_id
-            client = DBSession.query(Client).filter_by(id = client_id).first()
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id=client_id).first()
 
             if not client:
+                return ResponseError(message=f'Only registered users can create valency statistics.')
 
-                return (
+            attributes = ValencyAttributes.get_part(args['valency_kind'])
 
-                    ResponseError(
-                        message = 'Only registered users can create valency data.'))
+            # return if error
+            if type(attributes) is type:
+                return attributes
+
+            perspective_id = args['perspective_id']
+            debug_flag = args.get('debug_flag', False)
 
             if debug_flag and client.user_id != 1:
 
@@ -2327,18 +2712,13 @@ class CreateValencyData(graphene.Mutation):
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
-                    client_id = perspective_id[0], object_id = perspective_id[1]).first())
+                    client_id=perspective_id[0], object_id=perspective_id[1]).first())
 
             if not perspective:
-
-                return (
-
-                    ResponseError(
-                        message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
+                return ResponseError(message='No perspective {}/{} in the system.'.format(*perspective_id))
 
             dictionary = perspective.parent
-
-            locale_id = info.context.locale_id or 2
+            locale_id = info.context.get('locale_id') or 2
 
             dictionary_name = dictionary.get_translation(locale_id)
             perspective_name = perspective.get_translation(locale_id)
@@ -2346,75 +2726,70 @@ class CreateValencyData(graphene.Mutation):
             full_name = dictionary_name + ' \u203a ' + perspective_name
 
             if dictionary.marked_for_deletion:
-
                 return (
-
-                    ResponseError(message =
-                        'Dictionary \'{}\' {}/{} of perspective \'{}\' {}/{} is deleted.'.format(
-                            dictionary_name,
-                            dictionary.client_id,
-                            dictionary.object_id,
-                            perspective_name,
-                            perspective.client_id,
-                            perspective.object_id)))
+                    ResponseError(message=
+                    'Dictionary \'{}\' {}/{} of perspective \'{}\' {}/{} is deleted.'.format(
+                        dictionary_name,
+                        dictionary.client_id,
+                        dictionary.object_id,
+                        perspective_name,
+                        perspective.client_id,
+                        perspective.object_id)))
 
             if perspective.marked_for_deletion:
-
                 return (
-
-                    ResponseError(message =
-                        'Perspective \'{}\' {}/{} is deleted.'.format(
-                            full_name,
-                            perspective.client_id,
-                            perspective.object_id)))
+                    ResponseError(message=
+                    'Perspective \'{}\' {}/{} is deleted.'.format(
+                        full_name,
+                        perspective.client_id,
+                        perspective.object_id)))
 
             CreateValencyData.process(
                 info,
                 perspective_id,
+                attributes,
                 debug_flag)
 
             if False:
-
                 CreateValencyData.test(
                     info,
+                    attributes,
                     debug_flag)
 
-            return (
-
-                CreateValencyData(
-                    triumph = True))
+            return CreateValencyData(triumph=True)
 
         except Exception as exception:
-
             traceback_string = (
-
                 ''.join(
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
 
-            log.warning('create_valency_data: exception')
+            log.warning(f'create_{title}_data: exception')
             log.warning(traceback_string)
 
             transaction.abort()
 
-            return (
-
-                ResponseError(
-                    'Exception:\n' + traceback_string))
+            return ResponseError('Exception:\n' + traceback_string)
 
 
 class SaveValencyData(graphene.Mutation):
-
     class Arguments:
 
-        perspective_id = LingvodocID(required = True)
+        perspective_id = LingvodocID(required=True)
+        valency_kind = graphene.String(required=True)
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
     data_url = graphene.String()
 
     @staticmethod
-    def get_annotation_data(perspective_id):
+    def get_annotation_data(perspective_id, attributes):
+
+        db_instance_data, db_annotation_data, lex_col = (
+            attributes['instance_data'],
+            attributes['annotation_data'],
+            attributes['lex_col']
+        )
 
         # Getting valency annotation data.
 
@@ -2423,12 +2798,12 @@ class SaveValencyData(graphene.Mutation):
             DBSession
 
                 .query(
-                    dbValencyAnnotationData)
+                    db_annotation_data)
 
                 .filter(
-                    dbValencyAnnotationData.accepted != None,
-                    dbValencyAnnotationData.instance_id == dbValencyInstanceData.id,
-                    dbValencyInstanceData.sentence_id == dbValencySentenceData.id,
+                    db_annotation_data.accepted != None,
+                    db_annotation_data.instance_id == db_instance_data.id,
+                    db_instance_data.sentence_id == dbValencySentenceData.id,
                     dbValencySentenceData.source_id == dbValencySourceData.id,
                     dbValencySourceData.perspective_client_id == perspective_id[0],
                     dbValencySourceData.perspective_object_id == perspective_id[1])
@@ -2448,15 +2823,13 @@ class SaveValencyData(graphene.Mutation):
         if instance_id_set:
 
             instance_list = (
-
                 DBSession
 
                     .query(
-                        dbValencyInstanceData)
+                        db_instance_data)
 
                     .filter(
-                        dbValencyInstanceData.id.in_(
-
+                        db_instance_data.id.in_(
                             utils.values_query(
                                 instance_id_set, models.SLBigInteger)))
 
@@ -2467,7 +2840,6 @@ class SaveValencyData(graphene.Mutation):
         if user_id_set:
 
             user_list = (
-
                 DBSession
 
                     .query(
@@ -2475,7 +2847,6 @@ class SaveValencyData(graphene.Mutation):
 
                     .filter(
                         dbUser.id.in_(
-
                             utils.values_query(
                                 user_id_set, models.SLBigInteger)))
 
@@ -2489,7 +2860,6 @@ class SaveValencyData(graphene.Mutation):
         if sentence_id_set:
 
             sentence_list = (
-
                 DBSession
 
                     .query(
@@ -2497,7 +2867,6 @@ class SaveValencyData(graphene.Mutation):
 
                     .filter(
                         dbValencySentenceData.id.in_(
-
                             utils.values_query(
                                 sentence_id_set, models.SLBigInteger)))
 
@@ -2517,27 +2886,27 @@ class SaveValencyData(graphene.Mutation):
         instance_data_list = [
 
             {'id': instance.id,
-                'sentence_id': instance.sentence_id,
-                'index': instance.index,
-                'verb_lex': instance.verb_lex,
-                'case_str': instance.case_str}
+             'sentence_id': instance.sentence_id,
+             'index': instance.index,
+             lex_col: getattr(instance, lex_col),
+             'case_str': instance.case_str}
 
-                for instance in instance_list]
+            for instance in instance_list]
 
         annotation_data_list = [
 
             {'instance_id': annotation.instance_id,
-                'user_id': annotation.user_id,
-                'accepted': annotation.accepted}
+             'user_id': annotation.user_id,
+             'accepted': annotation.accepted}
 
-                for annotation in annotation_list]
+            for annotation in annotation_list]
 
         user_data_list = [
 
             {'id': user.id,
-                'name': user.name}
+             'name': user.name}
 
-                for user in user_list]
+            for user in user_list]
 
         return {
             'sentence_list': sentence_data_list,
@@ -2546,23 +2915,29 @@ class SaveValencyData(graphene.Mutation):
             'user_list': user_data_list}
 
     @staticmethod
-    def mutate(
-        root,
-        info,
-        perspective_id,
-        debug_flag = False):
+    def mutate(root, info, **args):
+
+        attributes = ValencyAttributes.get_part(args['valency_kind'])
+
+        # return if error
+        if type(attributes) is type:
+            return attributes
+
+        title = attributes['title']
 
         try:
 
-            client_id = info.context.client_id
-            client = DBSession.query(Client).filter_by(id = client_id).first()
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id=client_id).first()
 
             if not client:
-
                 return (
 
                     ResponseError(
-                        message = 'Only registered users can create valency data.'))
+                        message=f'Only registered users can save valency data.'))
+
+            perspective_id = args['perspective_id']
+            debug_flag = args.get('debug_flag', False)
 
             if debug_flag and client.user_id != 1:
 
@@ -2573,18 +2948,17 @@ class SaveValencyData(graphene.Mutation):
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
-                    client_id = perspective_id[0], object_id = perspective_id[1]).first())
+                    client_id=perspective_id[0], object_id=perspective_id[1]).first())
 
             if not perspective:
-
                 return (
 
                     ResponseError(
-                        message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
+                        message='No perspective {}/{} in the system.'.format(*perspective_id)))
 
             dictionary = perspective.parent
 
-            locale_id = info.context.locale_id or 2
+            locale_id = info.context.get('locale_id') or 2
 
             dictionary_name = dictionary.get_translation(locale_id)
             perspective_name = perspective.get_translation(locale_id)
@@ -2592,32 +2966,30 @@ class SaveValencyData(graphene.Mutation):
             full_name = dictionary_name + ' \u203a ' + perspective_name
 
             if dictionary.marked_for_deletion:
-
                 return (
 
-                    ResponseError(message =
-                        'Dictionary \'{}\' {}/{} of perspective \'{}\' {}/{} is deleted.'.format(
-                            dictionary_name,
-                            dictionary.client_id,
-                            dictionary.object_id,
-                            perspective_name,
-                            perspective.client_id,
-                            perspective.object_id)))
+                    ResponseError(message=
+                    'Dictionary \'{}\' {}/{} of perspective \'{}\' {}/{} is deleted.'.format(
+                        dictionary_name,
+                        dictionary.client_id,
+                        dictionary.object_id,
+                        perspective_name,
+                        perspective.client_id,
+                        perspective.object_id)))
 
             if perspective.marked_for_deletion:
-
                 return (
 
-                    ResponseError(message =
-                        'Perspective \'{}\' {}/{} is deleted.'.format(
-                            full_name,
-                            perspective.client_id,
-                            perspective.object_id)))
+                    ResponseError(message=
+                    'Perspective \'{}\' {}/{} is deleted.'.format(
+                        full_name,
+                        perspective.client_id,
+                        perspective.object_id)))
 
             # Getting valency annotation data.
 
             data_dict = (
-                SaveValencyData.get_annotation_data(perspective_id))
+                SaveValencyData.get_annotation_data(perspective_id, attributes))
 
             # Saving valency annotation data as zipped JSON.
 
@@ -2642,25 +3014,25 @@ class SaveValencyData(graphene.Mutation):
             bucket = storage_temporary['bucket']
 
             minio_client = (
-                    
+
                 minio.Minio(
                     host,
-                    access_key = storage_temporary['access_key'],
-                    secret_key = storage_temporary['secret_key'],
-                    secure = True))
+                    access_key=storage_temporary['access_key'],
+                    secret_key=storage_temporary['secret_key'],
+                    secure=True))
 
             temporary_file = (
-                    
+
                 tempfile.NamedTemporaryFile(
-                    delete = False))
+                    delete=False))
 
             zip_file = (
 
                 zipfile.ZipFile(
                     temporary_file,
                     'w',
-                    compression = zipfile.ZIP_DEFLATED,
-                    compresslevel = 9))
+                    compression=zipfile.ZIP_DEFLATED,
+                    compresslevel=9))
 
             zip_info = (
 
@@ -2670,17 +3042,17 @@ class SaveValencyData(graphene.Mutation):
             zip_info.compress_type = zipfile.ZIP_DEFLATED
 
             with zip_file.open(
-                zip_info, 'w') as binary_data_file:
+                    zip_info, 'w') as binary_data_file:
 
                 with io.TextIOWrapper(
-                    binary_data_file, 'utf-8') as text_data_file:
+                        binary_data_file, 'utf-8') as text_data_file:
 
                     json.dump(
                         data_dict,
                         text_data_file,
-                        ensure_ascii = False,
-                        sort_keys = True,
-                        indent = 2)
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        indent=2)
 
             zip_file.close()
             temporary_file.close()
@@ -2693,12 +3065,12 @@ class SaveValencyData(graphene.Mutation):
 
             object_name = (
 
-                storage_temporary['prefix'] +
-            
-                '/'.join((
-                    'valency_data',
-                    '{:.6f}'.format(current_time),
-                    'data.json.zip')))
+                    storage_temporary['prefix'] +
+
+                    '/'.join((
+                        f'{title}_valency_data',
+                        '{:.6f}'.format(current_time),
+                        'data.json.zip')))
 
             (etag, version_id) = (
 
@@ -2721,8 +3093,8 @@ class SaveValencyData(graphene.Mutation):
             return (
 
                 SaveValencyData(
-                    triumph = True,
-                    data_url = url))
+                    triumph=True,
+                    data_url=url))
 
         except Exception as exception:
 
@@ -2732,7 +3104,7 @@ class SaveValencyData(graphene.Mutation):
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
 
-            log.warning('save_valency_data: exception')
+            log.warning(f'save_{title}_data: exception')
             log.warning(traceback_string)
 
             transaction.abort()
@@ -2744,7 +3116,6 @@ class SaveValencyData(graphene.Mutation):
 
 
 class SetValencyAnnotation(graphene.Mutation):
-
     class ValencyInstanceAnnotation(graphene.types.Scalar):
 
         @staticmethod
@@ -2769,27 +3140,38 @@ class SetValencyAnnotation(graphene.Mutation):
             return [int(a_value.value), bool(b_value.value)]
 
     class Arguments:
-        pass
+
+        valency_kind = graphene.String(required=True)
 
     Arguments.annotation_list = (
-        graphene.List(ValencyInstanceAnnotation, required = True))
+        graphene.List(ValencyInstanceAnnotation, required=True))
 
     triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, info, **args):
 
+        attributes = ValencyAttributes.get_part(args['valency_kind'])
+
+        # return if error
+        if type(attributes) is type:
+            return attributes
+
+        prefix, title = (
+            attributes['prefix'],
+            attributes['title']
+        )
+
         try:
 
-            client_id = info.context.client_id
-            client = DBSession.query(Client).filter_by(id = client_id).first()
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id=client_id).first()
 
             if not client:
-
                 return (
 
                     ResponseError(
-                        message = 'Only registered users can set valency annotations.'))
+                        message=f'Only registered users can set valency annotations.'))
 
             annotation_list = args['annotation_list']
 
@@ -2799,7 +3181,7 @@ class SetValencyAnnotation(graphene.Mutation):
 
             # NOTE:
             #
-            # Directly formatting arguments in in general can be unsafe, but here it's ok because we are
+            # Directly formatting arguments in general can be unsafe, but here it's ok because we are
             # relying on GraphQL's argument validation.
 
             value_list_str = (
@@ -2813,9 +3195,9 @@ class SetValencyAnnotation(graphene.Mutation):
 
                 f'''
                 insert into
-                valency_annotation_data
+                {prefix}_annotation_data
                 values {value_list_str}
-                on conflict on constraint valency_annotation_data_pkey
+                on conflict on constraint {prefix}_annotation_data_pkey
                 do update set accepted = excluded.accepted;
                 ''')
 
@@ -2826,7 +3208,7 @@ class SetValencyAnnotation(graphene.Mutation):
             return (
 
                 SetValencyAnnotation(
-                    triumph = True))
+                    triumph=True))
 
         except Exception as exception:
 
@@ -2836,7 +3218,7 @@ class SetValencyAnnotation(graphene.Mutation):
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
 
-            log.warning('set_valency_annotation: exception')
+            log.warning(f'set_{title}_annotation: exception')
             log.warning(traceback_string)
 
             return (
@@ -3052,7 +3434,7 @@ class ValencyVerbCases(graphene.Mutation):
 
             sorted(
                 case_verb_dict.items(),
-                key = lambda item: CreateValencyData.case_index_dict[item[0]])):
+                key = lambda item: CreateValencyData.verb_case_index_dict[item[0]])):
 
             verb_sentence_list = (
 

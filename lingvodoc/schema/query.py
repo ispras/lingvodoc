@@ -5185,6 +5185,347 @@ class Query(graphene.ObjectType):
 
         return result_dict
 
+
+        log.debug(
+            f'\nperspective_id: {perspective_id}'
+            f'\noffset: {offset}'
+            f'\nlimit: {limit}'
+            f'\nspecificity_flag: {specificity_flag}'
+            f'\nadverb_prefix: {adverb_prefix}'
+            f'\ncase_flag: {case_flag}'
+            f'\naccept_value: {accept_value}'
+            f'\nsort_order_list: {sort_order_list}'
+            f'\ndebug_flag: {debug_flag}')
+
+        if sort_order_list is None:
+            sort_order_list = ['specificity', 'adverb', 'case', 'accept']
+
+        specificity_flag = True
+
+        adverb_flag = adverb_prefix is not None
+        accept_flag = accept_value is not None
+
+        instance_query = (
+
+            DBSession
+
+                .query(
+                    dbAdverbInstanceData)
+
+                .filter(
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1],
+                    dbValencySentenceData.source_id == dbValencySourceData.id,
+                    dbAdverbInstanceData.sentence_id == dbValencySentenceData.id))
+
+        # If we are going to sort by specificity, we will need a base instance CTE to generate specificity
+        # metrics.
+
+        instance_c = (
+            dbAdverbInstanceData)
+
+        if specificity_flag:
+
+            instance_cte = (
+                instance_query.cte())
+
+            instance_c = (
+                instance_cte.c)
+
+            instance_query = (
+                DBSession.query(instance_cte))
+
+        # Filtering by adverb prefix if required.
+
+        if adverb_prefix:
+            adverb_prefix_filter_str = (
+                adverb_prefix.replace('%', '\\%') + '%')
+
+            instance_query = (
+
+                instance_query.filter(
+                    instance_c.adverb_lex.ilike(
+                        adverb_prefix_filter_str)))
+
+        instance_count = (
+            instance_query.count())
+
+        # Getting ready to sort, if required.
+
+        order_by_list = []
+
+        for sort_type in sort_order_list:
+
+            if sort_type == 'specificity':
+
+                if specificity_flag:
+
+                    count_cte = (
+                        DBSession
+
+                            .query(
+                                instance_c.adverb_lex,
+                                func.unnest(
+                                    func.string_to_array(
+                                        instance_c.case_str, ',')).label('mark_str'),
+                                func.count('*').label('c_i'))
+
+                            .group_by(
+                                instance_c.adverb_lex,
+                                'mark_str')
+
+                           .cte())
+
+                    specificity_subquery = (
+                        DBSession
+
+                            .query(
+                                count_cte.c.adverb_lex,
+                                func.count('*').label('c_unique'),
+
+                                (func.log(
+                                    2, func.sum(count_cte.c.c_i))
+
+                                    - func.sum(
+                                        count_cte.c.c_i * func.log(2, count_cte.c.c_i))
+                                        / func.sum(count_cte.c.c_i))
+
+                                    .label('H'))
+
+                            .group_by(
+                                count_cte.c.adverb_lex)
+
+                            .subquery())
+
+                    instance_query = (
+
+                        instance_query.outerjoin(
+                            specificity_subquery,
+                            instance_c.adverb_lex == specificity_subquery.c.adverb_lex))
+
+                    order_by_list.extend((
+                        specificity_subquery.c.c_unique,
+                        specificity_subquery.c.H))
+
+            elif sort_type == 'adverb':
+
+                if adverb_flag:
+
+                    order_by_list.append(
+                        instance_c.adverb_lex)
+
+            elif sort_type == 'case':
+
+                if case_flag:
+
+                    order_by_list.append(
+                        func.string_to_array(instance_c.case_str, ','))
+
+            elif sort_type == 'accept':
+
+                if accept_flag:
+
+                    accept_subquery = (
+
+                        DBSession
+
+                            .query(
+                                dbAdverbAnnotationData.instance_id,
+
+                                func.bool_or(dbAdverbAnnotationData.accepted)
+                                    .label('accept_value'))
+
+                            .group_by(
+                                dbAdverbAnnotationData.instance_id)
+
+                            .subquery())
+
+                    instance_query = (
+
+                        instance_query.outerjoin(
+                            accept_subquery,
+                            instance_c.id == accept_subquery.c.instance_id))
+
+                    order_by_list.append(
+                        func.coalesce(accept_subquery.c.accept_value, False) != accept_value)
+
+        order_by_list.append(
+            instance_c.id)
+
+        # Getting annotation instances and related info.
+
+        instance_query = (
+
+            instance_query
+                .order_by(*order_by_list)
+                .offset(offset)
+                .limit(limit))
+
+        instance_list = instance_query.all()
+
+        if debug_flag:
+
+            log.debug(
+                '\n' +
+                str(instance_query.statement.compile(compile_kwargs = {'literal_binds': True})))
+
+        instance_id_set = (
+            set(instance.id for instance in instance_list))
+
+        sentence_id_set = (
+            set(instance.sentence_id for instance in instance_list))
+
+        log.debug(
+            '\ninstance_id_set: {}'
+            '\nsentence_id_set: {}'.format(
+                instance_id_set,
+                sentence_id_set))
+
+        sentence_list = []
+
+        if sentence_id_set:
+
+            sentence_list = (
+
+                DBSession
+
+                    .query(
+                        dbValencySentenceData)
+
+                    .filter(
+                        dbValencySentenceData.id.in_(sentence_id_set))
+
+                    .all())
+
+        annotation_list = []
+
+        if instance_id_set:
+
+            annotation_list = (
+
+                DBSession
+
+                    .query(
+                        dbAdverbAnnotationData.instance_id,
+
+                        func.jsonb_agg(
+                            func.jsonb_build_array(
+                                dbAdverbAnnotationData.user_id,
+                                dbAdverbAnnotationData.accepted)))
+
+                        .filter(
+                        dbAdverbAnnotationData.instance_id.in_(instance_id_set))
+
+                    .group_by(
+                        dbAdverbAnnotationData.instance_id)
+
+                    .all())
+
+        user_id_set = (
+
+            set(user_id
+                for _, user_annotation_list in annotation_list
+                for user_id, _ in user_annotation_list))
+
+        user_list = []
+
+        if user_id_set:
+
+            user_list = (
+
+                DBSession
+
+                    .query(
+                        dbUser.id, dbUser.name)
+
+                    .filter(
+                        dbUser.id.in_(user_id_set))
+
+                    .all())
+
+        instance_list = [
+
+            {'id': instance.id,
+                'sentence_id': instance.sentence_id,
+                'index': instance.index,
+                'adverb_lex': instance.adverb_lex,
+                'case_str': instance.case_str}
+
+            for instance in instance_list]
+
+        sentence_list = [
+            dict(sentence.data, id = sentence.id)
+            for sentence in sentence_list]
+
+        log.debug(
+            '\ninstance_list:\n{}'
+            '\nsentence_list:\n{}'
+            '\nannotation_list:\n{}'
+            '\nuser_list:\n{}'.format(
+                pprint.pformat(instance_list, width = 192),
+                pprint.pformat(sentence_list, width = 192),
+                pprint.pformat(annotation_list, width = 192),
+                pprint.pformat(user_list, width = 192)))
+
+        result_dict = {
+            'instance_count': instance_count,
+            'instance_list': instance_list,
+            'sentence_list': sentence_list,
+            'annotation_list': annotation_list,
+            'user_list': user_list}
+
+        # Getting all adverbs, without filtering, if required.
+
+        if adverb_flag:
+
+            if adverb_prefix:
+
+                adverb_query = (
+
+                    DBSession
+
+                        .query(
+                            dbAdverbInstanceData.adverb_lex,
+                            dbAdverbInstanceData.adverb_lex.ilike(
+                                adverb_prefix_filter_str)))
+
+            else:
+
+                adverb_query = (
+
+                    DBSession
+
+                        .query(
+                            dbAdverbInstanceData.adverb_lex))
+
+            adverb_list = (
+
+                adverb_query
+
+                    .filter(
+                        dbValencySourceData.perspective_client_id == perspective_id[0],
+                        dbValencySourceData.perspective_object_id == perspective_id[1],
+                        dbValencySentenceData.source_id == dbValencySourceData.id,
+                        dbAdverbInstanceData.sentence_id == dbValencySentenceData.id)
+
+                    .distinct()
+
+                    .order_by(dbAdverbInstanceData.adverb_lex)
+
+                    .all())
+
+            if adverb_prefix:
+
+                result_dict['adverb_list'] = (
+                    [list(row) for row in adverb_list])
+
+            else:
+
+                result_dict['adverb_list'] = (
+                    [[row[0], True] for row in adverb_list])
+
+        return result_dict
+
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
     field_id = LingvodocID()
@@ -8691,18 +9032,18 @@ class MyMutations(graphene.ObjectType):
     docx2eaf = Docx2Eaf.Field()
     docx2xlsx = Docx2Xlsx.Field()
     valency = Valency.Field()
+    valency_verb_cases = ValencyVerbCases.Field()
     create_valency_data = CreateValencyData.Field()
     save_valency_data = SaveValencyData.Field()
     set_valency_annotation = SetValencyAnnotation.Field()
-    valency_verb_cases = ValencyVerbCases.Field()
-    create_adverb_data = CreateAdverbData.Field()
-    save_adverb_data = SaveAdverbData.Field()
-    set_adverb_annotation = SetAdverbAnnotation.Field()
     bidirectional_links = BidirectionalLinks.Field()
 
 
-schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
-
+schema = graphene.Schema(
+    query=Query,
+    mutation=MyMutations,
+    auto_camelcase=False
+)
 
 # Special value to differentiate between when client_id, client and user info is uninitialized and when it's
 # None because the request has no authenticated client info.

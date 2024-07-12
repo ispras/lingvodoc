@@ -12,6 +12,10 @@ import math
 import re
 import sys
 
+cases = [
+    'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
+    'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
+
 def corpus_to_sentences(corpus_data_list):
 
     s_ends = {'.', '!',  '?', '...', '?!', '...»'}
@@ -104,10 +108,6 @@ def sentence_instance_gen(
     token_list,
     additional_check_flag = True):
 
-    cases = [
-        'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
-        'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
-
     lex_skip_set = {
         'какой', 'чисто', 'сё', 'минут'}
 
@@ -182,10 +182,6 @@ def sentences_arx_to_valencies(
 
     verbs = []
     verb_case_dict = defaultdict(dict)
-
-    cases = [
-        'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
-        'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
 
     case_template_list = [
         {'case': case, 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0}
@@ -303,10 +299,6 @@ def sentences_valencies_to_result(
     sentence_data_list,
     valence_data_list,
     verbose_flag = False):
-
-    cases = [
-        'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
-        'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
 
     case_counter = Counter()
 
