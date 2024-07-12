@@ -7524,34 +7524,50 @@ class ReorderColumns(graphene.Mutation):
                 ResponseError(
                     'Exception:\n' + traceback_string))
 
-class ValencyKind(graphene.Enum):
-    VERB = 'verb'
-    ADVERB = 'adverb'
 
 class ValencyAttributes():
 
-    verb = {'instance_data': dbValencyInstanceData,
+    attributes = {
+
+        'verb': {
+            'instance_data': dbValencyInstanceData,
             'annotation_data': dbValencyAnnotationData,
             'title': 'verb',
             'Title': 'Verb',
+            'prefix': 'valency',
             'hash_col': 'hash',
             'lex_col': 'verb_lex',
             'cases': valency.cases,
-            'sentence_instance_gen': valency.sentence_instance_gen}
+            'sentence_instance_gen': valency.sentence_instance_gen
+        },
 
-    adverb = {'instance_data': dbAdverbInstanceData,
-              'annotation_data': dbAdverbAnnotationData,
-              'title': 'adverb',
-              'Title': 'Adverb',
-              'hash_col': 'hash_adverb',
-              'lex_col': 'adverb_lex',
-              'cases': adverb.cases,
-              'sentence_instance_gen': adverb.sentence_instance_gen}
+        'adverb': {
+            'instance_data': dbAdverbInstanceData,
+            'annotation_data': dbAdverbAnnotationData,
+            'title': 'adverb',
+            'Title': 'Adverb',
+            'prefix': 'adverb',
+            'hash_col': 'hash_adverb',
+            'lex_col': 'adverb_lex',
+            'cases': adverb.cases,
+            'sentence_instance_gen': adverb.sentence_instance_gen
+        }
+    }
+
+    def get_attrs(self, valency_kind):
+
+        valency_kind = valency_kind.lower()
+
+        return (
+            self.attributes.get(
+            valency_kind,
+            ValueError(message = f"Valency kind '{valency_kind}' in not in {list(self.attributes.keys())}."))
+        )
 
 class CreateComplexData(graphene.Mutation):
     class Arguments:
         perspective_id = LingvodocID(required=True)
-        valency_kind = ValencyKind()
+        valency_kind = graphene.String(required=True)
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -7868,7 +7884,7 @@ class CreateComplexData(graphene.Mutation):
                         'case_str': pr_instance['case'].lower()}
 
                     pr_instance_key = (
-                        (getattr(pr_instance_dict, lex_col), pr_instance_dict['case_str']))
+                        (pr_instance_dict[lex_col], pr_instance_dict['case_str']))
 
                     # We can re-use existing info for this instance.
 
@@ -8101,7 +8117,7 @@ class CreateComplexData(graphene.Mutation):
                     dbLexicalEntry.parent_client_id,
                     dbLexicalEntry.parent_object_id))
 
-        adverb_data_query = (
+        valency_data_query = (
             DBSession
 
                 .query(
@@ -8124,7 +8140,7 @@ class CreateComplexData(graphene.Mutation):
                     dbPerspective.object_id)
 
                 .notin_(
-                    DBSession.query(adverb_data_query.cte())),
+                    DBSession.query(valency_data_query.cte())),
 
                 tuple_(
                     dbPerspective.client_id,
@@ -8163,12 +8179,15 @@ class CreateComplexData(graphene.Mutation):
             client = DBSession.query(Client).filter_by(id=client_id).first()
 
             if not client:
-                return ResponseError(message=f'Only registered users can create {title} valency statistics.')
+                return ResponseError(message=f'Only registered users can create valency statistics.')
+
+            valency_kind = args['valency_kind']
+            if type(attributes := ValencyAttributes.get_attrs(valency_kind)) is type:
+                # return if error
+                return attributes
 
             perspective_id = args['perspective_id']
-            valency_kind = args.get('valency_kind', ValencyKind.ADVERB)
             debug_flag = args.get('debug_flag', False)
-            attributes = getattr(ValencyAttributes, valency_kind.value)
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -8232,10 +8251,11 @@ class CreateComplexData(graphene.Mutation):
             return ResponseError('Exception:\n' + traceback_string)
 
 
-class SaveAdverbData(graphene.Mutation):
+class SaveComplexData(graphene.Mutation):
     class Arguments:
 
         perspective_id = LingvodocID(required=True)
+        valency_kind = graphene.String(required=True)
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -8253,7 +8273,20 @@ class SaveAdverbData(graphene.Mutation):
                 return (
 
                     ResponseError(
-                        message='Only registered users can save adverb data.'))
+                        message=f'Only registered users can save valency data.'))
+
+            valency_kind = args['valency_kind']
+            if type(attributes := ValencyAttributes.get_attrs(valency_kind)) is type:
+                # return if error
+                return attributes
+
+            db_instance_data, db_annotation_data, lex_col, title, prefix = (
+                attributes['instance_data'],
+                attributes['annotation_data'],
+                attributes['lex_col'],
+                attributes['title'],
+                attributes['prefix']
+            )
 
             perspective_id = args['perspective_id']
             debug_flag = args.get('debug_flag', False)
@@ -8298,20 +8331,21 @@ class SaveAdverbData(graphene.Mutation):
                         perspective.client_id,
                         perspective.object_id)))
 
-            # Getting adverb annotation data.
+            # Getting valency annotation data.
 
             annotation_list = (
                 DBSession
 
                     .query(
-                        dbAdverbAnnotationData)
+                        db_annotation_data)
 
                     .filter(
-                        dbAdverbAnnotationData.accepted != None,
-                        dbAdverbAnnotationData.instance_id == dbAdverbInstanceData.id,
-                        dbAdverbInstanceData.sentence_id == dbValencySentenceData.id,
+                        db_annotation_data.accepted != None,
+                        db_annotation_data.instance_id == db_instance_data.id,
+                        db_instance_data.sentence_id == dbValencySentenceData.id,
                         dbValencySentenceData.source_id == dbValencySourceData.id,
-                        dbValencySourceData.perspective_id == perspective_id)
+                        dbValencySourceData.perspective_client_id == perspective_id[0],
+                        dbValencySourceData.perspective_object_id == perspective_id[1])
 
                     .all())
 
@@ -8329,10 +8363,10 @@ class SaveAdverbData(graphene.Mutation):
                     DBSession
 
                         .query(
-                            dbAdverbInstanceData)
+                            db_instance_data)
 
                         .filter(
-                            dbAdverbInstanceData.id.in_(
+                            db_instance_data.id.in_(
                                 utils.values_query(
                                     instance_id_set, models.SLBigInteger)))
 
@@ -8373,7 +8407,7 @@ class SaveAdverbData(graphene.Mutation):
 
                         .all())
 
-            # Preparing adverb annotation data.
+            # Preparing valency annotation data.
 
             sentence_data_list = []
 
@@ -8388,7 +8422,7 @@ class SaveAdverbData(graphene.Mutation):
                 {'id': instance.id,
                  'sentence_id': instance.sentence_id,
                  'index': instance.index,
-                 'adverb_lex': instance.adverb_lex,
+                 lex_col: getattr(instance, lex_col),
                  'case_str': instance.case_str}
 
                 for instance in instance_list]
@@ -8414,7 +8448,7 @@ class SaveAdverbData(graphene.Mutation):
                 'annotation_list': annotation_data_list,
                 'user_list': user_data_list}
 
-            # Saving adverb annotation data as zipped JSON.
+            # Saving valency annotation data as zipped JSON.
 
             current_time = (
                 time.time())
@@ -8489,7 +8523,7 @@ class SaveAdverbData(graphene.Mutation):
                     storage_temporary['prefix'] +
 
                     '/'.join((
-                        'adverb_data',
+                        f'{title}_valency_data',
                         '{:.6f}'.format(current_time),
                         'data.json.zip')))
 
@@ -8513,7 +8547,7 @@ class SaveAdverbData(graphene.Mutation):
 
             return (
 
-                SaveAdverbData(
+                SaveComplexData(
                     triumph=True,
                     data_url=url))
 
@@ -8525,7 +8559,7 @@ class SaveAdverbData(graphene.Mutation):
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
 
-            log.warning('save_adverb_data: exception')
+            log.warning(f'save_{title}_data: exception')
             log.warning(traceback_string)
 
             transaction.abort()
@@ -8536,8 +8570,8 @@ class SaveAdverbData(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
-class SetAdverbAnnotation(graphene.Mutation):
-    class AdverbInstanceAnnotation(graphene.types.Scalar):
+class SetComplexAnnotation(graphene.Mutation):
+    class ValencyInstanceAnnotation(graphene.types.Scalar):
 
         @staticmethod
         def identity(value):
@@ -8561,10 +8595,11 @@ class SetAdverbAnnotation(graphene.Mutation):
             return [int(a_value.value), bool(b_value.value)]
 
     class Arguments:
-        pass
+
+        valency_kind = graphene.String(required=True)
 
     Arguments.annotation_list = (
-        graphene.List(AdverbInstanceAnnotation, required=True))
+        graphene.List(ValencyInstanceAnnotation, required=True))
 
     triumph = graphene.Boolean()
 
@@ -8580,7 +8615,17 @@ class SetAdverbAnnotation(graphene.Mutation):
                 return (
 
                     ResponseError(
-                        message='Only registered users can set adverb annotations.'))
+                        message=f'Only registered users can set valency annotations.'))
+
+            valency_kind = args['valency_kind']
+            if type(attributes := ValencyAttributes.get_attrs(valency_kind)) is type:
+                # return if error
+                return attributes
+
+            prefix, title = (
+                attributes['prefix'],
+                attributes['title']
+            )
 
             annotation_list = args['annotation_list']
 
@@ -8604,9 +8649,9 @@ class SetAdverbAnnotation(graphene.Mutation):
 
                 f'''
                 insert into
-                adverb_annotation_data
+                {prefix}_annotation_data
                 values {value_list_str}
-                on conflict on constraint adverb_annotation_data_pkey
+                on conflict on constraint {prefix}_annotation_data_pkey
                 do update set accepted = excluded.accepted;
                 ''')
 
@@ -8616,7 +8661,7 @@ class SetAdverbAnnotation(graphene.Mutation):
 
             return (
 
-                SetAdverbAnnotation(
+                SetComplexAnnotation(
                     triumph=True))
 
         except Exception as exception:
@@ -8627,7 +8672,7 @@ class SetAdverbAnnotation(graphene.Mutation):
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
 
-            log.warning('set_adverb_annotation: exception')
+            log.warning(f'set_{title}_annotation: exception')
             log.warning(traceback_string)
 
             return (
@@ -8743,18 +8788,21 @@ class MyMutations(graphene.ObjectType):
     docx2eaf = Docx2Eaf.Field()
     docx2xlsx = Docx2Xlsx.Field()
     valency = Valency.Field()
-    create_valency_data = CreateValencyData.Field()
-    save_valency_data = SaveValencyData.Field()
-    set_valency_annotation = SetValencyAnnotation.Field()
     valency_verb_cases = ValencyVerbCases.Field()
+    create_valency_data = CreateComplexData.Field()
+    save_valency_data = SaveComplexData.Field()
+    set_valency_annotation = SetComplexAnnotation.Field()
     create_adverb_data = CreateComplexData.Field()
-    save_adverb_data = SaveAdverbData.Field()
-    set_adverb_annotation = SetAdverbAnnotation.Field()
+    save_adverb_data = SaveComplexData.Field()
+    set_adverb_annotation = SetComplexAnnotation.Field()
     bidirectional_links = BidirectionalLinks.Field()
 
 
-schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
-
+schema = graphene.Schema(
+    query=Query,
+    mutation=MyMutations,
+    auto_camelcase=False
+)
 
 # Special value to differentiate between when client_id, client and user info is uninitialized and when it's
 # None because the request has no authenticated client info.
