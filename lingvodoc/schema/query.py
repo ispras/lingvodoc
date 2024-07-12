@@ -8273,6 +8273,138 @@ class SaveComplexData(graphene.Mutation):
     data_url = graphene.String()
 
     @staticmethod
+    def get_annotation_data(perspective_id, attributes):
+
+        db_instance_data, db_annotation_data, lex_col = (
+            attributes['instance_data'],
+            attributes['annotation_data'],
+            attributes['lex_col']
+        )
+
+        # Getting valency annotation data.
+
+        annotation_list = (
+
+            DBSession
+
+                .query(
+                    db_annotation_data)
+
+                .filter(
+                    db_annotation_data.accepted != None,
+                    db_annotation_data.instance_id == db_instance_data.id,
+                    db_instance_data.sentence_id == dbValencySentenceData.id,
+                    dbValencySentenceData.source_id == dbValencySourceData.id,
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1])
+
+                .all())
+
+        instance_id_set = set()
+        user_id_set = set()
+
+        for annotation in annotation_list:
+
+            instance_id_set.add(annotation.instance_id)
+            user_id_set.add(annotation.user_id)
+
+        instance_list = []
+
+        if instance_id_set:
+
+            instance_list = (
+                DBSession
+
+                    .query(
+                        db_instance_data)
+
+                    .filter(
+                        db_instance_data.id.in_(
+                            utils.values_query(
+                                instance_id_set, models.SLBigInteger)))
+
+                    .all())
+
+        user_list = []
+
+        if user_id_set:
+
+            user_list = (
+                DBSession
+
+                    .query(
+                        dbUser.id, dbUser.name)
+
+                    .filter(
+                        dbUser.id.in_(
+                            utils.values_query(
+                                user_id_set, models.SLBigInteger)))
+
+                    .all())
+
+        sentence_id_set = (
+            set(instance.sentence_id for instance in instance_list))
+
+        sentence_list = []
+
+        if sentence_id_set:
+
+            sentence_list = (
+                DBSession
+
+                    .query(
+                        dbValencySentenceData)
+
+                    .filter(
+                        dbValencySentenceData.id.in_(
+                            utils.values_query(
+                                sentence_id_set, models.SLBigInteger)))
+
+                    .all())
+
+        # Preparing valency annotation data.
+
+        sentence_data_list = []
+
+        for sentence in sentence_list:
+
+            sentence_data = sentence.data
+            sentence_data['id'] = sentence.id
+
+            sentence_data_list.append(sentence_data)
+
+        instance_data_list = [
+
+            {'id': instance.id,
+             'sentence_id': instance.sentence_id,
+             'index': instance.index,
+             lex_col: getattr(instance, lex_col),
+             'case_str': instance.case_str}
+
+            for instance in instance_list]
+
+        annotation_data_list = [
+
+            {'instance_id': annotation.instance_id,
+             'user_id': annotation.user_id,
+             'accepted': annotation.accepted}
+
+            for annotation in annotation_list]
+
+        user_data_list = [
+
+            {'id': user.id,
+             'name': user.name}
+
+            for user in user_list]
+
+        return {
+            'sentence_list': sentence_data_list,
+            'instance_list': instance_data_list,
+            'annotation_list': annotation_data_list,
+            'user_list': user_data_list}
+
+    @staticmethod
     def mutate(root, info, **args):
 
         try:
@@ -8292,16 +8424,17 @@ class SaveComplexData(graphene.Mutation):
             if type(attributes) is type:
                 return attributes
 
-            db_instance_data, db_annotation_data, lex_col, title, prefix = (
-                attributes['instance_data'],
-                attributes['annotation_data'],
-                attributes['lex_col'],
-                attributes['title'],
-                attributes['prefix']
-            )
+            title = attributes['title']
 
             perspective_id = args['perspective_id']
             debug_flag = args.get('debug_flag', False)
+
+            if debug_flag and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -8345,120 +8478,8 @@ class SaveComplexData(graphene.Mutation):
 
             # Getting valency annotation data.
 
-            annotation_list = (
-                DBSession
-
-                    .query(
-                        db_annotation_data)
-
-                    .filter(
-                        db_annotation_data.accepted != None,
-                        db_annotation_data.instance_id == db_instance_data.id,
-                        db_instance_data.sentence_id == dbValencySentenceData.id,
-                        dbValencySentenceData.source_id == dbValencySourceData.id,
-                        dbValencySourceData.perspective_client_id == perspective_id[0],
-                        dbValencySourceData.perspective_object_id == perspective_id[1])
-
-                    .all())
-
-            instance_id_set = set()
-            user_id_set = set()
-
-            for annotation in annotation_list:
-                instance_id_set.add(annotation.instance_id)
-                user_id_set.add(annotation.user_id)
-
-            instance_list = []
-
-            if instance_id_set:
-                instance_list = (
-                    DBSession
-
-                        .query(
-                            db_instance_data)
-
-                        .filter(
-                            db_instance_data.id.in_(
-                                utils.values_query(
-                                    instance_id_set, models.SLBigInteger)))
-
-                        .all())
-
-            user_list = []
-
-            if user_id_set:
-                user_list = (
-                    DBSession
-
-                        .query(
-                            dbUser.id, dbUser.name)
-
-                        .filter(
-                            dbUser.id.in_(
-                                utils.values_query(
-                                    user_id_set, models.SLBigInteger)))
-
-                        .all())
-
-            sentence_id_set = (
-                set(instance.sentence_id for instance in instance_list))
-
-            sentence_list = []
-
-            if sentence_id_set:
-                sentence_list = (
-                    DBSession
-
-                        .query(
-                            dbValencySentenceData)
-
-                        .filter(
-                            dbValencySentenceData.id.in_(
-                                utils.values_query(
-                                    sentence_id_set, models.SLBigInteger)))
-
-                        .all())
-
-            # Preparing valency annotation data.
-
-            sentence_data_list = []
-
-            for sentence in sentence_list:
-                sentence_data = sentence.data
-                sentence_data['id'] = sentence.id
-
-                sentence_data_list.append(sentence_data)
-
-            instance_data_list = [
-
-                {'id': instance.id,
-                 'sentence_id': instance.sentence_id,
-                 'index': instance.index,
-                 lex_col: getattr(instance, lex_col),
-                 'case_str': instance.case_str}
-
-                for instance in instance_list]
-
-            annotation_data_list = [
-
-                {'instance_id': annotation.instance_id,
-                 'user_id': annotation.user_id,
-                 'accepted': annotation.accepted}
-
-                for annotation in annotation_list]
-
-            user_data_list = [
-
-                {'id': user.id,
-                 'name': user.name}
-
-                for user in user_list]
-
-            data_dict = {
-                'sentence_list': sentence_data_list,
-                'instance_list': instance_data_list,
-                'annotation_list': annotation_data_list,
-                'user_list': user_data_list}
+            data_dict = (
+                SaveComplexData.get_annotation_data(perspective_id, attributes))
 
             # Saving valency annotation data as zipped JSON.
 
@@ -8515,6 +8536,7 @@ class SaveComplexData(graphene.Mutation):
 
                 with io.TextIOWrapper(
                         binary_data_file, 'utf-8') as text_data_file:
+
                     json.dump(
                         data_dict,
                         text_data_file,
@@ -8526,6 +8548,7 @@ class SaveComplexData(graphene.Mutation):
             temporary_file.close()
 
             if debug_flag:
+
                 shutil.copy(
                     temporary_file.name,
                     '__data__.json.zip')
@@ -8601,7 +8624,7 @@ class SetComplexAnnotation(graphene.Mutation):
             a_value, b_value = ast.values
 
             if (not isinstance(a_value, IntValue) or
-                    not isinstance(b_value, BooleanValue)):
+                not isinstance(b_value, BooleanValue)):
                 return None
 
             return [int(a_value.value), bool(b_value.value)]
@@ -8803,7 +8826,7 @@ class MyMutations(graphene.ObjectType):
     valency = Valency.Field()
     valency_verb_cases = ValencyVerbCases.Field()
     create_valency_data = CreateComplexData.Field()
-    save_valency_data = SaveValencyData.Field()
+    save_valency_data = SaveComplexData.Field()
     set_valency_annotation = SetComplexAnnotation.Field()
     create_adverb_data = CreateComplexData.Field()
     save_adverb_data = SaveComplexData.Field()
