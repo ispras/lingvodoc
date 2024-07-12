@@ -7554,14 +7554,16 @@ class ValencyAttributes():
         }
     }
 
-    def get_attrs(self, valency_kind):
+    @classmethod
+    def get_attrs(cls, valency_kind):
 
         valency_kind = valency_kind.lower()
 
         return (
-            self.attributes.get(
+            cls.attributes.get(
             valency_kind,
-            ValueError(message = f"Valency kind '{valency_kind}' in not in {list(self.attributes.keys())}."))
+            ValueError(
+                message = f"Valency kind '{valency_kind}' is not in {list(cls.attributes.keys())}."))
         )
 
 class CreateComplexData(graphene.Mutation):
