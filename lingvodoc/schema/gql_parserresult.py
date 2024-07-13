@@ -1513,8 +1513,9 @@ class CreateValencyData(graphene.Mutation):
             parser_source_delete_list,
             debug_flag):
 
-        db_instance_data, hash_col, lex_col, sentence_instance_gen, title = (
+        db_instance_data, db_annotation_data, hash_col, lex_col, sentence_instance_gen, title = (
             attributes['instance_data'],
+            attributes['annotation_data'],
             attributes['hash_col'],
             attributes['lex_col'],
             attributes['sentence_instance_gen'],
@@ -1844,6 +1845,15 @@ class CreateValencyData(graphene.Mutation):
                     sorted(
                         db_instance_obj_dict.values(),
                         key=lambda db_instance_obj: db_instance_obj.id))
+
+                # Deleting all annotations for unused instances
+                if db_instance_unused_list:
+                    DBSession.execute(
+                        db_annotation_data.__table__
+                            .delete()
+                            .where(
+                                db_annotation_data.instance_id
+                                .in_([inst.id for inst in db_instance_unused_list])))
 
                 for (pr_instance, pr_instance_dict), db_instance_obj in (
 
