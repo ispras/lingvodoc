@@ -663,14 +663,13 @@ class DictionaryPerspective(LingvodocObjectType):
                 .query(total_hash_union)
                 .subquery())
 
+        total_hash_count = (
+
+            DBSession
+                .query(total_hash_union)
+                .count())
+
         if debug_flag:
-
-            total_hash_count = (
-
-                DBSession
-                    .query(total_hash_union)
-                    .count())
-
             log.debug(
                 f'total_hash_count: {total_hash_count}')
 
@@ -700,14 +699,13 @@ class DictionaryPerspective(LingvodocObjectType):
 
                 .alias())
 
+        has_hash_count = (
+
+            DBSession
+                .query(has_hash_union)
+                .count())
+
         if debug_flag:
-
-            has_hash_count = (
-
-                DBSession
-                    .query(has_hash_union)
-                    .count())
-
             log.debug(
                 f'has_hash_count: {has_hash_count}')
 
@@ -729,7 +727,7 @@ class DictionaryPerspective(LingvodocObjectType):
             log.debug(
                 f'new_hash_count: {new_hash_count}')
 
-        return new_hash_count
+        return new_hash_count + (has_hash_count > total_hash_count)
 
     def resolve_new_adverb_data_count(self, info):
         """
