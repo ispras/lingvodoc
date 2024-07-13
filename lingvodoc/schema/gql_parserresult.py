@@ -2413,13 +2413,37 @@ class CreateValencyData(graphene.Mutation):
 
         merge_insert_list = []
 
+        db_merge_items = (
+
+            DBSession
+
+                .query(
+                    dbValencyMergeData.verb_lex,
+                    dbValencyMergeData.merge_id)
+
+                .filter(
+                    dbValencyMergeData.perspective_client_id == perspective_id[0],
+                    dbValencyMergeData.perspective_object_id == perspective_id[1])
+
+                .all())
+
         for lex_set in lex_set_list:
 
             if len(lex_set) <= 1:
                 continue
 
-            merge_id = (
-                DBSession.execute(dbValencyMergeIdSequence))
+            merge_id = None
+
+            for _lex, _id in db_merge_items:
+                if _lex in lex_set:
+                    merge_id = _id
+                    lex_set = [lex for lex in lex_set
+                               if lex not in [i[0] for i in db_merge_items]]
+                    break
+
+            if merge_id is None:
+                merge_id = (
+                    DBSession.execute(dbValencyMergeIdSequence))
 
             for verb_lex in lex_set:
 
