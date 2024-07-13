@@ -1811,11 +1811,11 @@ class CreateValencyData(graphene.Mutation):
                     pr_instance_dict = {
                         'sentence_id': db_sentence_obj.id,
                         'index': pr_instance['index'],
-                        lex_col: pr_sentence[pr_instance['location'][0]]['lex'].lower(),
+                        'lex': pr_sentence[pr_instance['location'][0]]['lex'].lower(),
                         'case_str': pr_instance['case'].lower()}
 
                     pr_instance_key = (
-                        (pr_instance_dict[lex_col], pr_instance_dict['case_str']))
+                        (pr_instance_dict['lex'], pr_instance_dict['case_str']))
 
                     # We can re-use existing info for this instance.
 
@@ -1863,7 +1863,7 @@ class CreateValencyData(graphene.Mutation):
 
                     index, lex, case_str = (
                         pr_instance_dict['index'],
-                        pr_instance_dict[lex_col],
+                        pr_instance_dict['lex'],
                         pr_instance_dict['case_str'])
 
                     if db_instance_obj.index != index:
