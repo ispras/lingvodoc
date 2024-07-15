@@ -1351,14 +1351,6 @@ class ValencyAttributes:
 
 class CreateValencyData(graphene.Mutation):
 
-    verb_case_list = [
-        'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
-        'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
-
-    verb_case_index_dict = {
-        case: index
-        for index, case in enumerate(verb_case_list)}
-
     class Arguments:
         perspective_id = LingvodocID(required=True)
         valency_kind = graphene.String(required=True)
@@ -1981,7 +1973,7 @@ class CreateValencyData(graphene.Mutation):
         case_re = (
 
             re.compile(
-                f'{delimiter_re}\\b({"|".join(CreateValencyData.verb_case_list)})\\b',
+                f'{delimiter_re}\\b({"|".join(valency.cases)})\\b',
                 re.IGNORECASE))
 
         lex_xlat_dict = collections.defaultdict(set)
@@ -3265,6 +3257,10 @@ class ValencyVerbCases(graphene.Mutation):
     """
     Compiles valency verb and cases info.
     """
+
+    verb_case_index_dict = {
+        case: index
+        for index, case in enumerate(valency.cases)}
 
     class Arguments:
 

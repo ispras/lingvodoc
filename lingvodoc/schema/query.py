@@ -1222,7 +1222,7 @@ class Query(graphene.ObjectType):
                         ', '.join(
                             f'(\'{case_str}\', {index})'
                             for index, case_str in (
-                                enumerate(CreateValencyData.case_list))))
+                                enumerate(valency.cases))))
 
                     DBSession.execute(f'''
 
