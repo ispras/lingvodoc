@@ -1319,6 +1319,7 @@ class ValencyAttributes:
             'hash_col': 'hash',
             'lex_col': 'verb_lex',
             'cases': valency.cases,
+            'sentence_instance_key': 'instances',
             'sentence_instance_gen': valency.sentence_instance_gen
         },
 
@@ -1331,6 +1332,7 @@ class ValencyAttributes:
             'hash_col': 'hash_adverb',
             'lex_col': 'adverb_lex',
             'cases': adverb.cases,
+            'sentence_instance_key': 'instances_adv',
             'sentence_instance_gen': adverb.sentence_instance_gen
         }
     }
@@ -1505,11 +1507,13 @@ class CreateValencyData(graphene.Mutation):
             parser_source_delete_list,
             debug_flag):
 
-        db_instance_data, db_annotation_data, hash_col, lex_col, sentence_instance_gen, title = (
+        (db_instance_data, db_annotation_data, hash_col, lex_col,
+         sentence_instance_key, sentence_instance_gen, title) = (
             attributes['instance_data'],
             attributes['annotation_data'],
             attributes['hash_col'],
             attributes['lex_col'],
+            attributes['sentence_instance_key'],
             attributes['sentence_instance_gen'],
             attributes['title']
         )
@@ -1763,14 +1767,14 @@ class CreateValencyData(graphene.Mutation):
                         '\ntokens:'
                         f'\n{[t["token"] for t in pr_sentence]}'
                         '\ndb_instances:'
-                        f'\n{pprint.pformat(db_sentence_obj.data.get("instances_adv", []), width=192)}'
+                        f'\n{pprint.pformat(db_sentence_obj.data.get(sentence_instance_key, []), width=192)}'
                         '\npr_instances:'
                         f'\n{pprint.pformat(pr_instance_list, width=192)}')
 
                 # Storing tokens and instances into db_sentence_obj
 
                 db_sentence_obj.data['tokens'] = pr_sentence
-                db_sentence_obj.data['instances_adv'] = pr_instance_list
+                db_sentence_obj.data[sentence_instance_key] = pr_instance_list
                 flag_modified(db_sentence_obj, 'data')
 
                 # Now we're going to get instance data and look for differences we would have to update.
