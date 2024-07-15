@@ -3468,7 +3468,7 @@ class ValencyVerbCases(graphene.Mutation):
 
             sorted(
                 case_verb_dict.items(),
-                key = lambda item: CreateValencyData.verb_case_index_dict[item[0]])):
+                key = lambda item: ValencyVerbCases.verb_case_index_dict[item[0]])):
 
             verb_sentence_list = (
 
