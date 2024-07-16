@@ -626,7 +626,13 @@ def get_result_json(annotated_html):
                 # last annots from the loop above should contain results list
                 for ann in annots:
                     if type(ann) is Tag:
-                        res = json.loads(ann.text)
+
+                        try:
+                            res = json.loads(ann.text)
+                        except ValueError as e:
+                            print(f"{ann.text}: {e}")
+                            continue
+
                         res['id'] = ann.get('id')
                         res['state'] = ann.get('class')
                         if type(res['state'] is list):
