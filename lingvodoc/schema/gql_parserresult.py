@@ -1659,8 +1659,8 @@ class CreateValencyData(graphene.Mutation):
 
                     .all()) if reusing_source else []
 
-            pr_sentence_list = [s for p in i['paragraphs']
-                                for s in p['sentences']]
+            pr_sentence_list = [s for p in i.get('paragraphs', [])
+                                for s in p.get('sentences', [])]
 
             # Database state must not mutate on list changes, so we'll create a copy
             sentence_obj_list = copy.copy(db_sentence_obj_list)
