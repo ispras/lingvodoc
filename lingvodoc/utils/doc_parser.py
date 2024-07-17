@@ -225,12 +225,19 @@ def apertium_parser(dedoc_output, apertium_path, lang):
             else:
                 return True
 
+        def biltrans_elem(i):
+            return (
+                biltrans_elements[i] if i < len(biltrans_elements) else ""
+            )
+
         def biltrans_lex(i):
-            return biltrans_elements[i][0: biltrans_elements[i].find("<")].lower()
+            return (
+                biltrans_elem(i)[0: biltrans_elem(i).find("<")].lower()
+            )
 
         def trans(elem):
             trans_list = list()
-            for match in re.findall(r"/(\w+)<", biltrans_elements[i]):
+            for match in re.findall(r"/(\w+)<", biltrans_elem(i)):
                 if match not in trans_list:
                     trans_list.append(match)
             return trans_list
@@ -268,8 +275,8 @@ def apertium_parser(dedoc_output, apertium_path, lang):
             i += offset
 
             new_lex = "lex=" + "\"" + biltrans_lex(i).lower() + "\""
-            new_gr = add_gr(gr(biltrans_elements[i]))
-            trans_list = trans(biltrans_elements[i])
+            new_gr = add_gr(gr(biltrans_elem(i)))
+            trans_list = trans(biltrans_elem(i))
 
             if not trans_list and new_gr == " gr=\"\"":
                 new += add_variant(" lex=\"\"", " gr=\"\"", " trans_ru=\"\"")
