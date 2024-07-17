@@ -590,13 +590,16 @@ def get_result_json(annotated_html):
 
                 if type(tag) is Tag:
 
+                    if tag.name in ['br', 'hr', 'img']:
+                        return False
+
                     while tag.name != 'span':
                         prefix.append(tag.name)
                         # calling f() recursively because several words
                         # may be inside e.g. <b></b> tags
                         for t in tag.contents:
                             f(t)
-                        return
+                        return True
 
                     id = tag.get('id')
                     state = tag.get('class')
@@ -640,8 +643,11 @@ def get_result_json(annotated_html):
                         word_dict['results'].append(res)
 
                 words_list.append(item_to_store)
+                return True
 
-            f(note)
+            if not f(note):
+                parags_list.append(words_list)
+                words_list = []
 
         parags_list.append(words_list)
 
