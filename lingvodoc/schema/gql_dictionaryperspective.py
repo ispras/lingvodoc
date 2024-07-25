@@ -88,6 +88,7 @@ from lingvodoc.utils.creation import (
 
 from lingvodoc.utils.deletion import real_delete_perspective
 from lingvodoc.utils.search import translation_gist_search
+from pdb import set_trace as A
 
 
 # Setting up logging.
@@ -222,7 +223,13 @@ class DictionaryPerspective(LingvodocObjectType):
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     columns = graphene.List(Column)
 
-    lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID), mode=graphene.String())
+    lexical_entries = graphene.List(
+        LexicalEntry,
+        ids = graphene.List(LingvodocID),
+        mode = graphene.String(),
+        offset = graphene.Int(),
+        limit = graphene.Int())
+
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     roles = graphene.Field(UserAndOrganizationsRoles)
     role_check = graphene.Boolean(subject = graphene.String(required = True), action = graphene.String(required = True))
@@ -511,7 +518,7 @@ class DictionaryPerspective(LingvodocObjectType):
         # Complete query for the perspective, excluding created_at which we already have.
 
         DBSession.execute(
-            'set extra_float_digits to 3;');
+            'set extra_float_digits to 3;')
 
         result = (
 
@@ -816,8 +823,8 @@ class DictionaryPerspective(LingvodocObjectType):
         return new_hash_count + (has_hash_count > ready_hash_count)
 
     @fetch_object()
-    def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
-                             position=1):
+    def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None,
+                                start_date=None, end_date=None, position=1, offset=0, limit=0):
 
         if self.check_is_hidden_for_client(info):
             return []
@@ -894,6 +901,12 @@ class DictionaryPerspective(LingvodocObjectType):
             if not info.context.acl_check_if('view', 'lexical_entries_and_entities',
                                    (self.dbObject.client_id, self.dbObject.object_id)):
                 lexes = lexes.limit(20)
+
+        if offset > 0:
+            lexes = lexes.offset(offset)
+
+        if limit > 0:
+            lexes = lexes.limit(limit)
 
         # lexes = lexes \
         #     .order_by(func.min(case(
@@ -1186,7 +1199,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         if translation_gist_object_id:
             dbperspective.translation_gist_object_id = translation_gist_object_id  # TODO: refactor like dictionaries
         if parent_id:
-            # parent_client_id, parent_object_id = parent_id
+            parent_client_id, parent_object_id = parent_id
             # dbparent_dictionary = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id,
             #                                                               object_id=parent_object_id).first()
             dbparent_dictionary = CACHE.get(objects=
