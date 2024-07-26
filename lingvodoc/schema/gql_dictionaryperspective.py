@@ -181,7 +181,13 @@ class PerspectivePage(LingvodocObjectType):
     entries_page = graphene.List(
         LexicalEntry,
         ids = graphene.List(LingvodocID),
-        mode = graphene.String())
+        mode = graphene.String(),
+        filter = graphene.String(),
+        sort_by_field = LingvodocID,
+        is_edit_mode = graphene.Boolean(),
+        is_ascending = graphene.Boolean(),
+        offset = graphene.Int(),
+        limit = graphene.Int())
 
     entries_total = graphene.Int()
 
