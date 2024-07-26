@@ -191,37 +191,11 @@ class PerspectivePage(LingvodocObjectType):
 
     entries_total = graphene.Int()
 
+    data_type = graphene.String()
     dbType = dbPerspectivePage
 
-    total = 0
-
-    @fetch_object()
-    def resolve_entries_page(
-            self,
-            info,
-            filter = None,
-            sort_by_field = None,
-            is_edit_mode = False,
-            is_ascending = None,
-            offset = 0,
-            limit = 0,
-            **kwargs):
-
-        dic_per = DictionaryPerspective()
-
-        result = dic_per.resolve_lexical_entries(info, **kwargs)
-
-        # here should be filtering, sorting
-
-        self.total = len(result)
-
-        # here should be pagination
-
-        return result
-
-    @fetch_object()
-    def resolve_entries_total(self, info):
-        return self.total
+    class Meta:
+        pass
 
 
 class DictionaryPerspective(LingvodocObjectType):
@@ -312,6 +286,8 @@ class DictionaryPerspective(LingvodocObjectType):
     new_adverb_data_count = graphene.Int()
 
     dbType = dbPerspective
+
+    entries_total = 0
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
@@ -978,20 +954,35 @@ class DictionaryPerspective(LingvodocObjectType):
 
         return lexical_entries
 
+    def resolve_entries_page(
+            self,
+            info,
+            filter = None,
+            sort_by_field = None,
+            is_edit_mode = False,
+            is_ascending = None,
+            offset = 0,
+            limit = 0,
+            **kwargs):
 
-    @fetch_object()
+        result = self.resolve_lexical_entries(info, **kwargs)
+
+        # here should be filtering, sorting
+
+        self.entries_total = len(result)
+
+        # here should be pagination
+
+        return result
+
     def resolve_perspective_page(
             self,
             info,
             **kwargs):
 
-        per_page = PerspectivePage()
-
-        return {
-            'entries_page': per_page.resolve_entries_page(info, **kwargs),
-            'entries_total': per_page.total
-        }
-
+        return PerspectivePage(
+            entries_page = self.resolve_entries_page(**kwargs),
+            entries_total = self.entries_total)
 
     @fetch_object()
     def resolve_authors(self, info):
