@@ -1022,6 +1022,27 @@ class Dictionary(
     domain = Column(Integer, default=0)
 
 
+class PerspectivePage(
+    CompositeIdMixin,
+    TableNameMixin,
+    ParentMixin,
+    CreatedAtMixin,
+    TranslationMixin,
+    StateMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    ObjectTOCMixin,
+    Base):
+
+    """
+    This object used to compile and get list of lexical entries with extra information
+    after filtering, sorting and pagination on backend
+    Parent: DictionaryPerspective
+    """
+
+    __parentname__ = 'DictionaryPerspective'
+
+
 class DictionaryPerspective(
     CompositeIdMixin,
     TableNameMixin,

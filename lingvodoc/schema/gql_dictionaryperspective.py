@@ -42,6 +42,7 @@ from lingvodoc.models import (
     JSONB,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
+    PerspectivePage as dbPerspectivePage,
     ObjectTOC,
     ParserResult as dbParserResult,
     PublishingEntity as dbPublishingEntity,
@@ -174,6 +175,49 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
 
     return lexical_entries
 
+
+class PerspectivePage(LingvodocObjectType):
+
+    entries_page = graphene.List(
+        LexicalEntry,
+        ids = graphene.List(LingvodocID),
+        mode = graphene.String())
+
+    entries_total = graphene.Int()
+
+    dbType = dbPerspectivePage
+
+    total = 0
+
+    @fetch_object()
+    def resolve_entries_page(
+            self,
+            info,
+            filter = None,
+            sort_by_field = None,
+            is_edit_mode = False,
+            is_ascending = None,
+            offset = 0,
+            limit = 0,
+            **kwargs):
+
+        dic_per = DictionaryPerspective()
+
+        result = dic_per.resolve_lexical_entries(info, **kwargs)
+
+        # here should be filtering, sorting
+
+        self.total = len(result)
+
+        # here should be pagination
+
+        return result
+
+    @fetch_object()
+    def resolve_entries_total(self, info):
+        return self.total
+
+
 class DictionaryPerspective(LingvodocObjectType):
     """
      #created_at                       | timestamp without time zone | NOT NULL
@@ -226,7 +270,16 @@ class DictionaryPerspective(LingvodocObjectType):
     lexical_entries = graphene.List(
         LexicalEntry,
         ids = graphene.List(LingvodocID),
+        mode = graphene.String())
+
+    perspective_page = graphene.Field(
+        PerspectivePage,
+        ids = graphene.List(LingvodocID),
         mode = graphene.String(),
+        filter = graphene.String(),
+        sort_by_field = LingvodocID,
+        is_edit_mode = graphene.Boolean(),
+        is_ascending = graphene.Boolean(),
         offset = graphene.Int(),
         limit = graphene.Int())
 
@@ -824,7 +877,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
     @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None,
-                                start_date=None, end_date=None, position=1, offset=0, limit=0):
+                                start_date=None, end_date=None, position=1):
 
         if self.check_is_hidden_for_client(info):
             return []
@@ -902,12 +955,6 @@ class DictionaryPerspective(LingvodocObjectType):
                                    (self.dbObject.client_id, self.dbObject.object_id)):
                 lexes = lexes.limit(20)
 
-        if offset > 0:
-            lexes = lexes.offset(offset)
-
-        if limit > 0:
-            lexes = lexes.limit(limit)
-
         # lexes = lexes \
         #     .order_by(func.min(case(
         #     [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
@@ -924,6 +971,20 @@ class DictionaryPerspective(LingvodocObjectType):
             lexical_entries.sort(key = lambda e: (e.dbObject.created_at, e.dbObject.object_id))
 
         return lexical_entries
+
+
+    @fetch_object()
+    def resolve_perspective_page(
+            self,
+            info,
+            **kwargs):
+
+        per_page = PerspectivePage()
+
+        return {
+            'entries_page': per_page.resolve_entries_page(info, **kwargs),
+            'entries_total': per_page.total
+        }
 
 
     @fetch_object()
