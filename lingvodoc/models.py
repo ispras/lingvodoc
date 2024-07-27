@@ -1033,13 +1033,11 @@ class PerspectivePage(
     AdditionalMetadataMixin,
     ObjectTOCMixin,
     Base):
-
     """
     This object used to compile and get list of lexical entries with extra information
     after filtering, sorting and pagination on backend
     Parent: DictionaryPerspective
     """
-
     __parentname__ = 'DictionaryPerspective'
 
 

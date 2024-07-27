@@ -178,20 +178,9 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
 
 class PerspectivePage(LingvodocObjectType):
 
-    entries_page = graphene.List(
-        LexicalEntry,
-        ids = graphene.List(LingvodocID),
-        mode = graphene.String(),
-        filter = graphene.String(),
-        sort_by_field = LingvodocID,
-        is_edit_mode = graphene.Boolean(),
-        is_ascending = graphene.Boolean(),
-        offset = graphene.Int(),
-        limit = graphene.Int())
-
+    entries_page = graphene.List(LexicalEntry)
     entries_total = graphene.Int()
 
-    data_type = graphene.String()
     dbType = dbPerspectivePage
 
     class Meta:
@@ -257,7 +246,7 @@ class DictionaryPerspective(LingvodocObjectType):
         ids = graphene.List(LingvodocID),
         mode = graphene.String(),
         filter = graphene.String(),
-        sort_by_field = LingvodocID,
+        sort_by_field = LingvodocID(),
         is_edit_mode = graphene.Boolean(),
         is_ascending = graphene.Boolean(),
         offset = graphene.Int(),
