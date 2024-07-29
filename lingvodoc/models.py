@@ -1971,7 +1971,21 @@ class LexicalEntry(
         entities_query = (
             DBSession
                 .query(
-                    Entity)
+                    Entity.client_id,
+                    Entity.object_id,
+                    Entity.parent_client_id,
+                    Entity.parent_object_id,
+                    Entity.self_client_id,
+                    Entity.self_object_id,
+                    Entity.link_client_id,
+                    Entity.link_object_id,
+                    Entity.field_client_id,
+                    Entity.field_object_id,
+                    Entity.locale_id,
+                    Entity.marked_for_deletion,
+                    Entity.content,
+                    Entity.additional_metadata,
+                    Entity.created_at)
 
                 .outerjoin(
                     PublishingEntity)
