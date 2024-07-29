@@ -66,7 +66,7 @@ from zope.sqlalchemy import ZopeTransactionExtension
 # Project imports.
 
 import lingvodoc.cache.caching as caching
-
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -1922,6 +1922,10 @@ class LexicalEntry(
         publish = None,
         accept = None,
         delete = False,
+        filter=None,
+        sort_by_field=None,
+        is_edit_mode=False,
+        is_ascending=None,
         check_perspective = True):
 
         if check_perspective:
@@ -1945,6 +1949,55 @@ class LexicalEntry(
         if not ls:
             return []
 
+        temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
+
+        DBSession.execute(
+            '''create TEMPORARY TABLE %s (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
+
+        class Tempo(Base):
+
+            __tablename__ = temp_table_name
+            __table_args__ = {'prefixes': ['TEMPORARY']}
+
+            traversal_lexical_order = Column(Integer, primary_key=True)
+            client_id = Column(SLBigInteger())
+            object_id = Column(SLBigInteger())
+
+        DBSession.execute(
+            Tempo.__table__
+                .insert()
+                .values(ls))
+
+        entities_query = (
+            DBSession
+                .query(
+                    Entity)
+
+                .outerjoin(
+                    PublishingEntity)
+
+                .filter(
+                    Entity.parent_client_id == Tempo.client_id,
+                    Entity.parent_object_id == Tempo.object_id))
+
+        if accept is not None:
+            entities_query.filter(PublishingEntity.accepted == accept)
+        if publish is not None:
+            entities_query.filter(PublishingEntity.published == publish)
+        if delete is not None:
+            entities_query.filter(Entity.marked_for_deletion == delete)
+
+        entries = (
+            entities_query
+                .order_by(Tempo.traversal_lexical_order)
+                .options(joinedload('publishingentity'))
+                .yield_per(100))
+
+        """
+        DBSession.execute(
+            '''insert into %s (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''' % temp_table_name,
+            ls)
+
         pub_filter = ""
 
         if publish is not None or accept is not None or delete is not None:
@@ -1963,15 +2016,6 @@ class LexicalEntry(
                 where_cond.append("cte_expr.marked_for_deletion = False")
             where_cond = ["WHERE", " AND ".join(where_cond)]
             pub_filter = " ".join(where_cond)
-
-        temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
-
-        DBSession.execute(
-            '''create TEMPORARY TABLE %s (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
-
-        DBSession.execute(
-            '''insert into %s (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''' % temp_table_name,
-            ls)
 
         statement = text('''
         WITH cte_expr AS
@@ -2009,6 +2053,7 @@ class LexicalEntry(
         '''.format(temp_table_name, pub_filter))
 
         entries = DBSession.query(Entity, PublishingEntity).from_statement(statement) .options(joinedload('publishingentity')).yield_per(100)
+        """
 
         return entries
 

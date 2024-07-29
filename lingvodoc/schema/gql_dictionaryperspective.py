@@ -113,7 +113,7 @@ def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex.dbObject = cur_lexical_entry
     return lex
 
-def entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = True):
+def entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = True, **kwargs):
     if mode == 'debug':
         return [gql_lexicalentry(lex, None) for lex in lexes]
     lex_id_to_obj = dict()
@@ -151,9 +151,8 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
                                                       publish=publish,
                                                       accept=accept,
                                                       delete=delete,
-                                                      check_perspective=check_perspective)
-
-    A()
+                                                      check_perspective=check_perspective,
+                                                      **kwargs)
 
     ent_iter = itertools.chain(list(entities))
     lexical_entries = list()
@@ -852,8 +851,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
     @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None,
-                                start_date=None, end_date=None, position=1,
-                                filter=None, is_case_sens=False, is_edit_mode=False):
+                                start_date=None, end_date=None, position=1, **kwargs):
 
         if self.check_is_hidden_for_client(info):
             return []
@@ -923,6 +921,7 @@ class DictionaryPerspective(LingvodocObjectType):
         if end_date:
             lexes = lexes.filter(dbEntity.created_at <= end_date)
 
+        '''
         if filter:
             if is_case_sens:
                 lexes = lexes.filter(dbEntity.content.like(f"%{filter}%"))
@@ -931,6 +930,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
         if not is_edit_mode:
             lexes = lexes.filter(func.length(dbEntity.content) > 0)
+        '''
 
         db_la_gist = translation_gist_search('Limited access')
         limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
@@ -948,7 +948,7 @@ class DictionaryPerspective(LingvodocObjectType):
         #     else_=dbEntity.content))) \
         #     .group_by(dbLexicalEntry)
         lexical_entries = (
-            entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = False))
+            entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = False, **kwargs))
 
         # If we were asked for specific lexical entries, we try to return them in creation order.
 
@@ -960,8 +960,6 @@ class DictionaryPerspective(LingvodocObjectType):
     def resolve_entries_page(
             self,
             info,
-            sort_by_field = None,
-            is_ascending = None,
             offset = 0,
             limit = 0,
             **kwargs):
