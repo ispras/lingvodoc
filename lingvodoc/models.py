@@ -1922,10 +1922,11 @@ class LexicalEntry(
         publish = None,
         accept = None,
         delete = False,
-        filter=None,
-        sort_by_field=None,
-        is_edit_mode=False,
-        is_ascending=None,
+        filter = None,
+        sort_by_field = None,
+        is_ascending = None,
+        is_edit_mode = False,
+        is_case_sens = True,
         check_perspective = True):
 
         if check_perspective:
@@ -1991,6 +1992,7 @@ class LexicalEntry(
         entries = (
             entities_query
                 .order_by(Tempo.traversal_lexical_order)
+                # Seems like loading optimization is not required here
                 #.options(joinedload('publishingentity'))
                 .yield_per(100))
 

@@ -146,7 +146,6 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
         accept = False
         delete = False
 
-    # TODO: out-of-date function
     entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                       publish=publish,
                                                       accept=accept,
@@ -180,7 +179,7 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
 
 class PerspectivePage(graphene.ObjectType):
 
-    entries_page = graphene.List(LexicalEntry)
+    lexical_entries = graphene.List(LexicalEntry)
     entries_total = graphene.Int()
 
     dbType = dbPerspectivePage
@@ -850,14 +849,17 @@ class DictionaryPerspective(LingvodocObjectType):
         return new_hash_count + (has_hash_count > ready_hash_count)
 
     @fetch_object()
-    def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None,
-                                start_date=None, end_date=None, position=1, **kwargs):
+    def resolve_lexical_entries(self, info, ids=None,
+                                mode=None, authors=None, clients=None,
+                                start_date=None, end_date=None, position=1,
+                                offset = 0, limit = 0, **kwargs):
 
         if self.check_is_hidden_for_client(info):
             return []
 
-        result = list()
-        request = info.context.get('request')
+        # result = list()
+        # request = info.context.get('request')
+
         if mode == 'all':
             publish = None
             accept = True
@@ -921,17 +923,6 @@ class DictionaryPerspective(LingvodocObjectType):
         if end_date:
             lexes = lexes.filter(dbEntity.created_at <= end_date)
 
-        '''
-        if filter:
-            if is_case_sens:
-                lexes = lexes.filter(dbEntity.content.like(f"%{filter}%"))
-            else:
-                lexes = lexes.filter(dbEntity.content.ilike(f"%{filter}%"))
-
-        if not is_edit_mode:
-            lexes = lexes.filter(func.length(dbEntity.content) > 0)
-        '''
-
         db_la_gist = translation_gist_search('Limited access')
         limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
@@ -955,27 +946,14 @@ class DictionaryPerspective(LingvodocObjectType):
         if ids is not None:
             lexical_entries.sort(key = lambda e: (e.dbObject.created_at, e.dbObject.object_id))
 
-        return lexical_entries
+        self.entries_total = len(lexical_entries)
 
-    def resolve_entries_page(
-            self,
-            info,
-            offset = 0,
-            limit = 0,
-            **kwargs):
-
-        result = self.resolve_lexical_entries(info, **kwargs)
-
-        # here should be filtering, sorting
-
-        self.entries_total = len(result)
-
-        # pagination
-        result = result[offset:]
+        # Pagination
+        lexical_entries = lexical_entries[offset:]
         if limit > 0:
-            result = result[:offset + limit]
+            lexical_entries = lexical_entries[:offset + limit]
 
-        return result
+        return lexical_entries
 
     def resolve_perspective_page(
             self,
@@ -983,7 +961,7 @@ class DictionaryPerspective(LingvodocObjectType):
             **kwargs):
 
         return PerspectivePage(
-            entries_page = self.resolve_entries_page(info, **kwargs),
+            lexical_entries = self.resolve_lexical_entries(info, **kwargs),
             entries_total = self.entries_total)
 
     @fetch_object()
