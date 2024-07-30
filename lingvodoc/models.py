@@ -1983,11 +1983,28 @@ class LexicalEntry(
                     Entity.parent_object_id == Tempo.object_id))
 
         if accept is not None:
-            entities_query.filter(PublishingEntity.accepted == accept)
+            entities_query = entities_query.filter(PublishingEntity.accepted == accept)
         if publish is not None:
-            entities_query.filter(PublishingEntity.published == publish)
+            entities_query = entities_query.filter(PublishingEntity.published == publish)
         if delete is not None:
-            entities_query.filter(Entity.marked_for_deletion == delete)
+            entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
+
+        # Debug
+        if filter := "ti":
+            if is_case_sens:
+                entities_filtered = entities_query.filter(Entity.content.like(f"%{filter}%"))
+            else:
+                entities_filtered = entities_query.filter(Entity.content.ilike(f"%{filter}%"))
+
+            if entities_filtered.count() > 0:
+                filtered_lexes = [row[0].parent_id for row in entities_filtered.yield_per(100).all()]
+                entities_query = (
+                    entities_query
+                        .filter(
+                            Entity.parent_id.in_(filtered_lexes)))
+                A()
+            else:
+                return None
 
         entries = (
             entities_query
