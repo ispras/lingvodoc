@@ -1971,21 +1971,8 @@ class LexicalEntry(
         entities_query = (
             DBSession
                 .query(
-                    Entity.client_id,
-                    Entity.object_id,
-                    Entity.parent_client_id,
-                    Entity.parent_object_id,
-                    Entity.self_client_id,
-                    Entity.self_object_id,
-                    Entity.link_client_id,
-                    Entity.link_object_id,
-                    Entity.field_client_id,
-                    Entity.field_object_id,
-                    Entity.locale_id,
-                    Entity.marked_for_deletion,
-                    Entity.content,
-                    Entity.additional_metadata,
-                    Entity.created_at)
+                    Entity,
+                    PublishingEntity)
 
                 .outerjoin(
                     PublishingEntity)
@@ -2004,14 +1991,14 @@ class LexicalEntry(
         entries = (
             entities_query
                 .order_by(Tempo.traversal_lexical_order)
-                .options(joinedload('publishingentity'))
+                #.options(joinedload('publishingentity'))
                 .yield_per(100))
 
-        """
-        DBSession.execute(
-            '''insert into %s (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''' % temp_table_name,
-            ls)
+        return entries
 
+    """
+        # Out-of-date queries
+        
         pub_filter = ""
 
         if publish is not None or accept is not None or delete is not None:
@@ -2067,10 +2054,9 @@ class LexicalEntry(
         '''.format(temp_table_name, pub_filter))
 
         entries = DBSession.query(Entity, PublishingEntity).from_statement(statement) .options(joinedload('publishingentity')).yield_per(100)
-        """
 
         return entries
-
+    """
 
 class Entity(
     CompositeIdMixin,
