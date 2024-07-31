@@ -1972,8 +1972,7 @@ class LexicalEntry(
         entities_query = (
             DBSession
                 .query(
-                    Entity,
-                    PublishingEntity)
+                    Entity)
 
                 .outerjoin(
                     PublishingEntity)
@@ -1992,16 +1991,22 @@ class LexicalEntry(
         # Debug
         if filter := "ti":
             if is_case_sens:
-                entities_filtered = entities_query.filter(Entity.content.like(f"%{filter}%"))
+                entities_subquery = entities_query.filter(Entity.content.like(f"%{filter}%"))
             else:
-                entities_filtered = entities_query.filter(Entity.content.ilike(f"%{filter}%"))
+                entities_subquery = entities_query.filter(Entity.content.ilike(f"%{filter}%"))
 
-            if entities_filtered.count() > 0:
-                filtered_lexes = [row[0].parent_id for row in entities_filtered.yield_per(100).all()]
+            entities_cte = entities_subquery.cte()
+
+            filtered_lexes = DBSession.query(
+                entities_cte.c.parent_client_id,
+                entities_cte.c.parent_object_id)
+
+            if filtered_lexes.count() > 0:
                 entities_query = (
                     entities_query
                         .filter(
-                            Entity.parent_id.in_(filtered_lexes)))
+                            Entity.parent_id
+                                .in_(filtered_lexes)))
                 A()
             else:
                 return None
