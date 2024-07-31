@@ -925,7 +925,8 @@ class DictionaryPerspective(LingvodocObjectType):
         #     else_=dbEntity.content))) \
         #     .group_by(dbLexicalEntry)
         lexical_entries = (
-            entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = False, **kwargs))
+            entries_with_entities(lexes, mode, accept=accept, delete=delete, publish=publish,
+                                  check_perspective = False, **kwargs))
 
         # If we were asked for specific lexical entries, we try to return them in creation order.
 
