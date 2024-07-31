@@ -1976,6 +1976,28 @@ class LexicalEntry(
                     Entity.parent_client_id == Tempo.client_id,
                     Entity.parent_object_id == Tempo.object_id))
 
+        empty_lexes = []
+
+        if is_edit_mode:
+
+            entities_cte = entities_query.cte()
+
+            filed_lexes = (
+                DBSession
+                    .query(
+                        entities_cte.c.parent_client_id,
+                        entities_cte.c.parent_object_id))
+
+            empty_lexes = (
+                DBSession
+                    .query(
+                        Tempo.client_id,
+                        Tempo.object_id)
+                    .filter(
+                        tuple_(Tempo.client_id, Tempo.object_id)
+                            .notin_(filed_lexes))
+                    .all())
+
         if accept is not None:
             entities_query = entities_query.filter(PublishingEntity.accepted == accept)
         if publish is not None:
@@ -1983,7 +2005,6 @@ class LexicalEntry(
         if delete is not None:
             entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
 
-        # Debug
         if filter := "man":
 
             if is_case_sens:
@@ -2001,8 +2022,7 @@ class LexicalEntry(
                         Entity.parent_id
                             .in_(filtered_lexes)))
 
-        # Debug
-        if sort_by_field := (2888, 14):
+        if sort_by_field:  # e.g. (2888, 14)
 
             field_entities = entities_query.filter(Entity.field_id == sort_by_field).cte()
 
@@ -2019,26 +2039,21 @@ class LexicalEntry(
                     .cte()
                 )
 
-            # Join our sorted query with main one
+            # Join our leading entities with main query
             entities_query = (
                 entities_query
                     .filter(
                         Entity.parent_client_id == alpha_entities.c.lex_client_id,
                         Entity.parent_object_id == alpha_entities.c.lex_object_id))
 
-            # Debug
-            if is_ascending := True:
+            if is_ascending:
                 entities_query = entities_query.order_by(
                     alpha_entities.c.first_entity)
             else:
                 entities_query = entities_query.order_by(
                     desc(alpha_entities.c.last_entity))
 
-        # Debug
-        for row in entities_query.all():
-            print(row[0].content)
-
-        return entities_query.yield_per(100)
+        return entities_query.yield_per(100), empty_lexes
 
     """
         # Out-of-date queries
