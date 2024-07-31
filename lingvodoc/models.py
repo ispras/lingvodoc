@@ -23,6 +23,8 @@ from sqlalchemy import (
     Index,
     literal,
     or_,
+    func,
+    desc,
     Sequence,
     Table,
     tuple_)
@@ -1972,14 +1974,17 @@ class LexicalEntry(
         entities_query = (
             DBSession
                 .query(
-                    Entity)
+                    Entity,
+                    PublishingEntity)
 
                 .outerjoin(
                     PublishingEntity)
 
                 .filter(
                     Entity.parent_client_id == Tempo.client_id,
-                    Entity.parent_object_id == Tempo.object_id))
+                    Entity.parent_object_id == Tempo.object_id)
+
+                .order_by(Tempo.traversal_lexical_order))
 
         if accept is not None:
             entities_query = entities_query.filter(PublishingEntity.accepted == accept)
@@ -1989,36 +1994,61 @@ class LexicalEntry(
             entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
 
         # Debug
-        if filter := "ti":
-            if is_case_sens:
-                entities_subquery = entities_query.filter(Entity.content.like(f"%{filter}%"))
-            else:
-                entities_subquery = entities_query.filter(Entity.content.ilike(f"%{filter}%"))
+        if filter := "man":
 
-            entities_cte = entities_subquery.cte()
+            if is_case_sens:
+                entities_cte = entities_query.filter(Entity.content.like(f"%{filter}%")).cte()
+            else:
+                entities_cte = entities_query.filter(Entity.content.ilike(f"%{filter}%")).cte()
 
             filtered_lexes = DBSession.query(
                 entities_cte.c.parent_client_id,
                 entities_cte.c.parent_object_id)
 
-            if filtered_lexes.count() > 0:
-                entities_query = (
-                    entities_query
-                        .filter(
-                            Entity.parent_id
-                                .in_(filtered_lexes)))
-                A()
+            entities_query = (
+                entities_query
+                    .filter(
+                        Entity.parent_id
+                            .in_(filtered_lexes)))
+
+        # Debug
+        if sort_by_field := (2888, 14):
+
+            field_entities = entities_query.filter(Entity.field_id == sort_by_field).cte()
+
+            alpha_entities = (
+                DBSession
+                    .query(
+                        field_entities.c.parent_client_id.label('lex_client_id'),
+                        field_entities.c.parent_object_id.label('lex_object_id'),
+                        func.min(field_entities.c.content).label('first_entity'),
+                        func.max(field_entities.c.content).label('last_entity'))
+
+                    .group_by('lex_client_id', 'lex_object_id')
+
+                    .cte()
+                )
+
+            # Join our sorted query with main one
+            entities_query = (
+                entities_query
+                    .filter(
+                        alpha_entities.c.lex_client_id == Entity.parent_client_id,
+                        alpha_entities.c.lex_object_id == Entity.parent_object_id))
+
+            # Debug
+            if is_ascending := True:
+                entities_query = entities_query.order_by(
+                    alpha_entities.c.first_entity)
             else:
-                return None
+                entities_query = entities_query.order_by(
+                    desc(alpha_entities.c.last_entity))
 
-        entries = (
-            entities_query
-                .order_by(Tempo.traversal_lexical_order)
-                # Seems like loading optimization is not required here
-                #.options(joinedload('publishingentity'))
-                .yield_per(100))
+        # Debug
+        for row in entities_query.all():
+            print(row[0].content)
 
-        return entries
+        return entities_query.yield_per(100)
 
     """
         # Out-of-date queries
