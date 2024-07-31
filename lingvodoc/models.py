@@ -1931,26 +1931,18 @@ class LexicalEntry(
         is_case_sens = True,
         check_perspective = True):
 
+        deleted_persps = []
+        filtered_lexes = []
+
         if check_perspective:
-
-            filtered_lexes = []
-
             deleted_persps = DictionaryPerspective.get_deleted()
-            for i in lexs:
-                if (i[2], i[3]) not in deleted_persps:
-                    filtered_lexes.append(i)
 
-        else:
+        for x in lexs:
 
-            filtered_lexes = lexs
+            if len(x) >= 4 and (x[2], x[3]) in deleted_persps:
+                continue
 
-        ls = []
-
-        for i, x in enumerate(filtered_lexes):
-            ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
-
-        if not ls:
-            return []
+            filtered_lexes.append({'client_id': x[0], 'object_id': x[1]})
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
@@ -1969,7 +1961,7 @@ class LexicalEntry(
         DBSession.execute(
             Tempo.__table__
                 .insert()
-                .values(ls))
+                .values(filtered_lexes))
 
         entities_query = (
             DBSession
@@ -1982,9 +1974,7 @@ class LexicalEntry(
 
                 .filter(
                     Entity.parent_client_id == Tempo.client_id,
-                    Entity.parent_object_id == Tempo.object_id)
-
-                .order_by(Tempo.traversal_lexical_order))
+                    Entity.parent_object_id == Tempo.object_id))
 
         if accept is not None:
             entities_query = entities_query.filter(PublishingEntity.accepted == accept)
@@ -2033,8 +2023,8 @@ class LexicalEntry(
             entities_query = (
                 entities_query
                     .filter(
-                        alpha_entities.c.lex_client_id == Entity.parent_client_id,
-                        alpha_entities.c.lex_object_id == Entity.parent_object_id))
+                        Entity.parent_client_id == alpha_entities.c.lex_client_id,
+                        Entity.parent_object_id == alpha_entities.c.lex_object_id))
 
             # Debug
             if is_ascending := True:
