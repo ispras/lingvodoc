@@ -113,7 +113,7 @@ def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex.dbObject = cur_lexical_entry
     return lex
 
-def entries_with_entities(lexes, mode, check_perspective = True, **kwargs):
+def entries_with_entities(lexes, mode, **filter_args):
 
     if mode == 'debug':
         return [gql_lexicalentry(lex, None) for lex in lexes]
@@ -125,30 +125,21 @@ def entries_with_entities(lexes, mode, check_perspective = True, **kwargs):
         lexes if isinstance(lexes, list) else
         lexes.yield_per(100).all()):
 
-        entry_id = (lex_obj.client_id, lex_obj.object_id)
+        lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
+                                     lex_obj.parent_client_id, lex_obj.parent_object_id))
 
-        # If we don't need to check for perspective deletion, we don't need perspective ids.
-        if check_perspective:
-            lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
-                                         lex_obj.parent_client_id, lex_obj.parent_object_id))
-        else:
-            lexes_composite_list.append(entry_id)
-
-        lex_id_to_obj[entry_id] = lex_obj
+        lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
 
     if mode == 'not_accepted':
-        accept = False
-        delete = False
+        filter_args['accept'] = False
+        filter_args['delete'] = False
 
-    (entities, empty_lexes) = (
-
-        dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                               check_perspective=check_perspective,
-                                               **kwargs))
+    entities, empty_lexes = (
+        dbLexicalEntry.graphene_track_multiple(lexes_composite_list, **filter_args))
 
     lexical_entries = list()
 
-    # We got empty lexes only if is_edit_mode
+    # We have empty lexes only if is_edit_mode
     for lex_ids in empty_lexes:
 
         lexical_entries.append(
