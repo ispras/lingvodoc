@@ -113,7 +113,7 @@ def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex.dbObject = cur_lexical_entry
     return lex
 
-def entries_with_entities(lexes, mode, **filter_args):
+def entries_with_entities(lexes, mode, **query_args):
 
     if mode == 'debug':
         return [gql_lexicalentry(lex, None) for lex in lexes]
@@ -131,11 +131,11 @@ def entries_with_entities(lexes, mode, **filter_args):
         lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
 
     if mode == 'not_accepted':
-        filter_args['accept'] = False
-        filter_args['delete'] = False
+        query_args['accept'] = False
+        query_args['delete'] = False
 
     entities, empty_lexes = (
-        dbLexicalEntry.graphene_track_multiple(lexes_composite_list, **filter_args))
+        dbLexicalEntry.graphene_track_multiple(lexes_composite_list, **query_args))
 
     lexical_entries = list()
 
@@ -838,7 +838,7 @@ class DictionaryPerspective(LingvodocObjectType):
     def resolve_lexical_entries(self, info, ids=None,
                                 mode=None, authors=None, clients=None,
                                 start_date=None, end_date=None, position=1,
-                                offset = 0, limit = 0, **kwargs):
+                                offset = 0, limit = 0, **query_args):
 
         if self.check_is_hidden_for_client(info):
             return []
@@ -926,7 +926,7 @@ class DictionaryPerspective(LingvodocObjectType):
         #     .group_by(dbLexicalEntry)
         lexical_entries = (
             entries_with_entities(lexes, mode, accept=accept, delete=delete, publish=publish,
-                                  check_perspective = False, **kwargs))
+                                  check_perspective = False, **query_args))
 
         # If we were asked for specific lexical entries, we try to return them in creation order.
 
@@ -945,10 +945,10 @@ class DictionaryPerspective(LingvodocObjectType):
     def resolve_perspective_page(
             self,
             info,
-            **kwargs):
+            **query_args):
 
         return PerspectivePage(
-            lexical_entries = self.resolve_lexical_entries(info, **kwargs),
+            lexical_entries = self.resolve_lexical_entries(info, **query_args),
             entries_total = self.entries_total)
 
     @fetch_object()

@@ -1929,6 +1929,7 @@ class LexicalEntry(
         is_ascending = None,
         is_edit_mode = False,
         is_case_sens = True,
+        is_regexp = False,
         check_perspective = True):
 
         deleted_persps = []
@@ -2007,10 +2008,16 @@ class LexicalEntry(
 
         if filter := "man":
 
-            if is_case_sens:
-                entities_cte = entities_query.filter(Entity.content.like(f"%{filter}%")).cte()
+            if is_regexp:
+                if is_case_sens:
+                    entities_cte = entities_query.filter(Entity.content.op('~')(filter)).cte()
+                else:
+                    entities_cte = entities_query.filter(Entity.content.op('~*')(filter)).cte()
             else:
-                entities_cte = entities_query.filter(Entity.content.ilike(f"%{filter}%")).cte()
+                if is_case_sens:
+                    entities_cte = entities_query.filter(Entity.content.like(f"%{filter}%")).cte()
+                else:
+                    entities_cte = entities_query.filter(Entity.content.ilike(f"%{filter}%")).cte()
 
             filtered_lexes = DBSession.query(
                 entities_cte.c.parent_client_id,
@@ -2022,7 +2029,7 @@ class LexicalEntry(
                         Entity.parent_id
                             .in_(filtered_lexes)))
 
-        if sort_by_field:  # e.g. (2888, 14)
+        if sort_by_field := (2888, 14):
 
             field_entities = entities_query.filter(Entity.field_id == sort_by_field).cte()
 
@@ -2046,12 +2053,16 @@ class LexicalEntry(
                         Entity.parent_client_id == alpha_entities.c.lex_client_id,
                         Entity.parent_object_id == alpha_entities.c.lex_object_id))
 
-            if is_ascending:
+            if is_ascending := True:
                 entities_query = entities_query.order_by(
-                    alpha_entities.c.first_entity)
+                    alpha_entities.c.first_entity,
+                    alpha_entities.c.lex_client_id,
+                    alpha_entities.c.lex_object_id)
             else:
                 entities_query = entities_query.order_by(
-                    desc(alpha_entities.c.last_entity))
+                    desc(alpha_entities.c.last_entity),
+                    desc(alpha_entities.c.lex_client_id),
+                    desc(alpha_entities.c.lex_object_id))
 
         return entities_query.yield_per(100), empty_lexes
 
