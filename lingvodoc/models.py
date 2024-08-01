@@ -1964,11 +1964,14 @@ class LexicalEntry(
                 .insert()
                 .values(filtered_lexes))
 
+        # We need just lexical entry id and entity's content for sorting and filtering
+
         entities_query = (
             DBSession
                 .query(
-                    Entity,
-                    PublishingEntity)
+                    Entity.parent_client_id,
+                    Entity.parent_object_id,
+                    Entity.content)
 
                 .outerjoin(
                     PublishingEntity)
@@ -1981,13 +1984,7 @@ class LexicalEntry(
 
         if is_edit_mode:
 
-            entities_cte = entities_query.cte()
-
-            filed_lexes = (
-                DBSession
-                    .query(
-                        entities_cte.c.parent_client_id,
-                        entities_cte.c.parent_object_id))
+            filed_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
 
             empty_lexes = (
                 DBSession
@@ -1999,6 +1996,8 @@ class LexicalEntry(
                             .notin_(filed_lexes))
                     .all())
 
+        # Apply system filters
+
         if accept is not None:
             entities_query = entities_query.filter(PublishingEntity.accepted == accept)
         if publish is not None:
@@ -2006,28 +2005,22 @@ class LexicalEntry(
         if delete is not None:
             entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
 
+        # Apply custom user's filter
+
         if filter := "man":
 
             if is_regexp:
                 if is_case_sens:
-                    entities_cte = entities_query.filter(Entity.content.op('~')(filter)).cte()
+                    entities_query = entities_query.filter(Entity.content.op('~')(filter))
                 else:
-                    entities_cte = entities_query.filter(Entity.content.op('~*')(filter)).cte()
+                    entities_query = entities_query.filter(Entity.content.op('~*')(filter))
             else:
                 if is_case_sens:
-                    entities_cte = entities_query.filter(Entity.content.like(f"%{filter}%")).cte()
+                    entities_query = entities_query.filter(Entity.content.like(f"%{filter}%"))
                 else:
-                    entities_cte = entities_query.filter(Entity.content.ilike(f"%{filter}%")).cte()
+                    entities_query = entities_query.filter(Entity.content.ilike(f"%{filter}%"))
 
-            filtered_lexes = DBSession.query(
-                entities_cte.c.parent_client_id,
-                entities_cte.c.parent_object_id)
-
-            entities_query = (
-                entities_query
-                    .filter(
-                        Entity.parent_id
-                            .in_(filtered_lexes)))
+        # Create alpha_entities cte to order by it afterwards
 
         if sort_by_field := (2888, 14):
 
@@ -2046,25 +2039,38 @@ class LexicalEntry(
                     .cte()
                 )
 
-            # Join our leading entities with main query
-            entities_query = (
-                entities_query
-                    .filter(
-                        Entity.parent_client_id == alpha_entities.c.lex_client_id,
-                        Entity.parent_object_id == alpha_entities.c.lex_object_id))
+        # Filter and sort Entity and PublishingEntity objects
 
-            if is_ascending := True:
-                entities_query = entities_query.order_by(
-                    alpha_entities.c.first_entity,
-                    alpha_entities.c.lex_client_id,
-                    alpha_entities.c.lex_object_id)
-            else:
-                entities_query = entities_query.order_by(
-                    desc(alpha_entities.c.last_entity),
-                    desc(alpha_entities.c.lex_client_id),
-                    desc(alpha_entities.c.lex_object_id))
+        filtered_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
 
-        return entities_query.yield_per(100), empty_lexes
+        A()
+
+        entities_result = (
+            DBSession
+                .query(
+                    Entity,
+                    PublishingEntity)
+
+                .filter(Entity.parent_id.in_(filtered_lexes)))
+
+        '''
+                # Join alpha_entities to order by them
+                .filter(
+                    Entity.parent_client_id == alpha_entities.c.lex_client_id,
+                    Entity.parent_object_id == alpha_entities.c.lex_object_id))
+
+        if is_ascending := True:
+            entities_result = entities_result.order_by(
+                alpha_entities.c.first_entity,
+                alpha_entities.c.lex_client_id,
+                alpha_entities.c.lex_object_id)
+        else:
+            entities_result = entities_result.order_by(
+                desc(alpha_entities.c.last_entity),
+                desc(alpha_entities.c.lex_client_id),
+                desc(alpha_entities.c.lex_object_id))
+        '''
+        return entities_result.yield_per(100), empty_lexes
 
     """
         # Out-of-date queries
