@@ -1973,12 +1973,11 @@ class LexicalEntry(
                     Entity.parent_object_id,
                     Entity.content)
 
-                .outerjoin(
-                    PublishingEntity)
-
                 .filter(
                     Entity.parent_client_id == Tempo.client_id,
                     Entity.parent_object_id == Tempo.object_id))
+
+        # Collect empty lexes
 
         empty_lexes = []
 
@@ -1996,29 +1995,31 @@ class LexicalEntry(
                             .notin_(filed_lexes))
                     .all())
 
-        # Apply system filters
-
-        if accept is not None:
-            entities_query = entities_query.filter(PublishingEntity.accepted == accept)
-        if publish is not None:
-            entities_query = entities_query.filter(PublishingEntity.published == publish)
-        if delete is not None:
-            entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
-
-        # Apply custom user's filter
+        # Apply user's custom filter
 
         if filter := "man":
 
+            # We filter using Entity model twice, so we need to use cte(),
+            # we can't use .with_entities
+
             if is_regexp:
                 if is_case_sens:
-                    entities_query = entities_query.filter(Entity.content.op('~')(filter))
+                    filtered_entities = entities_query.filter(Entity.content.op('~')(filter)).cte()
                 else:
-                    entities_query = entities_query.filter(Entity.content.op('~*')(filter))
+                    filtered_entities = entities_query.filter(Entity.content.op('~*')(filter)).cte()
             else:
                 if is_case_sens:
-                    entities_query = entities_query.filter(Entity.content.like(f"%{filter}%"))
+                    filtered_entities = entities_query.filter(Entity.content.like(f"%{filter}%")).cte()
                 else:
-                    entities_query = entities_query.filter(Entity.content.ilike(f"%{filter}%"))
+                    filtered_entities = entities_query.filter(Entity.content.ilike(f"%{filter}%")).cte()
+
+            filtered_lexes = (
+                DBSession
+                    .query(
+                        filtered_entities.c.parent_client_id,
+                        filtered_entities.c.parent_object_id))
+
+            entities_query = entities_query.filter(Entity.parent_id.in_(filtered_lexes))
 
         # Create alpha_entities cte to order by it afterwards
 
@@ -2041,98 +2042,46 @@ class LexicalEntry(
 
         # Filter and sort Entity and PublishingEntity objects
 
-        filtered_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
-
-        A()
-
         entities_result = (
             DBSession
                 .query(
                     Entity,
                     PublishingEntity)
 
-                .filter(Entity.parent_id.in_(filtered_lexes)))
+                .outerjoin(
+                    PublishingEntity)
 
-        '''
                 # Join alpha_entities to order by them
                 .filter(
                     Entity.parent_client_id == alpha_entities.c.lex_client_id,
                     Entity.parent_object_id == alpha_entities.c.lex_object_id))
 
+        # Apply system filters
+
+        if accept is not None:
+            entities_result = entities_result.filter(PublishingEntity.accepted == accept)
+        if publish is not None:
+            entities_result = entities_result.filter(PublishingEntity.published == publish)
+        if delete is not None:
+            entities_result = entities_result.filter(Entity.marked_for_deletion == delete)
+
+        # Sorting
+
         if is_ascending := True:
+
             entities_result = entities_result.order_by(
                 alpha_entities.c.first_entity,
                 alpha_entities.c.lex_client_id,
                 alpha_entities.c.lex_object_id)
         else:
+
             entities_result = entities_result.order_by(
                 desc(alpha_entities.c.last_entity),
                 desc(alpha_entities.c.lex_client_id),
                 desc(alpha_entities.c.lex_object_id))
-        '''
+
         return entities_result.yield_per(100), empty_lexes
 
-    """
-        # Out-of-date queries
-        
-        pub_filter = ""
-
-        if publish is not None or accept is not None or delete is not None:
-            where_cond = list()
-            if accept:
-                where_cond.append("publishingentity.accepted = True")
-            if accept is False:
-                where_cond.append("publishingentity.accepted = False")
-            if publish:
-                where_cond.append("publishingentity.published = True")
-            if publish is False:
-                where_cond.append("publishingentity.published = False")
-            if delete:
-                where_cond.append("cte_expr.marked_for_deletion = True")
-            if delete is False:
-                where_cond.append("cte_expr.marked_for_deletion = False")
-            where_cond = ["WHERE", " AND ".join(where_cond)]
-            pub_filter = " ".join(where_cond)
-
-        statement = text('''
-        WITH cte_expr AS
-        (SELECT
-           entity.*,
-           {0}.traversal_lexical_order AS traversal_lexical_order
-         FROM entity
-           INNER JOIN {0}
-             ON
-               entity.parent_client_id = {0}.client_id
-               AND entity.parent_object_id = {0}.object_id
-        )
-        SELECT
-          cte_expr.client_id,
-          cte_expr.object_id,
-          cte_expr.parent_client_id,
-          cte_expr.parent_object_id,
-          cte_expr.self_client_id,
-          cte_expr.self_object_id,
-          cte_expr.link_client_id,
-          cte_expr.link_object_id,
-          cte_expr.field_client_id,
-          cte_expr.field_object_id,
-          cte_expr.locale_id,
-          cte_expr.marked_for_deletion,
-          cte_expr.content,
-          cte_expr.additional_metadata,
-          cte_expr.created_at,
-          publishingentity.*
-        FROM cte_expr
-          LEFT JOIN publishingentity
-            ON publishingentity.client_id = cte_expr.client_id AND publishingentity.object_id = cte_expr.object_id
-          {1}
-        ORDER BY cte_expr.traversal_lexical_order;
-        '''.format(temp_table_name, pub_filter))
-
-        entries = DBSession.query(Entity, PublishingEntity).from_statement(statement) .options(joinedload('publishingentity')).yield_per(100)
-
-        return entries
-    """
 
 class Entity(
     CompositeIdMixin,
