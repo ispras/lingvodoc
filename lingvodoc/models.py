@@ -2021,7 +2021,9 @@ class LexicalEntry(
 
             entities_query = entities_query.filter(Entity.parent_id.in_(filtered_lexes))
 
-        # Create alpha_entities cte to order by it afterwards
+        # Create alpha_entities cte to order by it
+
+        alpha_entities = None
 
         if sort_by_field := (2888, 14):
 
@@ -2049,12 +2051,7 @@ class LexicalEntry(
                     PublishingEntity)
 
                 .outerjoin(
-                    PublishingEntity)
-
-                # Join alpha_entities to order by them
-                .filter(
-                    Entity.parent_client_id == alpha_entities.c.lex_client_id,
-                    Entity.parent_object_id == alpha_entities.c.lex_object_id))
+                    PublishingEntity))
 
         # Apply system filters
 
@@ -2067,20 +2064,31 @@ class LexicalEntry(
 
         # Sorting
 
-        if is_ascending := True:
+        if alpha_entities is not None:
 
-            entities_result = entities_result.order_by(
-                alpha_entities.c.first_entity,
-                alpha_entities.c.lex_client_id,
-                alpha_entities.c.lex_object_id)
-        else:
+            # Join alpha_entities to order by them
 
-            entities_result = entities_result.order_by(
-                desc(alpha_entities.c.last_entity),
-                desc(alpha_entities.c.lex_client_id),
-                desc(alpha_entities.c.lex_object_id))
+            entities_result = entities_result.filter(
+                Entity.parent_client_id == alpha_entities.c.lex_client_id,
+                Entity.parent_object_id == alpha_entities.c.lex_object_id)
 
-        return entities_result.yield_per(100), empty_lexes
+            if is_ascending := True:
+
+                entities_result = entities_result.order_by(
+                    alpha_entities.c.first_entity,
+                    Entity.content)
+            else:
+
+                entities_result = entities_result.order_by(
+                    desc(alpha_entities.c.last_entity),
+                    desc(Entity.content))
+
+        entities_result = entities_result.order_by(
+            Entity.parent_client_id,
+            Entity.parent_object_id)
+
+        return entities_result.options(
+            joinedload('publishingentity')).yield_per(100), empty_lexes
 
 
 class Entity(
