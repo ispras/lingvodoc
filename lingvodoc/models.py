@@ -1920,7 +1920,7 @@ class LexicalEntry(
     @classmethod
     def graphene_track_multiple(
         cls,
-        lexs,
+        lexes,
         publish = None,
         accept = None,
         delete = False,
@@ -1932,18 +1932,18 @@ class LexicalEntry(
         is_regexp = False,
         check_perspective = True):
 
-        deleted_persps = []
-        filtered_lexes = []
+        deleted_per = []
+        alive_lexes = []
 
         if check_perspective:
-            deleted_persps = DictionaryPerspective.get_deleted()
+            deleted_per = DictionaryPerspective.get_deleted()
 
-        for x in lexs:
+        for x in lexes:
 
-            if len(x) >= 4 and (x[2], x[3]) in deleted_persps:
+            if len(x) >= 4 and (x[2], x[3]) in deleted_per:
                 continue
 
-            filtered_lexes.append({'client_id': x[0], 'object_id': x[1]})
+            alive_lexes.append({'client_id': x[0], 'object_id': x[1]})
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
@@ -1961,7 +1961,7 @@ class LexicalEntry(
         DBSession.execute(
             Tempo.__table__
                 .insert()
-                .values(filtered_lexes))
+                .values(alive_lexes))
 
         # We need just lexical entry and entity id and entity's content for sorting and filtering
 
@@ -2000,7 +2000,9 @@ class LexicalEntry(
 
         # Apply user's custom filter
 
-        if filter := "dain":
+        filtered_lexes = None
+
+        if filter := "ma.*n":
 
             # We filter using Entity model in parallels twice,
             # so we need to use cte(), we can't use .with_entities
@@ -2022,9 +2024,7 @@ class LexicalEntry(
                         filtered_entities.c.parent_client_id,
                         filtered_entities.c.parent_object_id))
 
-            entities_query = entities_query.filter(Entity.parent_id.in_(filtered_lexes))
-
-        # Create alpha_entities cte to order by it
+        # Create field_entities and alpha_entities cte to order by them
 
         alpha_entities = None
 
@@ -2064,6 +2064,14 @@ class LexicalEntry(
             entities_result = entities_result.filter(PublishingEntity.published == publish)
         if delete is not None:
             entities_result = entities_result.filter(Entity.marked_for_deletion == delete)
+
+        # Filtering
+
+        if filtered_lexes is not None:
+
+            entities_result = entities_result.filter(
+                Entity.parent_id
+                    .in_(filtered_lexes))
 
         # Sorting
 
