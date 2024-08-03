@@ -1948,27 +1948,28 @@ class LexicalEntry(
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
         DBSession.execute(
-            '''create TEMPORARY TABLE %s (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
+            '''create TEMPORARY TABLE %s (client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
 
         class Tempo(Base):
 
             __tablename__ = temp_table_name
             __table_args__ = {'prefixes': ['TEMPORARY']}
 
-            traversal_lexical_order = Column(Integer, primary_key=True)
-            client_id = Column(SLBigInteger())
-            object_id = Column(SLBigInteger())
+            client_id = Column(SLBigInteger(), primary_key=True)
+            object_id = Column(SLBigInteger(), primary_key=True)
 
         DBSession.execute(
             Tempo.__table__
                 .insert()
                 .values(filtered_lexes))
 
-        # We need just lexical entry id and entity's content for sorting and filtering
+        # We need just lexical entry and entity id and entity's content for sorting and filtering
 
         entities_query = (
             DBSession
                 .query(
+                    Entity.client_id,
+                    Entity.object_id,
                     Entity.parent_client_id,
                     Entity.parent_object_id,
                     Entity.content)
@@ -1990,19 +1991,21 @@ class LexicalEntry(
                     .query(
                         Tempo.client_id,
                         Tempo.object_id)
+
                     .filter(
                         tuple_(Tempo.client_id, Tempo.object_id)
                             .notin_(filed_lexes))
+
                     .all())
 
         # Apply user's custom filter
 
-        if filter := "man":
+        if filter := "ma.*n":
 
-            # We filter using Entity model twice, so we need to use cte(),
-            # we can't use .with_entities
+            # We filter using Entity model in parallels twice,
+            # so we need to use cte(), we can't use .with_entities
 
-            if is_regexp:
+            if is_regexp := True:
                 if is_case_sens:
                     filtered_entities = entities_query.filter(Entity.content.op('~')(filter)).cte()
                 else:
@@ -2042,7 +2045,7 @@ class LexicalEntry(
                     .cte()
                 )
 
-        # Filter and sort Entity and PublishingEntity objects
+        # Finally, filter and sort Entity and PublishingEntity objects
 
         entities_result = (
             DBSession
@@ -2066,26 +2069,35 @@ class LexicalEntry(
 
         if alpha_entities is not None:
 
-            # Join alpha_entities to order by them
+            # Join alpha_entities and field_entities to order by them
 
-            entities_result = entities_result.filter(
+            entities_result = entities_result.join(
+                alpha_entities, and_(
                 Entity.parent_client_id == alpha_entities.c.lex_client_id,
-                Entity.parent_object_id == alpha_entities.c.lex_object_id)
+                Entity.parent_object_id == alpha_entities.c.lex_object_id))
+
+            entities_result = entities_result.outerjoin(
+                field_entities, and_(
+                Entity.client_id == field_entities.c.client_id,
+                Entity.object_id == field_entities.c.object_id))
 
             if is_ascending := True:
 
                 entities_result = entities_result.order_by(
                     alpha_entities.c.first_entity,
-                    Entity.content)
+                    field_entities.c.content)
             else:
 
                 entities_result = entities_result.order_by(
                     desc(alpha_entities.c.last_entity),
-                    desc(Entity.content))
+                    desc(field_entities.c.content))
 
-        entities_result = entities_result.order_by(
-            Entity.parent_client_id,
-            Entity.parent_object_id)
+        else:
+
+            entities_result = entities_result.order_by(
+                Entity.parent_client_id,
+                Entity.parent_object_id)
+
 
         return entities_result.options(
             joinedload('publishingentity')).yield_per(100), empty_lexes
