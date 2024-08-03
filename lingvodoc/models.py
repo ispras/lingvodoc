@@ -2103,7 +2103,9 @@ class LexicalEntry(
 
             entities_result = entities_result.order_by(
                 Entity.parent_client_id,
-                Entity.parent_object_id)
+                Entity.parent_object_id,
+                Entity.client_id,
+                Entity.object_id)
 
 
         return entities_result.options(
