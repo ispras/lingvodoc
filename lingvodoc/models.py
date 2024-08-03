@@ -2000,7 +2000,7 @@ class LexicalEntry(
 
         # Apply user's custom filter
 
-        if filter := "ma.*n":
+        if filter := "dain":
 
             # We filter using Entity model in parallels twice,
             # so we need to use cte(), we can't use .with_entities
@@ -2037,8 +2037,8 @@ class LexicalEntry(
                     .query(
                         field_entities.c.parent_client_id.label('lex_client_id'),
                         field_entities.c.parent_object_id.label('lex_object_id'),
-                        func.min(field_entities.c.content).label('first_entity'),
-                        func.max(field_entities.c.content).label('last_entity'))
+                        func.min(func.lower(field_entities.c.content)).label('first_entity'),
+                        func.max(func.lower(field_entities.c.content)).label('last_entity'))
 
                     .group_by('lex_client_id', 'lex_object_id')
 
@@ -2081,17 +2081,16 @@ class LexicalEntry(
                 Entity.client_id == field_entities.c.client_id,
                 Entity.object_id == field_entities.c.object_id))
 
-            if is_ascending := True:
+            if is_ascending := False:
 
                 entities_result = entities_result.order_by(
                     alpha_entities.c.first_entity,
-                    field_entities.c.content)
+                    func.lower(field_entities.c.content))
             else:
 
                 entities_result = entities_result.order_by(
                     desc(alpha_entities.c.last_entity),
-                    desc(field_entities.c.content))
-
+                    desc(func.lower(field_entities.c.content)))
         else:
 
             entities_result = entities_result.order_by(
