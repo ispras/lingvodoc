@@ -843,9 +843,6 @@ class DictionaryPerspective(LingvodocObjectType):
         if self.check_is_hidden_for_client(info):
             return []
 
-        # result = list()
-        # request = info.context.get('request')
-
         if mode == 'all':
             publish = None
             accept = True
@@ -881,11 +878,6 @@ class DictionaryPerspective(LingvodocObjectType):
         else:
             raise ResponseError(message="mode: <all|published|not_accepted|deleted|all_with_deleted>")
 
-        # dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, position=position, self_client_id=None,
-        #                                                self_object_id=None).first()
-        # if not dbcolumn:
-        #     dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, self_client_id=None,
-        #                                                self_object_id=None).first()
         lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
         if ids is not None:
             ids = list(ids)
@@ -893,10 +885,6 @@ class DictionaryPerspective(LingvodocObjectType):
         if authors or start_date or end_date:
             lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
 
-        # if publish is not None:
-        #     lexes = lexes.filter(dbPublishingEntity.published == publish)
-        # if accept is not None:
-        #     lexes = lexes.filter(dbPublishingEntity.accepted == accept)
         if delete is not None:
             if authors or start_date or end_date:
                 lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
@@ -912,18 +900,15 @@ class DictionaryPerspective(LingvodocObjectType):
         db_la_gist = translation_gist_search('Limited access')
         limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
-        if self.dbObject.state_translation_gist_client_id == limited_client_id and self.dbObject.state_translation_gist_object_id == limited_object_id and mode != 'not_accepted':
+        if (self.dbObject.state_translation_gist_client_id == limited_client_id and
+                self.dbObject.state_translation_gist_object_id == limited_object_id and
+                mode != 'not_accepted'):
+
             if not info.context.acl_check_if('view', 'lexical_entries_and_entities',
-                                   (self.dbObject.client_id, self.dbObject.object_id)):
+                                             (self.dbObject.client_id, self.dbObject.object_id)):
+
                 lexes = lexes.limit(20)
 
-        # lexes = lexes \
-        #     .order_by(func.min(case(
-        #     [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
-        #           dbEntity.field_object_id != dbcolumn.field_object_id),
-        #       'яяяяяя')],
-        #     else_=dbEntity.content))) \
-        #     .group_by(dbLexicalEntry)
         lexical_entries = (
             entries_with_entities(lexes, mode, accept=accept, delete=delete, publish=publish,
                                   check_perspective = False, **query_args))
