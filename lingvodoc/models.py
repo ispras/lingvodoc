@@ -2005,17 +2005,24 @@ class LexicalEntry(
             # We filter using Entity model in parallels twice,
             # so we need to use cte(), we can't use .with_entities
 
+            # Filter from special fields
+            filtered_entities = entities_query.filter(
+                Entity.field_id != (66, 25))
+
             if is_regexp:
                 if is_case_sens:
-                    filtered_entities = entities_query.filter(Entity.content.op('~')(filter)).cte()
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.op('~')(filter)).cte()
                 else:
-                    filtered_entities = entities_query.filter(Entity.content.op('~*')(filter)).cte()
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.op('~*')(filter)).cte()
             else:
                 if is_case_sens:
-                    filtered_entities = entities_query.filter(Entity.content.like(f"%{filter}%")).cte()
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.like(f"%{filter}%")).cte()
                 else:
-                    filtered_entities = entities_query.filter(Entity.content.ilike(f"%{filter}%")).cte()
-
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.ilike(f"%{filter}%")).cte()
         else:
 
             filtered_entities = entities_query.cte()
