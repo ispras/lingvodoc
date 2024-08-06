@@ -233,10 +233,11 @@ class DictionaryPerspective(LingvodocObjectType):
         ids = graphene.List(LingvodocID),
         mode = graphene.String(),
         filter = graphene.String(),
-        sort_by_field = LingvodocID(),
-        is_edit_mode = graphene.Boolean(),
+        is_regexp = graphene.Boolean(),
         is_case_sens = graphene.Boolean(),
+        is_edit_mode = graphene.Boolean(),
         is_ascending = graphene.Boolean(),
+        sort_by_field = LingvodocID(),
         offset = graphene.Int(),
         limit = graphene.Int())
 
