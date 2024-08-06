@@ -2000,14 +2000,12 @@ class LexicalEntry(
 
         # Apply user's custom filter
 
-        filtered_lexes = None
-
-        if filter := "ma.*n":
+        if filter:
 
             # We filter using Entity model in parallels twice,
             # so we need to use cte(), we can't use .with_entities
 
-            if is_regexp := True:
+            if is_regexp:
                 if is_case_sens:
                     filtered_entities = entities_query.filter(Entity.content.op('~')(filter)).cte()
                 else:
@@ -2018,17 +2016,23 @@ class LexicalEntry(
                 else:
                     filtered_entities = entities_query.filter(Entity.content.ilike(f"%{filter}%")).cte()
 
-            filtered_lexes = (
-                DBSession
-                    .query(
-                        filtered_entities.c.parent_client_id,
-                        filtered_entities.c.parent_object_id))
+        else:
+
+            filtered_entities = entities_query.cte()
+
+        # Getting filtered_lexes after previous steps
+
+        filtered_lexes = (
+            DBSession
+                .query(
+                    filtered_entities.c.parent_client_id,
+                    filtered_entities.c.parent_object_id))
 
         # Create field_entities and alpha_entities cte to order by them
 
         alpha_entities = None
 
-        if sort_by_field := (2888, 14):
+        if sort_by_field:
 
             field_entities = entities_query.filter(Entity.field_id == sort_by_field).cte()
 
@@ -2054,7 +2058,11 @@ class LexicalEntry(
                     PublishingEntity)
 
                 .outerjoin(
-                    PublishingEntity))
+                    PublishingEntity)
+
+                .filter(
+                    Entity.parent_id
+                        .in_(filtered_lexes)))
 
         # Apply system filters
 
@@ -2064,14 +2072,6 @@ class LexicalEntry(
             entities_result = entities_result.filter(PublishingEntity.published == publish)
         if delete is not None:
             entities_result = entities_result.filter(Entity.marked_for_deletion == delete)
-
-        # Filtering
-
-        if filtered_lexes is not None:
-
-            entities_result = entities_result.filter(
-                Entity.parent_id
-                    .in_(filtered_lexes))
 
         # Sorting
 
@@ -2089,7 +2089,7 @@ class LexicalEntry(
                 Entity.client_id == field_entities.c.client_id,
                 Entity.object_id == field_entities.c.object_id))
 
-            if is_ascending := False:
+            if is_ascending:
 
                 entities_result = entities_result.order_by(
                     alpha_entities.c.first_entity,
