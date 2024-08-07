@@ -4371,6 +4371,11 @@ class SwadeshAnalysis(graphene.Mutation):
     embedding_3d = graphene.List(graphene.List(graphene.Float))
     perspective_name_list = graphene.List(graphene.String)
 
+    dictionary_count = graphene.Int()
+    group_count = graphene.Int()
+    not_enough_count = graphene.Int()
+    transcription_count = graphene.Int()
+
     @staticmethod
     def get_entry_text(entry):
         return f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
@@ -4773,19 +4778,31 @@ class SwadeshAnalysis(graphene.Mutation):
             # GC
             del data_query
 
+        group_counter = [0] * len(group_list)
+        total_transcription_count = 0
+
         # Checking if found entries have links
         means = collections.OrderedDict()
         for perspective_id, entries in entries_set.items():
             means[perspective_id] = collections.defaultdict(set)
             for group_index, group in enumerate(group_list):
+
                 # Select etymologically linked entries
                 linked = entries & group
+                # Count non-empty 'linked'
+                group_counter[group_index] += (len(linked) > 0)
+
                 for entry_id in linked:
                     result_pool[perspective_id][entry_id]['group'] = group_index
                     swadesh = result_pool[perspective_id][entry_id]['swadesh']
                     # Store the correspondence: perspective { meanings(1/2/3) { etymological_groups(1.1/1.2/2.1/3.1)
                     if not result_pool[perspective_id][entry_id]['borrowed']:
                         means[perspective_id][swadesh].add(group_index)
+                        total_transcription_count += 1
+
+        not_enough_count = 0
+        for count in group_counter:
+            not_enough_count += (count < 2)
 
         dictionary_count = len(means)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
@@ -4863,6 +4880,10 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 result = html_result,
                 xlsx_url = xlsx_url,
+                dictionary_count = len(perspective_info_list),
+                group_count = len(group_list),
+                not_enough_count = not_enough_count,
+                transcription_count = total_transcription_count,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
                 embedding_3d = embedding_3d_pca,
@@ -5023,6 +5044,11 @@ class MorphCognateAnalysis(graphene.Mutation):
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
     perspective_name_list = graphene.List(graphene.String)
+
+    dictionary_count = graphene.Int()
+    group_count = graphene.Int()
+    not_enough_count = graphene.Int()
+    transcription_count = graphene.Int()
 
     @staticmethod
     def get_entry_text(entry):
@@ -5207,16 +5233,28 @@ class MorphCognateAnalysis(graphene.Mutation):
             # GC
             del data_query
 
+        group_counter = [0] * len(group_list)
+        total_transcription_count = 0
+
         # Checking if found entries have links
         for perspective_id, entries in result_pool.items():
             for group_index, group in enumerate(group_list):
+
                 # Select etymologically linked entries
                 linked = entries.keys() & group
+                # Count non-empty 'linked'
+                group_counter[group_index] += (len(linked) > 0)
+
                 for entry_id in linked:
                     result_pool[perspective_id][entry_id]['group'] = group_index
                     meaning = result_pool[perspective_id][entry_id]['meaning']
+                    total_transcription_count += 1
                     for sub_meaning in meaning:
                         meaning_to_links[perspective_id][sub_meaning].add(group_index)
+
+        not_enough_count = 0
+        for count in group_counter:
+            not_enough_count += (count < 2)
 
         dictionary_count = len(result_pool)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
@@ -5302,6 +5340,10 @@ class MorphCognateAnalysis(graphene.Mutation):
 
                 result = html_result,
                 xlsx_url = xlsx_url,
+                dictionary_count=len(perspective_info_list),
+                group_count=len(group_list),
+                not_enough_count = not_enough_count,
+                transcription_count=total_transcription_count,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
                 embedding_3d = embedding_3d_pca,
