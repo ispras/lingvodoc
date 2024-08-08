@@ -1972,7 +1972,7 @@ class LexicalEntry(
                     Entity.object_id,
                     Entity.parent_client_id,
                     Entity.parent_object_id,
-                    Entity.content)
+                    Entity.content.label('order_content'))
 
                 .filter(
                     Entity.parent_client_id == Tempo.client_id,
@@ -2048,8 +2048,10 @@ class LexicalEntry(
                     .query(
                         field_entities.c.parent_client_id.label('lex_client_id'),
                         field_entities.c.parent_object_id.label('lex_object_id'),
-                        func.min(func.lower(field_entities.c.content)).label('first_entity'),
-                        func.max(func.lower(field_entities.c.content)).label('last_entity'))
+                        func.min(func.lower(field_entities.c.order_content)).label('first_entity'),
+                        func.max(func.lower(field_entities.c.order_content)).label('last_entity'))
+
+                    .filter(func.length(field_entities.c.order_content) > 0)
 
                     .group_by('lex_client_id', 'lex_object_id')
 
@@ -2085,8 +2087,9 @@ class LexicalEntry(
         if alpha_entities is not None:
 
             # Join alpha_entities and field_entities to order by them
-
-            entities_result = entities_result.join(
+            # Outerjoin because some lexical entries or the whole table
+            # may not have any entity for the sorting field
+            entities_result = entities_result.outerjoin(
                 alpha_entities, and_(
                 Entity.parent_client_id == alpha_entities.c.lex_client_id,
                 Entity.parent_object_id == alpha_entities.c.lex_object_id))
@@ -2100,19 +2103,18 @@ class LexicalEntry(
 
                 entities_result = entities_result.order_by(
                     alpha_entities.c.first_entity,
-                    func.lower(field_entities.c.content))
+                    func.lower(field_entities.c.order_content))
             else:
 
                 entities_result = entities_result.order_by(
                     desc(alpha_entities.c.last_entity),
-                    desc(func.lower(field_entities.c.content)))
-        else:
+                    desc(func.lower(field_entities.c.order_content)))
 
-            entities_result = entities_result.order_by(
-                Entity.parent_client_id,
-                Entity.parent_object_id,
-                Entity.client_id,
-                Entity.object_id)
+        entities_result = entities_result.order_by(
+            Entity.parent_client_id,
+            Entity.parent_object_id,
+            Entity.client_id,
+            Entity.object_id)
 
 
         return entities_result.options(
