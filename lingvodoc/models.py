@@ -1972,7 +1972,7 @@ class LexicalEntry(
                     Entity.object_id,
                     Entity.parent_client_id,
                     Entity.parent_object_id,
-                    Entity.content.label('order_content'))
+                    Entity.content)
 
                 .filter(
                     Entity.parent_client_id == Tempo.client_id,
@@ -2023,21 +2023,22 @@ class LexicalEntry(
                 else:
                     filtered_entities = filtered_entities.filter(
                         Entity.content.ilike(f"%{filter}%")).cte()
-        else:
 
-            filtered_entities = entities_query.cte()
+            filtered_lexes = (
+                DBSession
+                    .query(
+                        filtered_entities.c.parent_client_id,
+                        filtered_entities.c.parent_object_id))
 
-        # Getting filtered_lexes after previous steps
+            entities_query = entities_query.filter(
+                Entity.parent_id
+                    .in_(filtered_lexes))
 
-        filtered_lexes = (
-            DBSession
-                .query(
-                    filtered_entities.c.parent_client_id,
-                    filtered_entities.c.parent_object_id))
+        entities_cte = entities_query.cte()
 
         # Create field_entities and alpha_entities cte to order by them
 
-        alpha_entities = None
+        sorting_cte = None
 
         if sort_by_field:
 
@@ -2048,15 +2049,40 @@ class LexicalEntry(
                     .query(
                         field_entities.c.parent_client_id.label('lex_client_id'),
                         field_entities.c.parent_object_id.label('lex_object_id'),
-                        func.min(func.lower(field_entities.c.order_content)).label('first_entity'),
-                        func.max(func.lower(field_entities.c.order_content)).label('last_entity'))
+                        func.min(func.lower(field_entities.c.content)).label('first_entity'),
+                        func.max(func.lower(field_entities.c.content)).label('last_entity'))
 
-                    .filter(func.length(field_entities.c.order_content) > 0)
+                    .filter(func.length(field_entities.c.content) > 0)
 
                     .group_by('lex_client_id', 'lex_object_id')
 
                     .cte()
                 )
+
+            sorting_cte = (
+                DBSession
+                    .query(
+                        entities_cte.c.parent_client_id,
+                        entities_cte.c.parent_object_id,
+                        entities_cte.c.client_id,
+                        entities_cte.c.object_id,
+                        alpha_entities.c.first_entity,
+                        alpha_entities.c.last_entity,
+                        field_entities.c.content.label('order_content'))
+
+                    .outerjoin(
+                        alpha_entities, and_(
+                            alpha_entities.c.lex_client_id == entities_cte.c.parent_client_id,
+                            alpha_entities.c.lex_object_id == entities_cte.c.parent_object_id))
+
+                    .outerjoin(
+                        field_entities, and_(
+                            field_entities.c.client_id == entities_cte.c.client_id,
+                            field_entities.c.object_id == entities_cte.c.object_id))
+
+                    .cte())
+
+            entities_cte = sorting_cte
 
         # Finally, filter and sort Entity and PublishingEntity objects
 
@@ -2070,8 +2096,8 @@ class LexicalEntry(
                     PublishingEntity)
 
                 .filter(
-                    Entity.parent_id
-                        .in_(filtered_lexes)))
+                    entities_cte.c.client_id == Entity.client_id,
+                    entities_cte.c.object_id == Entity.object_id))
 
         # Apply system filters
 
@@ -2084,38 +2110,31 @@ class LexicalEntry(
 
         # Sorting
 
-        if alpha_entities is not None:
-
-            # Join alpha_entities and field_entities to order by them
-            # Outerjoin because some lexical entries or the whole table
-            # may not have any entity for the sorting field
-            entities_result = entities_result.outerjoin(
-                alpha_entities, and_(
-                Entity.parent_client_id == alpha_entities.c.lex_client_id,
-                Entity.parent_object_id == alpha_entities.c.lex_object_id))
-
-            entities_result = entities_result.outerjoin(
-                field_entities, and_(
-                Entity.client_id == field_entities.c.client_id,
-                Entity.object_id == field_entities.c.object_id))
+        if sorting_cte is not None:
 
             if is_ascending:
 
                 entities_result = entities_result.order_by(
-                    alpha_entities.c.first_entity,
-                    func.lower(field_entities.c.order_content))
+                    entities_cte.c.first_entity,
+                    entities_cte.c.parent_client_id,
+                    entities_cte.c.parent_object_id,
+                    func.lower(entities_cte.c.order_content)
+                )
+
             else:
 
                 entities_result = entities_result.order_by(
-                    desc(alpha_entities.c.last_entity),
-                    desc(func.lower(field_entities.c.order_content)))
+                    desc(entities_cte.c.last_entity),
+                    entities_cte.c.parent_client_id,
+                    entities_cte.c.parent_object_id,
+                    desc(func.lower(entities_cte.c.order_content))
+                )
 
         entities_result = entities_result.order_by(
-            Entity.parent_client_id,
-            Entity.parent_object_id,
-            Entity.client_id,
-            Entity.object_id)
-
+            entities_cte.c.parent_client_id,
+            entities_cte.c.parent_object_id,
+            entities_cte.c.client_id,
+            entities_cte.c.object_id)
 
         return entities_result.options(
             joinedload('publishingentity')).yield_per(100), empty_lexes
