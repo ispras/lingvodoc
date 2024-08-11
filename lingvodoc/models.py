@@ -2105,10 +2105,6 @@ class LexicalEntry(
         new_entities_result = (
             entities_result
                 .filter(
-
-                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
-                        .in_(filed_lexes),
-
                     tuple_(Entity.parent_client_id, Entity.parent_object_id)
                         .in_(created_entries)))
 
@@ -2117,7 +2113,6 @@ class LexicalEntry(
         old_entities_result = (
             entities_result
                 .filter(
-
                     entities_cte.c.client_id == Entity.client_id,
                     entities_cte.c.object_id == Entity.object_id,
 
