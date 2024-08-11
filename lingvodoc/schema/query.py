@@ -3744,7 +3744,7 @@ class Query(graphene.ObjectType):
             (lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
             for lex in lexes]
 
-        (entities, _) = (
+        (_,entities, _) = (
 
             dbLexicalEntry.graphene_track_multiple(
                 lexes_composite_list,
@@ -4741,7 +4741,7 @@ class Query(graphene.ObjectType):
             (entry.client_id, entry.object_id, entry.parent_client_id, entry.parent_object_id)
             for entry in lexes]
 
-        (entities, _) = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
+        (_, entities, _) = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                                publish=publish, accept=accept)
 
         def graphene_entity(cur_entity, cur_publishing):

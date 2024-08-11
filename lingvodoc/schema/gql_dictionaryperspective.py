@@ -113,7 +113,12 @@ def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex.dbObject = cur_lexical_entry
     return lex
 
-def entries_with_entities(lexes, mode, **query_args):
+def entries_with_entities(lexes, mode,
+                          is_edit_mode=True,
+                          created_entries=[],
+                          limit=0,
+                          offset=0,
+                          **query_args):
 
     if mode == 'debug':
         return [gql_lexicalentry(lex, None) for lex in lexes]
@@ -134,20 +139,36 @@ def entries_with_entities(lexes, mode, **query_args):
         query_args['accept'] = False
         query_args['delete'] = False
 
-    entities, empty_lexes = (
-        dbLexicalEntry.graphene_track_multiple(lexes_composite_list, **query_args))
+    new_entities, old_entities, empty_lexes = (
+        dbLexicalEntry.graphene_track_multiple(lexes_composite_list, created_entries, **query_args))
 
-    lexical_entries = list()
+    # Getting sets of hashable items
+    empty_lexes_set = set([tuple(lex) for lex in empty_lexes])
+    added_lexes_set = set([tuple(lex) for lex in created_entries])
+
+    # Calculating lists of old and newly added empty lexes
+    old_empty_lexes = list(list(lex) for lex in empty_lexes_set - added_lexes_set) if is_edit_mode else []
+    new_empty_lexes = list(list(lex) for lex in empty_lexes_set & added_lexes_set)
+
+    """
+    Finally we start to combine summary list of lexes in following sequence:
+    -- (non-empty) new_entities in any amount
+    -- new_empty_lexes in any amount and mode
+    -- old_empty_lexes sliced by 'limit' in edit mode
+    -- old_entities sliced by [offset : offset + limit]
+    """
+
+    lexical_entries = []
 
     # We have empty lexes only if is_edit_mode
-    for lex_ids in empty_lexes:
+    for lex_ids in old_empty_lexes:
 
         lexical_entries.append(
             gql_lexicalentry(
                 cur_lexical_entry = lex_id_to_obj[lex_ids],
                 cur_entities = []))
 
-    ent_iter = itertools.chain(list(entities))
+    ent_iter = itertools.chain(list(old_entities))
 
     for lex_ids, entity_with_published in itertools.groupby(ent_iter, key = group_by_lex):
 
@@ -160,7 +181,40 @@ def entries_with_entities(lexes, mode, **query_args):
                 cur_lexical_entry = lex_id_to_obj[lex_ids],
                 cur_entities = gql_entities_list))
 
-    return lexical_entries
+    # Pagination
+
+    total_entries = len(lexical_entries)
+
+    lexical_entries = lexical_entries[offset:]
+    if limit > 0:
+        lexical_entries = lexical_entries[:offset + limit]
+
+    # In any mode we show empty new lexes if any
+    # Adding them at the beginning of list
+
+    for lex_ids in new_empty_lexes:
+
+        lexical_entries.insert(0,
+            gql_lexicalentry(
+                cur_lexical_entry = lex_id_to_obj[lex_ids],
+                cur_entities = []))
+
+    # Add lexes with new_entities at the beginning of list
+
+    ent_iter = itertools.chain(list(new_entities))
+
+    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key = group_by_lex):
+
+        gql_entities_list = [
+            gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
+            for x in entity_with_published]
+
+        lexical_entries.insert(0,
+            gql_lexicalentry(
+                cur_lexical_entry = lex_id_to_obj[lex_ids],
+                cur_entities = gql_entities_list))
+
+    return lexical_entries, total_entries
 
 
 class PerspectivePage(graphene.ObjectType):
@@ -840,7 +894,7 @@ class DictionaryPerspective(LingvodocObjectType):
     def resolve_lexical_entries(self, info, ids=None,
                                 mode=None, authors=None, clients=None,
                                 start_date=None, end_date=None, position=1,
-                                offset = 0, limit = 0, **query_args):
+                                **query_args):
 
         if self.check_is_hidden_for_client(info):
             return []
@@ -911,7 +965,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
                 lexes = lexes.limit(20)
 
-        lexical_entries = (
+        lexical_entries, self.entries_total = (
             entries_with_entities(lexes, mode, accept=accept, delete=delete, publish=publish,
                                   check_perspective = False, **query_args))
 
@@ -919,13 +973,6 @@ class DictionaryPerspective(LingvodocObjectType):
 
         if ids is not None:
             lexical_entries.sort(key = lambda e: (e.dbObject.created_at, e.dbObject.object_id))
-
-        self.entries_total = len(lexical_entries)
-
-        # Pagination
-        lexical_entries = lexical_entries[offset:]
-        if limit > 0:
-            lexical_entries = lexical_entries[:offset + limit]
 
         return lexical_entries
 

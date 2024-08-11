@@ -1927,7 +1927,6 @@ class LexicalEntry(
         filter = None,
         sort_by_field = None,
         is_ascending = None,
-        is_edit_mode = False,
         is_case_sens = True,
         is_regexp = False,
         created_entries = [],
@@ -1979,25 +1978,21 @@ class LexicalEntry(
                     Entity.parent_client_id == Tempo.client_id,
                     Entity.parent_object_id == Tempo.object_id))
 
-        # Collect empty lexes
+        filed_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
 
-        empty_lexes = []
+        # Collect all empty lexes including created ones
 
-        if is_edit_mode:
+        empty_lexes = (
+            DBSession
+                .query(
+                    Tempo.client_id,
+                    Tempo.object_id)
 
-            filed_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
+                .filter(
+                    tuple_(Tempo.client_id, Tempo.object_id)
+                        .notin_(filed_lexes))
 
-            empty_lexes = (
-                DBSession
-                    .query(
-                        Tempo.client_id,
-                        Tempo.object_id)
-
-                    .filter(
-                        tuple_(Tempo.client_id, Tempo.object_id)
-                            .notin_(filed_lexes).notin_(created_entries))
-
-                    .all())
+                .all())
 
         # Apply user's custom filter
 
@@ -2037,7 +2032,7 @@ class LexicalEntry(
 
         entities_cte = entities_query.cte()
 
-        # Create field_entities and alpha_entities cte to order by them
+        # Create sorting_cte to order by it
 
         sorting_cte = None
 
@@ -2094,13 +2089,9 @@ class LexicalEntry(
                     PublishingEntity)
 
                 .outerjoin(
-                    PublishingEntity)
+                    PublishingEntity))
 
-                .filter(
-                    entities_cte.c.client_id == Entity.client_id,
-                    entities_cte.c.object_id == Entity.object_id))
-
-        # Apply system filters
+        # Pre-filtering
 
         if accept is not None:
             entities_result = entities_result.filter(PublishingEntity.accepted == accept)
@@ -2109,13 +2100,45 @@ class LexicalEntry(
         if delete is not None:
             entities_result = entities_result.filter(Entity.marked_for_deletion == delete)
 
-        # Sorting
+        # Pre-sorting
+
+        entities_result = entities_result.order_by(
+            Entity.parent_client_id,
+            Entity.parent_object_id,
+            Entity.client_id,
+            Entity.object_id)
+
+        # Get new entities from entities_before_custom_filtering
+
+        new_entities_result = (
+            entities_result
+                .filter(
+
+                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
+                        .in_(filed_lexes),
+
+                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
+                        .in_(created_entries)))
+
+        # Filter and join at once to get and sort old entities
+
+        old_entities_result = (
+            entities_result
+                .filter(
+
+                    entities_cte.c.client_id == Entity.client_id,
+                    entities_cte.c.object_id == Entity.object_id,
+
+                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
+                        .notin_(created_entries)))
+
+        # Custom sorting
 
         if sorting_cte is not None:
 
             if is_ascending:
 
-                entities_result = entities_result.order_by(
+                old_entities_result = old_entities_result.order_by(
                     entities_cte.c.first_entity,
                     entities_cte.c.parent_client_id,
                     entities_cte.c.parent_object_id,
@@ -2124,21 +2147,20 @@ class LexicalEntry(
 
             else:
 
-                entities_result = entities_result.order_by(
+                old_entities_result = old_entities_result.order_by(
                     desc(entities_cte.c.last_entity),
                     entities_cte.c.parent_client_id,
                     entities_cte.c.parent_object_id,
                     desc(func.lower(entities_cte.c.order_content))
                 )
 
-        entities_result = entities_result.order_by(
-            entities_cte.c.parent_client_id,
-            entities_cte.c.parent_object_id,
-            entities_cte.c.client_id,
-            entities_cte.c.object_id)
-
-        return entities_result.options(
-            joinedload('publishingentity')).yield_per(100), empty_lexes
+        return (
+            new_entities_result,
+            old_entities_result
+                .options(
+                    joinedload('publishingentity'))
+                .yield_per(100),
+            empty_lexes)
 
 
 class Entity(
