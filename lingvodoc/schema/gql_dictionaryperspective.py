@@ -206,13 +206,13 @@ def entries_with_entities(lexes, mode,
 
     ent_iter = itertools.chain(list(new_entities))
 
-    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key = group_by_lex):
+    for i, (lex_ids, entity_with_published) in enumerate(itertools.groupby(ent_iter, key = group_by_lex)):
 
         gql_entities_list = [
             gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
             for x in entity_with_published]
 
-        lexical_entries.insert(0,
+        lexical_entries.insert(i,
             gql_lexicalentry(
                 cur_lexical_entry = lex_id_to_obj[lex_ids],
                 cur_entities = gql_entities_list))
