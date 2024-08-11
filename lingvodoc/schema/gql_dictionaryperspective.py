@@ -42,6 +42,7 @@ from lingvodoc.models import (
     JSONB,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
+    PerspectivePage as dbPerspectivePage,
     ObjectTOC,
     ParserResult as dbParserResult,
     PublishingEntity as dbPublishingEntity,
@@ -88,6 +89,7 @@ from lingvodoc.utils.creation import (
 
 from lingvodoc.utils.deletion import real_delete_perspective
 from lingvodoc.utils.search import translation_gist_search
+from pdb import set_trace as A
 
 
 # Setting up logging.
@@ -111,47 +113,65 @@ def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex.dbObject = cur_lexical_entry
     return lex
 
-def entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = True):
+def entries_with_entities(lexes, mode,
+                          is_edit_mode=True,
+                          created_entries=[],
+                          limit=0,
+                          offset=0,
+                          **query_args):
+
     if mode == 'debug':
         return [gql_lexicalentry(lex, None) for lex in lexes]
+
     lex_id_to_obj = dict()
     lexes_composite_list = list()
 
-    if check_perspective:
+    for lex_obj in (
+        lexes if isinstance(lexes, list) else
+        lexes.yield_per(100).all()):
 
-        for lex_obj in (
-            lexes if isinstance(lexes, list) else
-            lexes.yield_per(100).all()):
+        lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
+                                     lex_obj.parent_client_id, lex_obj.parent_object_id))
 
-            lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
-                                        lex_obj.parent_client_id, lex_obj.parent_object_id))
-            lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
-
-    else:
-
-        # If we don't need to check for perspective deletion, we don't need perspective ids.
-
-        for lex_obj in (
-            lexes if isinstance(lexes, list) else
-            lexes.yield_per(100).all()):
-
-            entry_id = (lex_obj.client_id, lex_obj.object_id)
-
-            lexes_composite_list.append(entry_id)
-            lex_id_to_obj[entry_id] = lex_obj
+        lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
 
     if mode == 'not_accepted':
-        accept = False
-        delete = False
+        query_args['accept'] = False
+        query_args['delete'] = False
 
-    entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                      publish=publish,
-                                                      accept=accept,
-                                                      delete=delete,
-                                                      check_perspective=check_perspective)
+    new_entities, old_entities, empty_lexes = (
+        dbLexicalEntry.graphene_track_multiple(
+            lexes_composite_list,
+            created_entries=created_entries,
+            **query_args))
 
-    ent_iter = itertools.chain(list(entities))
-    lexical_entries = list()
+    # Getting sets of hashable items
+    empty_lexes_set = set([tuple(lex) for lex in empty_lexes])
+    added_lexes_set = set([tuple(lex) for lex in created_entries])
+
+    # Calculating lists of old and newly added empty lexes
+    old_empty_lexes = empty_lexes_set - added_lexes_set if is_edit_mode else []
+    new_empty_lexes = empty_lexes_set & added_lexes_set
+
+    """
+    Finally we start to combine summary list of lexes in following sequence:
+    -- (non-empty) new_entities in any amount
+    -- new_empty_lexes in any amount and mode
+    -- old_empty_lexes sliced by 'limit' in edit mode
+    -- old_entities sliced by [offset : offset + limit]
+    """
+
+    lexical_entries = []
+
+    # We have empty lexes only if is_edit_mode
+    for lex_ids in old_empty_lexes:
+
+        lexical_entries.append(
+            gql_lexicalentry(
+                cur_lexical_entry = lex_id_to_obj[lex_ids],
+                cur_entities = []))
+
+    ent_iter = itertools.chain(list(old_entities))
 
     for lex_ids, entity_with_published in itertools.groupby(ent_iter, key = group_by_lex):
 
@@ -159,19 +179,57 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
             gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
             for x in entity_with_published]
 
-        lexical_entry = lex_id_to_obj.pop(lex_ids)
-
-        if (lexical_entry.client_id, lexical_entry.object_id) == lex_ids:
-
-            lexical_entries.append(
-                gql_lexicalentry(cur_lexical_entry = lexical_entry, cur_entities = gql_entities_list))
-
-    for new_lex in lex_id_to_obj.values():
-
         lexical_entries.append(
-            gql_lexicalentry(cur_lexical_entry = new_lex, cur_entities = []))
+            gql_lexicalentry(
+                cur_lexical_entry = lex_id_to_obj[lex_ids],
+                cur_entities = gql_entities_list))
 
-    return lexical_entries
+    # Pagination
+
+    total_entries = len(lexical_entries)
+
+    lexical_entries = lexical_entries[offset:]
+    if limit > 0:
+        lexical_entries = lexical_entries[:offset + limit]
+
+    # In any mode we show empty new lexes if any
+    # Adding them at the beginning of list
+
+    for lex_ids in new_empty_lexes:
+
+        lexical_entries.insert(0,
+            gql_lexicalentry(
+                cur_lexical_entry = lex_id_to_obj[lex_ids],
+                cur_entities = []))
+
+    # Add lexes with new_entities at the beginning of list
+
+    ent_iter = itertools.chain(list(new_entities))
+
+    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key = group_by_lex):
+
+        gql_entities_list = [
+            gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
+            for x in entity_with_published]
+
+        lexical_entries.insert(0,
+            gql_lexicalentry(
+                cur_lexical_entry = lex_id_to_obj[lex_ids],
+                cur_entities = gql_entities_list))
+
+    return lexical_entries, total_entries
+
+
+class PerspectivePage(graphene.ObjectType):
+
+    lexical_entries = graphene.List(LexicalEntry)
+    entries_total = graphene.Int()
+
+    dbType = dbPerspectivePage
+
+    class Meta:
+        pass
+
 
 class DictionaryPerspective(LingvodocObjectType):
     """
@@ -222,7 +280,25 @@ class DictionaryPerspective(LingvodocObjectType):
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     columns = graphene.List(Column)
 
-    lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID), mode=graphene.String())
+    lexical_entries = graphene.List(
+        LexicalEntry,
+        ids = graphene.List(LingvodocID),
+        mode = graphene.String())
+
+    perspective_page = graphene.Field(
+        PerspectivePage,
+        ids = graphene.List(LingvodocID),
+        mode = graphene.String(),
+        filter = graphene.String(),
+        is_regexp = graphene.Boolean(),
+        is_case_sens = graphene.Boolean(),
+        is_edit_mode = graphene.Boolean(),
+        is_ascending = graphene.Boolean(),
+        sort_by_field = LingvodocID(),
+        offset = graphene.Int(),
+        limit = graphene.Int(),
+        created_entries = graphene.List(LingvodocID))
+
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     roles = graphene.Field(UserAndOrganizationsRoles)
     role_check = graphene.Boolean(subject = graphene.String(required = True), action = graphene.String(required = True))
@@ -246,6 +322,8 @@ class DictionaryPerspective(LingvodocObjectType):
     new_adverb_data_count = graphene.Int()
 
     dbType = dbPerspective
+
+    entries_total = 0
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
@@ -511,7 +589,7 @@ class DictionaryPerspective(LingvodocObjectType):
         # Complete query for the perspective, excluding created_at which we already have.
 
         DBSession.execute(
-            'set extra_float_digits to 3;');
+            'set extra_float_digits to 3;')
 
         result = (
 
@@ -816,14 +894,14 @@ class DictionaryPerspective(LingvodocObjectType):
         return new_hash_count + (has_hash_count > ready_hash_count)
 
     @fetch_object()
-    def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
-                             position=1):
+    def resolve_lexical_entries(self, info, ids=None,
+                                mode=None, authors=None, clients=None,
+                                start_date=None, end_date=None, position=1,
+                                **query_args):
 
         if self.check_is_hidden_for_client(info):
             return []
 
-        result = list()
-        request = info.context.get('request')
         if mode == 'all':
             publish = None
             accept = True
@@ -859,11 +937,6 @@ class DictionaryPerspective(LingvodocObjectType):
         else:
             raise ResponseError(message="mode: <all|published|not_accepted|deleted|all_with_deleted>")
 
-        # dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, position=position, self_client_id=None,
-        #                                                self_object_id=None).first()
-        # if not dbcolumn:
-        #     dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, self_client_id=None,
-        #                                                self_object_id=None).first()
         lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
         if ids is not None:
             ids = list(ids)
@@ -871,10 +944,6 @@ class DictionaryPerspective(LingvodocObjectType):
         if authors or start_date or end_date:
             lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
 
-        # if publish is not None:
-        #     lexes = lexes.filter(dbPublishingEntity.published == publish)
-        # if accept is not None:
-        #     lexes = lexes.filter(dbPublishingEntity.accepted == accept)
         if delete is not None:
             if authors or start_date or end_date:
                 lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
@@ -890,20 +959,18 @@ class DictionaryPerspective(LingvodocObjectType):
         db_la_gist = translation_gist_search('Limited access')
         limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
-        if self.dbObject.state_translation_gist_client_id == limited_client_id and self.dbObject.state_translation_gist_object_id == limited_object_id and mode != 'not_accepted':
+        if (self.dbObject.state_translation_gist_client_id == limited_client_id and
+                self.dbObject.state_translation_gist_object_id == limited_object_id and
+                mode != 'not_accepted'):
+
             if not info.context.acl_check_if('view', 'lexical_entries_and_entities',
-                                   (self.dbObject.client_id, self.dbObject.object_id)):
+                                             (self.dbObject.client_id, self.dbObject.object_id)):
+
                 lexes = lexes.limit(20)
 
-        # lexes = lexes \
-        #     .order_by(func.min(case(
-        #     [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
-        #           dbEntity.field_object_id != dbcolumn.field_object_id),
-        #       'яяяяяя')],
-        #     else_=dbEntity.content))) \
-        #     .group_by(dbLexicalEntry)
-        lexical_entries = (
-            entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = False))
+        lexical_entries, self.entries_total = (
+            entries_with_entities(lexes, mode, accept=accept, delete=delete, publish=publish,
+                                  check_perspective = False, **query_args))
 
         # If we were asked for specific lexical entries, we try to return them in creation order.
 
@@ -912,6 +979,14 @@ class DictionaryPerspective(LingvodocObjectType):
 
         return lexical_entries
 
+    def resolve_perspective_page(
+            self,
+            info,
+            **query_args):
+
+        return PerspectivePage(
+            lexical_entries = self.resolve_lexical_entries(info, **query_args),
+            entries_total = self.entries_total)
 
     @fetch_object()
     def resolve_authors(self, info):
@@ -1186,7 +1261,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         if translation_gist_object_id:
             dbperspective.translation_gist_object_id = translation_gist_object_id  # TODO: refactor like dictionaries
         if parent_id:
-            # parent_client_id, parent_object_id = parent_id
+            parent_client_id, parent_object_id = parent_id
             # dbparent_dictionary = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id,
             #                                                               object_id=parent_object_id).first()
             dbparent_dictionary = CACHE.get(objects=
