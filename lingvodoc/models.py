@@ -2100,14 +2100,6 @@ class LexicalEntry(
         if delete is not None:
             entities_result = entities_result.filter(Entity.marked_for_deletion == delete)
 
-        # Pre-sorting
-
-        entities_result = entities_result.order_by(
-            Entity.parent_client_id,
-            Entity.parent_object_id,
-            Entity.client_id,
-            Entity.object_id)
-
         # Get new entities from entities_before_custom_filtering
 
         new_entities_result = (
@@ -2153,6 +2145,14 @@ class LexicalEntry(
                     entities_cte.c.parent_object_id,
                     desc(func.lower(entities_cte.c.order_content))
                 )
+
+        # Default sorting
+
+        old_entities_result = old_entities_result.order_by(
+            Entity.parent_client_id,
+            Entity.parent_object_id,
+            Entity.client_id,
+            Entity.object_id)
 
         return (
             new_entities_result,
