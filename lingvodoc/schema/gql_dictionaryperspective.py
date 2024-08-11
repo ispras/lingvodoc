@@ -140,15 +140,18 @@ def entries_with_entities(lexes, mode,
         query_args['delete'] = False
 
     new_entities, old_entities, empty_lexes = (
-        dbLexicalEntry.graphene_track_multiple(lexes_composite_list, created_entries, **query_args))
+        dbLexicalEntry.graphene_track_multiple(
+            lexes_composite_list,
+            created_entries=created_entries,
+            **query_args))
 
     # Getting sets of hashable items
     empty_lexes_set = set([tuple(lex) for lex in empty_lexes])
     added_lexes_set = set([tuple(lex) for lex in created_entries])
 
     # Calculating lists of old and newly added empty lexes
-    old_empty_lexes = list(list(lex) for lex in empty_lexes_set - added_lexes_set) if is_edit_mode else []
-    new_empty_lexes = list(list(lex) for lex in empty_lexes_set & added_lexes_set)
+    old_empty_lexes = empty_lexes_set - added_lexes_set if is_edit_mode else []
+    new_empty_lexes = empty_lexes_set & added_lexes_set
 
     """
     Finally we start to combine summary list of lexes in following sequence:
