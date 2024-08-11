@@ -239,7 +239,8 @@ class DictionaryPerspective(LingvodocObjectType):
         is_ascending = graphene.Boolean(),
         sort_by_field = LingvodocID(),
         offset = graphene.Int(),
-        limit = graphene.Int())
+        limit = graphene.Int(),
+        created_entries = graphene.List(LingvodocID))
 
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     roles = graphene.Field(UserAndOrganizationsRoles)

@@ -1930,6 +1930,7 @@ class LexicalEntry(
         is_edit_mode = False,
         is_case_sens = True,
         is_regexp = False,
+        created_entries = [],
         check_perspective = True):
 
         deleted_per = []
@@ -1994,7 +1995,7 @@ class LexicalEntry(
 
                     .filter(
                         tuple_(Tempo.client_id, Tempo.object_id)
-                            .notin_(filed_lexes))
+                            .notin_(filed_lexes).notin_(created_entries))
 
                     .all())
 
