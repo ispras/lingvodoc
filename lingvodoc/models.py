@@ -1960,10 +1960,11 @@ class LexicalEntry(
             client_id = Column(SLBigInteger(), primary_key=True)
             object_id = Column(SLBigInteger(), primary_key=True)
 
-        DBSession.execute(
-            Tempo.__table__
-                .insert()
-                .values(alive_lexes))
+        if alive_lexes:
+            DBSession.execute(
+                Tempo.__table__
+                    .insert()
+                    .values(alive_lexes))
 
         # We need just lexical entry and entity id and entity's content for sorting and filtering
 
