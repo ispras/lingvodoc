@@ -29,6 +29,8 @@ from sqlalchemy import (
     Table,
     tuple_)
 
+from sqlalchemy.sql.expression import nullsfirst, nullslast
+
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from sqlalchemy.ext.compiler import compiles
@@ -2046,9 +2048,10 @@ class LexicalEntry(
                         field_entities.c.parent_client_id.label('lex_client_id'),
                         field_entities.c.parent_object_id.label('lex_object_id'),
                         func.min(func.lower(field_entities.c.content)).label('first_entity'),
-                        func.max(func.lower(field_entities.c.content)).label('last_entity'))
+                        func.max(func.lower(field_entities.c.content)).label('last_entity'),
+                        func.count().label('count_entity'))
 
-                    .filter(func.length(field_entities.c.content) > 0)
+                    #.filter(func.length(field_entities.c.content) > 0)
 
                     .group_by('lex_client_id', 'lex_object_id')
 
@@ -2064,6 +2067,7 @@ class LexicalEntry(
                         entities_cte.c.object_id,
                         alpha_entities.c.first_entity,
                         alpha_entities.c.last_entity,
+                        alpha_entities.c.count_entity,
                         field_entities.c.content.label('order_content'))
 
                     .outerjoin(
@@ -2127,6 +2131,7 @@ class LexicalEntry(
 
                 old_entities_result = old_entities_result.order_by(
                     entities_cte.c.first_entity,
+                    nullsfirst(entities_cte.c.count_entity),  # for 'Paradigm and contexts' field
                     entities_cte.c.parent_client_id,
                     entities_cte.c.parent_object_id,
                     func.lower(entities_cte.c.order_content)
@@ -2136,6 +2141,7 @@ class LexicalEntry(
 
                 old_entities_result = old_entities_result.order_by(
                     desc(entities_cte.c.last_entity),
+                    nullslast(entities_cte.c.count_entity.desc()),  # for 'Paradigm and contexts' field
                     entities_cte.c.parent_client_id,
                     entities_cte.c.parent_object_id,
                     desc(func.lower(entities_cte.c.order_content))
