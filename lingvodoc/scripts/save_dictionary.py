@@ -1996,6 +1996,57 @@ class Save_Context(object):
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
 
+            # Now trying to use regexp for transcription and translation fields
+
+            if transcription_fid is None or translation_fid is None:
+
+                en_xcript_fid = None
+                en_xlat_fid = None
+
+                ru_xcript_fid = None
+                ru_xlat_fid = None
+
+                def has_word(word, text):
+                    return bool(re.search(r'\b' + word + r'\b', text))
+
+                for field_cid, field_oid, name_dict in field_name_info_list:
+
+                    if '2' in name_dict:
+
+                        en_name = (
+                            re.escape(name_dict['2']).lower())
+
+                        if (has_word("transcription", en_name) or
+                            has_word("word", en_name)):
+                            en_xcript_fid = (field_cid, field_oid)
+
+                        elif (has_word("translation", en_name) or
+                              has_word("meaning", en_name)):
+                            en_xlat_fid = (field_cid, field_oid)
+
+                    if '1' in name_dict:
+
+                        ru_name = (
+                            re.escape(name_dict['1']).lower())
+
+                        if (has_word("транскрипция", ru_name) or
+                            has_word("слово", ru_name)):
+                            ru_xcript_fid = (field_cid, field_oid)
+
+                        elif (has_word("перевод", ru_name) or
+                              has_word("значение", ru_name)):
+                            ru_xlat_fid = (field_cid, field_oid)
+
+                if en_xcript_fid is not None and en_xlat_fid is not None:
+
+                    transcription_fid = en_xcript_fid
+                    translation_fid = en_xlat_fid
+
+                elif ru_xcript_fid is not None and ru_xlat_fid is not None:
+
+                    transcription_fid = ru_xcript_fid
+                    translation_fid = ru_xlat_fid
+
             # Failed to get transcription & translation fields, we will get first three fields.
             if transcription_fid is None or translation_fid is None:
 
