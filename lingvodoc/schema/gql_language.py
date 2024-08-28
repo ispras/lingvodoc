@@ -1499,6 +1499,7 @@ class Language_Resolver(object):
 
         self.published_query = None
         self.published_condition_count = 0
+        self.from_to_dict = collections.defaultdict(list)
 
     def argument_value(self, argument):
 
