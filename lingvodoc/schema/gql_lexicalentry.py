@@ -3,8 +3,9 @@ import time
 import string
 import random
 import logging
+import re
 
-from sqlalchemy import tuple_
+from sqlalchemy import tuple_, func
 
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
@@ -34,7 +35,9 @@ from lingvodoc.models import (
     Group as dbGroup,
     LexicalEntry as dbLexicalEntry,
     User as dbUser,
-    BaseGroup as dbBaseGroup
+    BaseGroup as dbBaseGroup,
+    DictionaryPerspectiveToField as dbColumn,
+    TranslationAtom as dbTranslation
 )
 from lingvodoc.schema.gql_entity import Entity
 
@@ -63,7 +66,7 @@ class LexicalEntry(LingvodocObjectType):
      #moved_to            | text                        |
      #additional_metadata | jsonb                       |
     """
-    entities = graphene.List(Entity, mode=graphene.String())
+    entities = graphene.List(Entity, mode=graphene.String(), xfields=graphene.Boolean())
     dbType = dbLexicalEntry
     gql_Entities = None
 
@@ -79,7 +82,7 @@ class LexicalEntry(LingvodocObjectType):
 
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
-    def resolve_entities(self, info, mode='all'):
+    def resolve_entities(self, info, mode='all', xfields=False):
         if self.gql_Entities is not None:
             return self.gql_Entities
         if mode == 'all':
@@ -100,17 +103,20 @@ class LexicalEntry(LingvodocObjectType):
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
 
-        result = list()
-        entities = DBSession.query(dbEntity, dbPublishingEntity).\
-            filter(dbEntity.parent_client_id == self.dbObject.client_id,
-                   dbEntity.parent_object_id == self.dbObject.object_id,
-                   dbEntity.client_id == dbPublishingEntity.client_id,
-                   dbEntity.object_id == dbPublishingEntity.object_id)
+        entities = (
+            DBSession
+                .query(dbEntity, dbPublishingEntity)
+                .filter(
+                    dbEntity.parent_client_id == self.dbObject.client_id,
+                    dbEntity.parent_object_id == self.dbObject.object_id,
+                    dbEntity.client_id == dbPublishingEntity.client_id,
+                    dbEntity.object_id == dbPublishingEntity.object_id,
+                    dbEntity.marked_for_deletion is False))
+
         if publish is not None:
             entities = entities.filter(dbPublishingEntity.published == publish)
         if accept is not None:
             entities = entities.filter(dbPublishingEntity.accepted == accept)
-        entities = entities.filter(dbEntity.marked_for_deletion == False).yield_per(100)
 
         def graphene_entity(cur_entity, cur_publishing):
             ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
@@ -118,20 +124,64 @@ class LexicalEntry(LingvodocObjectType):
             ent.publishingentity = cur_publishing
             return ent
 
-        result = [graphene_entity(entity[0], entity[1]) for entity in entities]
-        # for db_entity in self.dbObject.entity:
-        #     publ = db_entity.publishingentity
-        #     if publish is not None and publ.published != publish:
-        #         continue
-        #     if accept is not None and publ.accepted != accept:
-        #         continue
-        #     if db_entity.marked_for_deletion:
-        #         continue
-        #     ent = Entity(id = [db_entity.client_id, db_entity.object_id])
-        #     ent.dbObject = db_entity
-        #     ent.publishingentity = publ
-        #     result.append(ent)
+        result = list()
 
+        if not xfields:
+
+            result.extend(graphene_entity(entity[0], entity[1]) for entity in entities.yield_per(100))
+
+        else:
+
+            fields_list = (
+                DBSession
+
+                    .query(
+                        dbField.client_id.label('field_cid'),
+                        dbField.object_id.label('field_oid'),
+                        func.group_concat(func.lower(dbTranslation.content), "; "),
+                        func.min(dbColumn.position).label('position'))
+
+                    .filter(
+                        dbColumn.parent_client_id == self.dbObject.client_id,
+                        dbColumn.parent_object_id == self.dbObject.object_id,
+                        dbColumn.marked_for_deletion is False,
+                        dbField.marked_for_deletion is False,
+                        dbTranslation.locale_id <= 2)
+
+                    .group_by('field_cid', 'field_oid')
+                    .order_by('position')
+                    .all())
+
+            def has_word(word, text):
+                return bool(re.search(r'\b' + word + r'\b', text))
+
+            xcript_fid = None
+            xlat_fid = None
+
+            for field_cid, field_oid, title in fields_list:
+
+                if xcript_fid is None:
+                    if (has_word("transcription", title) or
+                       has_word("word", title) or
+                       has_word("транскрипция", title) or
+                       has_word("слово", title)):
+                        xcript_fid = (field_cid, field_oid)
+
+                if xlat_fid is None:
+                    if (has_word("translation", title) or
+                       has_word("meaning", title) or
+                       has_word("перевод", title) or
+                       has_word("значение", title)):
+                        xlat_fid = (field_cid, field_oid)
+
+                if xcript_fid and xlat_fid:
+                    break
+
+            xcripts = entities.filter(dbEntity.field_id == xcript_fid)
+            xlats = entities.filter(dbEntity.field_id == xlat_fid)
+
+            result.extend(graphene_entity(entity[0], entity[1]) for entity in xcripts.yield_per(100))
+            result.extend(graphene_entity(entity[0], entity[1]) for entity in xlats.yield_per(100))
 
         return result
 
