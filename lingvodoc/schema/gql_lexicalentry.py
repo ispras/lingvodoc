@@ -37,7 +37,8 @@ from lingvodoc.models import (
     User as dbUser,
     BaseGroup as dbBaseGroup,
     DictionaryPerspectiveToField as dbColumn,
-    TranslationAtom as dbTranslation
+    TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist
 )
 from lingvodoc.schema.gql_entity import Entity
 
@@ -50,6 +51,7 @@ from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
 from uuid import uuid4
 
 from lingvodoc.cache.caching import CACHE
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -84,7 +86,8 @@ class LexicalEntry(LingvodocObjectType):
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info, mode='all', xfields=False):
         if self.gql_Entities is not None:
-            return self.gql_Entities
+            pass
+            #return self.gql_Entities
         if mode == 'all':
             publish = None
             accept = True
@@ -111,7 +114,7 @@ class LexicalEntry(LingvodocObjectType):
                     dbEntity.parent_object_id == self.dbObject.object_id,
                     dbEntity.client_id == dbPublishingEntity.client_id,
                     dbEntity.object_id == dbPublishingEntity.object_id,
-                    dbEntity.marked_for_deletion is False))
+                    dbEntity.marked_for_deletion == False))
 
         if publish is not None:
             entities = entities.filter(dbPublishingEntity.published == publish)
@@ -132,25 +135,31 @@ class LexicalEntry(LingvodocObjectType):
 
         else:
 
+            # Getting only transcriptions and translations
+
             fields_list = (
                 DBSession
 
                     .query(
                         dbField.client_id.label('field_cid'),
                         dbField.object_id.label('field_oid'),
-                        func.group_concat(func.lower(dbTranslation.content), "; "),
+                        func.array_agg(func.lower(dbTranslationAtom.content)),
                         func.min(dbColumn.position).label('position'))
 
                     .filter(
-                        dbColumn.parent_client_id == self.dbObject.client_id,
-                        dbColumn.parent_object_id == self.dbObject.object_id,
-                        dbColumn.marked_for_deletion is False,
-                        dbField.marked_for_deletion is False,
-                        dbTranslation.locale_id <= 2)
+                        dbColumn.parent_client_id == self.dbObject.parent_client_id,
+                        dbColumn.parent_object_id == self.dbObject.parent_object_id,
+                        dbTranslationAtom.parent_id == dbTranslationGist.id,
+                        dbField.translation_gist_id == dbTranslationGist.id,
+                        dbColumn.field_id == dbField.id,
+                        dbColumn.marked_for_deletion == False,
+                        dbField.marked_for_deletion == False,
+                        dbTranslationAtom.locale_id <= 2)
 
                     .group_by('field_cid', 'field_oid')
                     .order_by('position')
                     .all())
+            A()
 
             def has_word(word, text):
                 return bool(re.search(r'\b' + word + r'\b', text))
@@ -158,7 +167,9 @@ class LexicalEntry(LingvodocObjectType):
             xcript_fid = None
             xlat_fid = None
 
-            for field_cid, field_oid, title in fields_list:
+            for field_cid, field_oid, title, _ in fields_list:
+
+                title = "; ".join(title)
 
                 if xcript_fid is None:
                     if (has_word("transcription", title) or
@@ -176,6 +187,8 @@ class LexicalEntry(LingvodocObjectType):
 
                 if xcript_fid and xlat_fid:
                     break
+
+            A()
 
             xcripts = entities.filter(dbEntity.field_id == xcript_fid)
             xlats = entities.filter(dbEntity.field_id == xlat_fid)
