@@ -48,6 +48,10 @@ from lingvodoc.utils.creation import create_lexicalentry
 from lingvodoc.utils.deletion import real_delete_entity
 from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
+
+# Dirty debugging!
+from lingvodoc.scripts.save_dictionary import get_json_tree
+
 from uuid import uuid4
 
 from lingvodoc.cache.caching import CACHE
@@ -85,6 +89,11 @@ class LexicalEntry(LingvodocObjectType):
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info, mode='all', xfields=False):
+
+        # Dirty debugging!
+        if xfields:
+            get_json_tree(only_in_toc=True)
+
         if self.gql_Entities is not None:
             pass
             #return self.gql_Entities
@@ -127,80 +136,7 @@ class LexicalEntry(LingvodocObjectType):
             ent.publishingentity = cur_publishing
             return ent
 
-        result = list()
-
-        if not xfields:
-
-            result.extend(graphene_entity(entity[0], entity[1]) for entity in entities.yield_per(100))
-
-        else:
-
-            # Getting only transcriptions and translations
-
-            fields_list = (
-                DBSession
-
-                    .query(
-                        dbField.client_id.label('field_cid'),
-                        dbField.object_id.label('field_oid'),
-                        func.array_agg(func.lower(dbTranslationAtom.content)),
-                        func.min(dbColumn.position).label('position'))
-
-                    .filter(
-                        dbColumn.parent_client_id == self.dbObject.parent_client_id,
-                        dbColumn.parent_object_id == self.dbObject.parent_object_id,
-                        dbTranslationAtom.parent_id == dbTranslationGist.id,
-                        dbField.translation_gist_id == dbTranslationGist.id,
-                        dbColumn.field_id == dbField.id,
-                        dbColumn.marked_for_deletion == False,
-                        dbField.marked_for_deletion == False,
-                        dbTranslationAtom.locale_id <= 2)
-
-                    .group_by('field_cid', 'field_oid')
-                    .order_by('position')
-                    .all())
-            A()
-
-            def has_word(word, text):
-                return bool(re.search(r'\b' + word + r'\b', text))
-
-            xcript_fid = None
-            xlat_fid = None
-
-            for field_cid, field_oid, title, _ in fields_list:
-
-                title = "; ".join(title)
-
-                if xcript_fid is None:
-                    if (has_word("transcription", title) or
-                       has_word("word", title) or
-                       has_word("транскрипция", title) or
-                       has_word("слово", title)):
-                        xcript_fid = (field_cid, field_oid)
-
-                if xlat_fid is None:
-                    if (has_word("translation", title) or
-                       has_word("meaning", title) or
-                       has_word("перевод", title) or
-                       has_word("значение", title)):
-                        xlat_fid = (field_cid, field_oid)
-
-                if xcript_fid and xlat_fid:
-                    break
-
-            A()
-
-            xcripts = entities.filter(dbEntity.field_id == xcript_fid)
-            xlats = entities.filter(dbEntity.field_id == xlat_fid)
-
-            result.extend(graphene_entity(entity[0], entity[1]) for entity in xcripts.yield_per(100))
-            result.extend(graphene_entity(entity[0], entity[1]) for entity in xlats.yield_per(100))
-
-        return result
-
-
-
-
+        return [graphene_entity(entity[0], entity[1]) for entity in entities.yield_per(100)]
 
 
 class CreateLexicalEntry(graphene.Mutation):

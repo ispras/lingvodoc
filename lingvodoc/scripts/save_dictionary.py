@@ -32,7 +32,8 @@ from pydub import AudioSegment
 
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy import and_, create_engine, func, literal
+from sqlalchemy import and_, create_engine, func, literal, cast
+from sqlalchemy.dialects.postgresql import JSONB
 
 from lingvodoc.models import (
     Client,
@@ -3238,3 +3239,171 @@ def save_dictionary(
     session.commit()
     engine.dispose()
 
+
+def get_json_tree(only_in_toc=True):
+
+    LanguageName, DictionaryName, PerspectiveName = (
+        aliased(TranslationAtom), aliased(TranslationAtom), aliased(TranslationAtom))
+
+    languages_list = (
+        SyncDBSession
+            .query(
+                Language.client_id,
+                Language.object_id,
+                literal(0).label('level'),
+                func.array_agg(LanguageName.content).label('title'))
+
+            .filter(
+                Language.parent_client_id == None,
+                Language.parent_object_id == None,
+                Language.marked_for_deletion == False,
+                Language.translation_gist_id == TranslationGist.id,
+                TranslationGist.marked_for_deletion == False,
+                LanguageName.parent_id == TranslationGist.id,
+                LanguageName.marked_for_deletion == False)
+
+            .group_by(
+                Language.client_id,
+                Language.object_id)
+
+            .cte('languages_list', recursive=True))
+
+    parLanguage = aliased(languages_list)
+    subLanguage = aliased(Language)
+
+    languages_list = languages_list.union_all(
+        SyncDBSession
+            .query(
+                subLanguage.client_id,
+                subLanguage.object_id,
+                (parLanguage.c.level + 1).label("level"),
+                func.array_agg(LanguageName.content).label('title'))
+
+            .filter(
+                subLanguage.parent_client_id == parLanguage.c.client_id,
+                subLanguage.parent_object_id == parLanguage.c.object_id,
+                subLanguage.marked_for_deletion == False,
+                subLanguage.translation_gist_id == TranslationGist.id,
+                TranslationGist.marked_for_deletion == False,
+                LanguageName.parent_id == TranslationGist.id,
+                LanguageName.marked_for_deletion == False)
+
+            .group_by(
+                subLanguage.client_id,
+                subLanguage.object_id)
+
+    )
+
+    extra_conditions = [Language.additional_metadata['toc_mark'] == cast('true', JSONB)] if only_in_toc else []
+
+    languages_tree = (
+        SyncDBSession
+            .query(
+                Language.client_id,
+                Language.object_id,
+                languages_list.c.level)
+
+            .filter(*extra_conditions)
+            .select_entity_from(languages_list)
+            .all())
+
+    A()
+
+    """
+    perspectives_list = (
+        SyncDBSession
+            .query(
+
+
+                DictionaryPerspective.parent_client_id,
+                DictionaryPerspective.parent_object_id,
+                func.array_agg(DictionaryName.content),
+
+                DictionaryPerspective.client_id,
+                DictionaryPerspective.object_id,
+                func.array_agg(PerspectiveName.content),
+                )
+
+
+        )
+
+    )
+
+
+    # Getting only transcriptions and translations
+
+    perspective_cid = 0
+    perspective_oid = 0
+
+    fields_list = (
+        SyncDBSession
+
+            .query(
+                Field.client_id.label('field_cid'),
+                Field.object_id.label('field_oid'),
+                func.array_agg(func.lower(TranslationAtom.content)),
+                func.min(DictionaryPerspectiveToField.position).label('position'))
+
+            .filter(
+                DictionaryPerspectiveToField.parent_client_id == perspective_cid,
+                DictionaryPerspectiveToField.parent_object_id == perspective_oid,
+                TranslationAtom.parent_id == TranslationGist.id,
+                Field.translation_gist_id == TranslationGist.id,
+                DictionaryPerspectiveToField.field_id == Field.id,
+                DictionaryPerspectiveToField.marked_for_deletion == False,
+                Field.marked_for_deletion == False,
+                TranslationAtom.locale_id <= 2)
+
+            .group_by('field_cid', 'field_oid')
+            .order_by('position')
+            .all())
+
+
+    def has_word(word, text):
+        return bool(re.search(r'\b' + word + r'\b', text))
+
+
+    xcript_fid = None
+    xlat_fid = None
+    with_cognates = False
+
+    for field_cid, field_oid, title, _ in fields_list:
+
+        title = "; ".join(title)
+
+        if xcript_fid is None and not has_word("affix", title):
+            if (has_word("transcription", title) or
+                    has_word("word", title) or
+                    has_word("транскрипция", title) or
+                    has_word("слово", title)):
+                xcript_fid = (field_cid, field_oid)
+                xcript_fname = title
+
+        if xlat_fid is None and not has_word("affix", title):
+            if (has_word("translation", title) or
+                    has_word("meaning", title) or
+                    has_word("перевод", title) or
+                    has_word("значение", title)):
+                xlat_fid = (field_cid, field_oid)
+                xlat_fname = title
+
+        if ((field_cid, field_oid) == (66, 25)):
+            with_cognates = True
+
+        if xcript_fid and xlat_fid and with_cognates:
+            break
+
+    if xcript_fid and xlat_fid and with_cognates:
+        xcripts = entities.filter(dbEntity.field_id == xcript_fid).yield_per(100)
+        xlats = entities.filter(dbEntity.field_id == xlat_fid).yield_per(100)
+        linked_group = (
+            DBSession
+                .execute(
+                f'select * from linked_group(66, 25, {self.dbObject.client_id}, {self.dbObject.object_id})')
+                .fetchall())
+
+        print(f"Perspective_id: {(self.dbObject.parent_client_id, self.dbObject.parent_object_id)}")
+        print(f"{xcript_fname}: {' | '.join(xcript[0].content for xcript in xcripts)}")
+        print(f"{xlat_fname}: {' | '.join(xlat[0].content for xlat in xlats)}")
+        print(f"Cognate_groups: {str(linked_group)}\n")
+    """
