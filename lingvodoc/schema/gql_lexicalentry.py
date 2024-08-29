@@ -95,8 +95,7 @@ class LexicalEntry(LingvodocObjectType):
             get_json_tree(only_in_toc=True)
 
         if self.gql_Entities is not None:
-            pass
-            #return self.gql_Entities
+            return self.gql_Entities
         if mode == 'all':
             publish = None
             accept = True

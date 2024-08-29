@@ -32,8 +32,7 @@ from pydub import AudioSegment
 
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy import and_, create_engine, func, literal, cast
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import and_, create_engine, func, literal
 
 from lingvodoc.models import (
     Client,
@@ -3242,94 +3241,146 @@ def save_dictionary(
 
 def get_json_tree(only_in_toc=True):
 
-    LanguageName, DictionaryName, PerspectiveName = (
-        aliased(TranslationAtom), aliased(TranslationAtom), aliased(TranslationAtom))
+    # Getting root languages
 
-    languages_list = (
+    language_list = (
         SyncDBSession
             .query(
-                Language.client_id,
-                Language.object_id,
-                literal(0).label('level'),
-                func.array_agg(LanguageName.content).label('title'))
+                Language,
+                literal(0).label('level'))
 
             .filter(
                 Language.parent_client_id == None,
                 Language.parent_object_id == None,
-                Language.marked_for_deletion == False,
-                Language.translation_gist_id == TranslationGist.id,
-                TranslationGist.marked_for_deletion == False,
-                LanguageName.parent_id == TranslationGist.id,
-                LanguageName.marked_for_deletion == False)
+                Language.marked_for_deletion == False)
 
-            .group_by(
-                Language.client_id,
-                Language.object_id)
+            .cte('language_list', recursive=True))
 
-            .cte('languages_list', recursive=True))
-
-    parLanguage = aliased(languages_list)
+    parLanguage = aliased(language_list)
     subLanguage = aliased(Language)
 
-    languages_list = languages_list.union_all(
+    # Recursively getting tree of languages
+
+    language_list = language_list.union_all(
         SyncDBSession
             .query(
-                subLanguage.client_id,
-                subLanguage.object_id,
-                (parLanguage.c.level + 1).label("level"),
-                func.array_agg(LanguageName.content).label('title'))
+                subLanguage,
+                (parLanguage.c.level + 1).label("level"))
 
             .filter(
                 subLanguage.parent_client_id == parLanguage.c.client_id,
                 subLanguage.parent_object_id == parLanguage.c.object_id,
-                subLanguage.marked_for_deletion == False,
-                subLanguage.translation_gist_id == TranslationGist.id,
-                TranslationGist.marked_for_deletion == False,
-                LanguageName.parent_id == TranslationGist.id,
-                LanguageName.marked_for_deletion == False)
+                subLanguage.marked_for_deletion == False))
 
-            .group_by(
-                subLanguage.client_id,
-                subLanguage.object_id)
+    if_only_in_toc = [language_list.c.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
 
-    )
+    get_translation_atom = [
+        TranslationGist.marked_for_deletion == False,
+        TranslationAtom.parent_id == TranslationGist.id,
+        TranslationAtom.marked_for_deletion == False ]
 
-    extra_conditions = [Language.additional_metadata['toc_mark'] == cast('true', JSONB)] if only_in_toc else []
-
-    languages_tree = (
+    language_tree = (
         SyncDBSession
             .query(
-                Language.client_id,
-                Language.object_id,
-                languages_list.c.level)
+                language_list.c.client_id.label('language_cid'),
+                language_list.c.object_id.label('language_oid'),
+                func.array_agg(TranslationAtom.content).label('language_title'),
+                func.min(language_list.c.level).label('language_level'))
 
-            .filter(*extra_conditions)
-            .select_entity_from(languages_list)
-            .all())
+            .filter(
+                language_list.c.translation_gist_client_id == TranslationGist.client_id,
+                language_list.c.translation_gist_object_id == TranslationGist.object_id,
+                *get_translation_atom, *if_only_in_toc)
+
+            .group_by('language_cid', 'language_oid')
+
+            .cte())
+
+    # Getting dictionaries with self titles
+
+    dictionary_tree = (
+        SyncDBSession
+            .query(
+                language_tree.c.language_cid,
+                language_tree.c.language_oid,
+                language_tree.c.language_title,
+                language_tree.c.language_level,
+
+                Dictionary.client_id.label('dictionary_cid'),
+                Dictionary.object_id.label('dictionary_oid'),
+                func.array_agg(TranslationAtom.content).label('dictionary_title'))
+
+            .filter(
+                Dictionary.parent_client_id == language_tree.c.language_cid,
+                Dictionary.parent_object_id == language_tree.c.language_oid,
+                Dictionary.marked_for_deletion == False,
+                Dictionary.translation_gist_id == TranslationGist.id,
+                *get_translation_atom)
+
+            .group_by(
+                language_tree.c.language_cid,
+                language_tree.c.language_oid,
+                language_tree.c.language_title,
+                language_tree.c.language_level,
+                'dictionary_cid',
+                'dictionary_oid')
+
+            .cte())
+
+    # Getting perspectives with self titles
+
+    perspective_tree = (
+        SyncDBSession
+            .query(
+                dictionary_tree.c.language_cid,
+                dictionary_tree.c.language_oid,
+                dictionary_tree.c.language_title,
+                dictionary_tree.c.language_level,
+
+                dictionary_tree.c.dictionary_cid,
+                dictionary_tree.c.dictionary_oid,
+                dictionary_tree.c.dictionary_title,
+
+                DictionaryPerspective.client_id.label('perspective_cid'),
+                DictionaryPerspective.object_id.label('perspective_oid'),
+                func.array_agg(TranslationAtom.content).label('perspective_title'))
+
+            .filter(
+                DictionaryPerspective.parent_client_id == dictionary_tree.c.dictionary_cid,
+                DictionaryPerspective.parent_object_id == dictionary_tree.c.dictionary_oid,
+                DictionaryPerspective.marked_for_deletion == False,
+                DictionaryPerspective.translation_gist_id == TranslationGist.id,
+                *get_translation_atom)
+
+            .group_by(
+                dictionary_tree.c.language_cid,
+                dictionary_tree.c.language_oid,
+                dictionary_tree.c.language_title,
+                dictionary_tree.c.language_level,
+
+                dictionary_tree.c.dictionary_cid,
+                dictionary_tree.c.dictionary_oid,
+                dictionary_tree.c.dictionary_title,
+
+                'perspective_cid',
+                'perspective_oid')
+
+            .order_by(
+                dictionary_tree.c.language_level,
+                dictionary_tree.c.language_cid,
+                dictionary_tree.c.language_oid,
+
+                dictionary_tree.c.dictionary_cid,
+                dictionary_tree.c.dictionary_oid,
+
+                'perspective_cid',
+                'perspective_oid')
+
+            .yield_per(100))
 
     A()
 
     """
-    perspectives_list = (
-        SyncDBSession
-            .query(
-
-
-                DictionaryPerspective.parent_client_id,
-                DictionaryPerspective.parent_object_id,
-                func.array_agg(DictionaryName.content),
-
-                DictionaryPerspective.client_id,
-                DictionaryPerspective.object_id,
-                func.array_agg(PerspectiveName.content),
-                )
-
-
-        )
-
-    )
-
-
     # Getting only transcriptions and translations
 
     perspective_cid = 0
