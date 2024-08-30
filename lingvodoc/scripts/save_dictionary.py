@@ -3293,7 +3293,9 @@ def get_json_tree(only_in_toc=True):
                 language_list.c.translation_gist_object_id == TranslationGist.object_id,
                 *get_translation_atom, *if_only_in_toc)
 
-            .group_by('language_cid', 'language_oid')
+            .group_by(
+                'language_cid',
+                'language_oid')
 
             .cte())
 
@@ -3302,11 +3304,8 @@ def get_json_tree(only_in_toc=True):
     dictionary_tree = (
         SyncDBSession
             .query(
-                language_tree.c.language_level,
-                language_tree.c.language_cid,
-                language_tree.c.language_oid,
-                language_tree.c.language_title,
-
+                Dictionary.parent_client_id.label('language_cid'),
+                Dictionary.parent_object_id.label('language_oid'),
                 Dictionary.client_id.label('dictionary_cid'),
                 Dictionary.object_id.label('dictionary_oid'),
                 func.array_agg(TranslationAtom.content).label('dictionary_title'))
@@ -3319,11 +3318,8 @@ def get_json_tree(only_in_toc=True):
                 *get_translation_atom)
 
             .group_by(
-                language_tree.c.language_level,
-                language_tree.c.language_cid,
-                language_tree.c.language_oid,
-                language_tree.c.language_title,
-
+                'language_cid',
+                'language_oid',
                 'dictionary_cid',
                 'dictionary_oid')
 
@@ -3334,15 +3330,8 @@ def get_json_tree(only_in_toc=True):
     perspective_tree = (
         SyncDBSession
             .query(
-                dictionary_tree.c.language_level,
-                dictionary_tree.c.language_cid,
-                dictionary_tree.c.language_oid,
-                dictionary_tree.c.language_title,
-
-                dictionary_tree.c.dictionary_cid,
-                dictionary_tree.c.dictionary_oid,
-                dictionary_tree.c.dictionary_title,
-
+                DictionaryPerspective.parent_client_id.label('dictionary_cid'),
+                DictionaryPerspective.parent_object_id.label('dictionary_oid'),
                 DictionaryPerspective.client_id.label('perspective_cid'),
                 DictionaryPerspective.object_id.label('perspective_oid'),
                 func.array_agg(TranslationAtom.content).label('perspective_title'))
@@ -3355,28 +3344,47 @@ def get_json_tree(only_in_toc=True):
                 *get_translation_atom)
 
             .group_by(
-                dictionary_tree.c.language_level,
-                dictionary_tree.c.language_cid,
-                dictionary_tree.c.language_oid,
-                dictionary_tree.c.language_title,
+                'dictionary_cid',
+                'dictionary_oid',
+                'perspective_cid',
+                'perspective_oid')
+
+            .cte())
+
+    # Summary tree
+
+    summary_tree = (
+        SyncDBSession
+            .query(
+                language_tree.c.language_level,
+                language_tree.c.language_cid,
+                language_tree.c.language_oid,
+                language_tree.c.language_title,
 
                 dictionary_tree.c.dictionary_cid,
                 dictionary_tree.c.dictionary_oid,
                 dictionary_tree.c.dictionary_title,
 
-                'perspective_cid',
-                'perspective_oid')
+                perspective_tree.c.perspective_cid,
+                perspective_tree.c.perspective_oid,
+                perspective_tree.c.perspective_title)
+
+            .filter(
+                language_tree.c.language_cid == dictionary_tree.c.language_cid,
+                language_tree.c.language_oid == dictionary_tree.c.language_oid,
+                dictionary_tree.c.dictionary_cid == perspective_tree.c.dictionary_cid,
+                dictionary_tree.c.dictionary_oid == perspective_tree.c.dictionary_oid)
 
             .order_by(
-                dictionary_tree.c.language_level,
-                dictionary_tree.c.language_cid,
-                dictionary_tree.c.language_oid,
+                language_tree.c.language_level,
+                language_tree.c.language_cid,
+                language_tree.c.language_oid,
 
                 dictionary_tree.c.dictionary_cid,
                 dictionary_tree.c.dictionary_oid,
 
-                'perspective_cid',
-                'perspective_oid')
+                perspective_tree.c.perspective_cid,
+                perspective_tree.c.perspective_oid,)
 
             .yield_per(100))
 
