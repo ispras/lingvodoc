@@ -3403,13 +3403,15 @@ def has_etymology(field_cte):
     def has_word(word, text):
         return bool(re.search(r'\b' + word + r'\b', text))
 
-    # Getting only transcriptions and translations
+    # Group fields by perspective
+    fields_by_perspective = itertools.groupby(
+        SyncDBSession.query(field_cte).yield_per(100),
+        key=lambda x: (x[0], x[1]))
 
-    fields_chain = itertools.chain(SyncDBSession.query(field_cte).yield_per(100))
-    fields_by_perspective = itertools.groupby(fields_chain, key=lambda x: (x[0], x[1]))
+    for perspective_id, fields_group in fields_by_perspective:
 
-    for perspective_id, fields_iter in fields_by_perspective:
-        fields_list = sorted(list(fields_iter), key=lambda x: x[5])
+        # Sorting fields by position
+        fields_list = sorted(list(fields_group), key=lambda x: x[5])
 
         xcript_fid = None
         xlat_fid = None
@@ -3439,24 +3441,56 @@ def has_etymology(field_cte):
                 with_cognates = True
 
             if xcript_fid and xlat_fid and with_cognates:
-                A()
                 break
 
-    """
         if xcript_fid and xlat_fid and with_cognates:
-            xcripts = entities.filter(dbEntity.field_id == xcript_fid).yield_per(100)
-            xlats = entities.filter(dbEntity.field_id == xlat_fid).yield_per(100)
-            linked_group = (
-                DBSession
-                    .execute(
-                    f'select * from linked_group(66, 25, {self.dbObject.client_id}, {self.dbObject.object_id})')
-                    .fetchall())
 
-            print(f"Perspective_id: {(self.dbObject.parent_client_id, self.dbObject.parent_object_id)}")
-            print(f"{xcript_fname}: {' | '.join(xcript[0].content for xcript in xcripts)}")
-            print(f"{xlat_fname}: {' | '.join(xlat[0].content for xlat in xlats)}")
-            print(f"Cognate_groups: {str(linked_group)}\n")
+            entities = (
+                SyncDBSession
+                    .query(
+                        LexicalEntry.client_id,
+                        LexicalEntry.object_id,
+                        Entity.field_id,
+                        Entity.content)
 
+                    .filter(
+                        LexicalEntry.parent_id == perspective_id,
+                        Entity.parent_id == LexicalEntry.id,
+                        Entity.field_id.in_([xcript_fid, xlat_fid]),
+                        Entity.marked_for_deletion == False,
+                        Entity.client_id == PublishingEntity.client_id,
+                        Entity.object_id == PublishingEntity.object_id,
+                        PublishingEntity.published == True,
+                        PublishingEntity.accepted == True)
+
+                    .yield_per(100))
+
+            entities_by_lex = itertools.groupby(entities, key=lambda x: (x[0], x[1]))
+
+            for lex_id, entities_group in entities_by_lex:
+
+                linked_group = (
+                    SyncDBSession
+                        .execute(
+                            f'select * from linked_group(66, 25, {lex_id[0]}, {lex_id[1]})')
+                        .fetchall())
+
+                entities_by_field = itertools.groupby(entities_group, key = lambda x: (x[2], x[3]))
+
+                for field_id, group in entities_by_field:
+
+                    field_text = [x[4] for x in group]
+
+                    if field_id == xcript_fid:
+                        xcript_text = field_text
+                    elif field_id == xlat_fid:
+                        xlat_text = field_text
+
+                print(f"Perspective_id: {perspective_id}")
+                print(f"{xcript_fname}: {xcript_text}")
+                print(f"{xlat_fname}: {xlat_text}")
+                print(f"Cognate_groups: {str(linked_group)}\n")
+    """
     # Summary tree
 
     summary_сte = (
