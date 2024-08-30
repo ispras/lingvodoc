@@ -3405,75 +3405,57 @@ def has_etymology(field_cte):
 
     # Getting only transcriptions and translations
 
-    field_query = (
-        SyncDBSession
-            .query(
-                field_cte.c.perspective_cid,
-                field_cte.c.perspective_oid,
-                func.array_agg(tuple_(
-                    field_cte.c.field_position,
-                    field_cte.c.field_cid,
-                    field_cte.c.field_oid,
-                    field_cte.c.field_title)
-                ).label('field_summary'))
+    fields_chain = itertools.chain(SyncDBSession.query(field_cte).yield_per(100))
+    fields_by_perspective = itertools.groupby(fields_chain, key=lambda x: (x[0], x[1]))
 
-            .group_by(
-                field_cte.c.perspective_cid,
-                field_cte.c.perspective_oid)
+    for perspective_id, fields_iter in fields_by_perspective:
+        fields_list = sorted(list(fields_iter), key=lambda x: x[5])
 
-            .order_by(
-                field_cte.c.perspective_cid,
-                field_cte.c.perspective_oid,
-                'field_summary')
+        xcript_fid = None
+        xlat_fid = None
+        with_cognates = False
 
-            .yield_per(100))
+        for _, _, field_cid, field_oid, title, _ in fields_list:
 
-    A()
+            title = "; ".join(title)
+
+            if xcript_fid is None and not has_word("affix", title):
+                if (has_word("transcription", title) or
+                        has_word("word", title) or
+                        has_word("транскрипция", title) or
+                        has_word("слово", title)):
+                    xcript_fid = (field_cid, field_oid)
+                    xcript_fname = title
+
+            if xlat_fid is None and not has_word("affix", title):
+                if (has_word("translation", title) or
+                        has_word("meaning", title) or
+                        has_word("перевод", title) or
+                        has_word("значение", title)):
+                    xlat_fid = (field_cid, field_oid)
+                    xlat_fname = title
+
+            if ((field_cid, field_oid) == (66, 25)):
+                with_cognates = True
+
+            if xcript_fid and xlat_fid and with_cognates:
+                A()
+                break
 
     """
-    xcript_fid = None
-    xlat_fid = None
-    with_cognates = False
-
-    for field_cid, field_oid, title, _ in fields_list:
-
-        title = "; ".join(title)
-
-        if xcript_fid is None and not has_word("affix", title):
-            if (has_word("transcription", title) or
-                    has_word("word", title) or
-                    has_word("транскрипция", title) or
-                    has_word("слово", title)):
-                xcript_fid = (field_cid, field_oid)
-                xcript_fname = title
-
-        if xlat_fid is None and not has_word("affix", title):
-            if (has_word("translation", title) or
-                    has_word("meaning", title) or
-                    has_word("перевод", title) or
-                    has_word("значение", title)):
-                xlat_fid = (field_cid, field_oid)
-                xlat_fname = title
-
-        if ((field_cid, field_oid) == (66, 25)):
-            with_cognates = True
-
         if xcript_fid and xlat_fid and with_cognates:
-            break
+            xcripts = entities.filter(dbEntity.field_id == xcript_fid).yield_per(100)
+            xlats = entities.filter(dbEntity.field_id == xlat_fid).yield_per(100)
+            linked_group = (
+                DBSession
+                    .execute(
+                    f'select * from linked_group(66, 25, {self.dbObject.client_id}, {self.dbObject.object_id})')
+                    .fetchall())
 
-    if xcript_fid and xlat_fid and with_cognates:
-        xcripts = entities.filter(dbEntity.field_id == xcript_fid).yield_per(100)
-        xlats = entities.filter(dbEntity.field_id == xlat_fid).yield_per(100)
-        linked_group = (
-            DBSession
-                .execute(
-                f'select * from linked_group(66, 25, {self.dbObject.client_id}, {self.dbObject.object_id})')
-                .fetchall())
-
-        print(f"Perspective_id: {(self.dbObject.parent_client_id, self.dbObject.parent_object_id)}")
-        print(f"{xcript_fname}: {' | '.join(xcript[0].content for xcript in xcripts)}")
-        print(f"{xlat_fname}: {' | '.join(xlat[0].content for xlat in xlats)}")
-        print(f"Cognate_groups: {str(linked_group)}\n")
+            print(f"Perspective_id: {(self.dbObject.parent_client_id, self.dbObject.parent_object_id)}")
+            print(f"{xcript_fname}: {' | '.join(xcript[0].content for xcript in xcripts)}")
+            print(f"{xlat_fname}: {' | '.join(xlat[0].content for xlat in xlats)}")
+            print(f"Cognate_groups: {str(linked_group)}\n")
 
     # Summary tree
 
