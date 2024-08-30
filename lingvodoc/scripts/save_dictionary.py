@@ -3242,8 +3242,9 @@ def save_dictionary(
 def get_json_tree(only_in_toc=True):
 
     cte_dict = get_cte_dict(only_in_toc)
-    perspective_list = has_etymology(cte_dict['field_cte'])
-    #json = compile_json(cte_dict)
+    lex_iterator = lex_with_etymology(cte_dict['field_cte'])
+    A()
+    #json = compile_json(cte_dict, lex_iterator)
 
 
 # Getting cte for languages, dictionaries, perspectives and fields
@@ -3401,7 +3402,7 @@ def get_cte_dict(only_in_toc):
 
 # Getting perspectives with transcription, translation and cognates
 
-def has_etymology(field_cte):
+def lex_with_etymology(field_cte):
 
     def has_word(word, text):
         return bool(re.search(r'\b' + word + r'\b', text))
@@ -3416,8 +3417,7 @@ def has_etymology(field_cte):
         # Sorting fields by position
         fields_list = sorted(list(fields_group), key=lambda x: x[5])
 
-        xcript_fid = None
-        xlat_fid = None
+        xcript_fid, xlat_fid, xcript_fname, xlat_fname, xcript_text, xlat_text = [None] * 6
         with_cognates = False
 
         for _, _, field_cid, field_oid, title, _, _ in fields_list:
@@ -3489,10 +3489,22 @@ def has_etymology(field_cte):
                     elif field_id == xlat_fid:
                         xlat_text = field_text
 
+                """
                 print(f"Perspective_id: {perspective_id}")
                 print(f"{xcript_fname}: {xcript_text}")
                 print(f"{xlat_fname}: {xlat_text}")
                 print(f"Cognate_groups: {str(linked_group)}\n")
+                """
+
+                # Return current found lexical entry with perspective_id
+
+                yield {
+                    (xcript_fid, xcript_fname): xcript_text,
+                    (xlat_fid, xlat_fname): xlat_text,
+                    "linked_groups": str(linked_group)
+                }, perspective_id
+
+
     """
     # Summary tree
 
