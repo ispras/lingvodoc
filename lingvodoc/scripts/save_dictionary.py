@@ -3241,9 +3241,18 @@ def save_dictionary(
 
 def get_json_tree(only_in_toc=True):
 
+    cte_dict = get_cte_dict(only_in_toc)
+    perspective_list = has_etymology(cte_dict['field_cte'])
+    #json = compile_json(cte_dict)
+
+
+# Getting cte for languages, dictionaries, perspectives and fields
+
+def get_cte_dict(only_in_toc):
+
     # Getting root languages
 
-    language_list = (
+    language_init = (
         SyncDBSession
             .query(
                 Language,
@@ -3254,25 +3263,25 @@ def get_json_tree(only_in_toc=True):
                 Language.parent_object_id == None,
                 Language.marked_for_deletion == False)
 
-            .cte('language_list', recursive=True))
+            .cte(recursive=True))
 
-    parLanguage = aliased(language_list)
+    prnLanguage = aliased(language_init)
     subLanguage = aliased(Language)
 
     # Recursively getting tree of languages
 
-    language_list = language_list.union_all(
+    language_step = language_init.union_all(
         SyncDBSession
             .query(
                 subLanguage,
-                (parLanguage.c.level + 1).label("level"))
+                (prnLanguage.c.level + 1).label("level"))
 
             .filter(
-                subLanguage.parent_client_id == parLanguage.c.client_id,
-                subLanguage.parent_object_id == parLanguage.c.object_id,
+                subLanguage.parent_client_id == prnLanguage.c.client_id,
+                subLanguage.parent_object_id == prnLanguage.c.object_id,
                 subLanguage.marked_for_deletion == False))
 
-    if_only_in_toc = [language_list.c.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
+    if_only_in_toc = [language_step.c.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
 
     get_translation_atom = [
         TranslationGist.marked_for_deletion == False,
@@ -3280,17 +3289,17 @@ def get_json_tree(only_in_toc=True):
         func.length(TranslationAtom.content) > 0,
         TranslationAtom.marked_for_deletion == False ]
 
-    language_tree = (
+    language_сte = (
         SyncDBSession
             .query(
-                func.min(language_list.c.level).label('language_level'),
-                language_list.c.client_id.label('language_cid'),
-                language_list.c.object_id.label('language_oid'),
+                func.min(language_step.c.level).label('language_level'),
+                language_step.c.client_id.label('language_cid'),
+                language_step.c.object_id.label('language_oid'),
                 func.array_agg(TranslationAtom.content).label('language_title'))
 
             .filter(
-                language_list.c.translation_gist_client_id == TranslationGist.client_id,
-                language_list.c.translation_gist_object_id == TranslationGist.object_id,
+                language_step.c.translation_gist_client_id == TranslationGist.client_id,
+                language_step.c.translation_gist_object_id == TranslationGist.object_id,
                 *get_translation_atom, *if_only_in_toc)
 
             .group_by(
@@ -3301,7 +3310,7 @@ def get_json_tree(only_in_toc=True):
 
     # Getting dictionaries with self titles
 
-    dictionary_tree = (
+    dictionary_сte = (
         SyncDBSession
             .query(
                 Dictionary.parent_client_id.label('language_cid'),
@@ -3311,8 +3320,8 @@ def get_json_tree(only_in_toc=True):
                 func.array_agg(TranslationAtom.content).label('dictionary_title'))
 
             .filter(
-                Dictionary.parent_client_id == language_tree.c.language_cid,
-                Dictionary.parent_object_id == language_tree.c.language_oid,
+                Dictionary.parent_client_id == language_сte.c.language_cid,
+                Dictionary.parent_object_id == language_сte.c.language_oid,
                 Dictionary.marked_for_deletion == False,
                 Dictionary.translation_gist_id == TranslationGist.id,
                 *get_translation_atom)
@@ -3327,7 +3336,7 @@ def get_json_tree(only_in_toc=True):
 
     # Getting perspectives with self titles
 
-    perspective_tree = (
+    perspective_сte = (
         SyncDBSession
             .query(
                 DictionaryPerspective.parent_client_id.label('dictionary_cid'),
@@ -3337,8 +3346,8 @@ def get_json_tree(only_in_toc=True):
                 func.array_agg(TranslationAtom.content).label('perspective_title'))
 
             .filter(
-                DictionaryPerspective.parent_client_id == dictionary_tree.c.dictionary_cid,
-                DictionaryPerspective.parent_object_id == dictionary_tree.c.dictionary_oid,
+                DictionaryPerspective.parent_client_id == dictionary_сte.c.dictionary_cid,
+                DictionaryPerspective.parent_object_id == dictionary_сte.c.dictionary_oid,
                 DictionaryPerspective.marked_for_deletion == False,
                 DictionaryPerspective.translation_gist_id == TranslationGist.id,
                 *get_translation_atom)
@@ -3351,79 +3360,77 @@ def get_json_tree(only_in_toc=True):
 
             .cte())
 
-    # Summary tree
+    # Getting fields with self title
 
-    summary_tree = (
+    field_cte = (
         SyncDBSession
             .query(
-                language_tree.c.language_level,
-                language_tree.c.language_cid,
-                language_tree.c.language_oid,
-                language_tree.c.language_title,
-
-                dictionary_tree.c.dictionary_cid,
-                dictionary_tree.c.dictionary_oid,
-                dictionary_tree.c.dictionary_title,
-
-                perspective_tree.c.perspective_cid,
-                perspective_tree.c.perspective_oid,
-                perspective_tree.c.perspective_title)
+                perspective_сte.c.perspective_cid,
+                perspective_сte.c.perspective_oid,
+                Field.client_id.label('field_cid'),
+                Field.object_id.label('field_oid'),
+                func.array_agg(func.lower(TranslationAtom.content)).label('field_title'),
+                func.min(DictionaryPerspectiveToField.position).label('field_position'))
 
             .filter(
-                language_tree.c.language_cid == dictionary_tree.c.language_cid,
-                language_tree.c.language_oid == dictionary_tree.c.language_oid,
-                dictionary_tree.c.dictionary_cid == perspective_tree.c.dictionary_cid,
-                dictionary_tree.c.dictionary_oid == perspective_tree.c.dictionary_oid)
+                DictionaryPerspectiveToField.parent_client_id == perspective_сte.c.perspective_cid,
+                DictionaryPerspectiveToField.parent_object_id == perspective_сte.c.perspective_oid,
+                DictionaryPerspectiveToField.marked_for_deletion == False,
+                DictionaryPerspectiveToField.field_id == Field.id,
+                Field.marked_for_deletion == False,
+                Field.translation_gist_id == TranslationGist.id,
+                *get_translation_atom, TranslationAtom.locale_id <= 2)
+
+            .group_by(
+                perspective_сte.c.perspective_cid,
+                perspective_сte.c.perspective_oid,
+                'field_cid', 'field_oid')
+
+            .cte())
+
+    return {
+        'language_сte': language_сte,
+        'dictionary_сte': dictionary_сte,
+        'perspective_сte': perspective_сte,
+        'field_cte': field_cte
+    }
+
+
+# Getting perspectives with transcription, translation and cognates
+
+def has_etymology(field_cte):
+
+    def has_word(word, text):
+        return bool(re.search(r'\b' + word + r'\b', text))
+
+    # Getting only transcriptions and translations
+
+    field_query = (
+        SyncDBSession
+            .query(
+                field_cte.c.perspective_cid,
+                field_cte.c.perspective_oid,
+                func.array_agg(tuple_(
+                    field_cte.c.field_position,
+                    field_cte.c.field_cid,
+                    field_cte.c.field_oid,
+                    field_cte.c.field_title)
+                ).label('field_summary'))
+
+            .group_by(
+                field_cte.c.perspective_cid,
+                field_cte.c.perspective_oid)
 
             .order_by(
-                language_tree.c.language_level,
-                language_tree.c.language_cid,
-                language_tree.c.language_oid,
-
-                dictionary_tree.c.dictionary_cid,
-                dictionary_tree.c.dictionary_oid,
-
-                perspective_tree.c.perspective_cid,
-                perspective_tree.c.perspective_oid,)
+                field_cte.c.perspective_cid,
+                field_cte.c.perspective_oid,
+                'field_summary')
 
             .yield_per(100))
 
     A()
 
     """
-    # Getting only transcriptions and translations
-
-    perspective_cid = 0
-    perspective_oid = 0
-
-    fields_list = (
-        SyncDBSession
-
-            .query(
-                Field.client_id.label('field_cid'),
-                Field.object_id.label('field_oid'),
-                func.array_agg(func.lower(TranslationAtom.content)),
-                func.min(DictionaryPerspectiveToField.position).label('position'))
-
-            .filter(
-                DictionaryPerspectiveToField.parent_client_id == perspective_cid,
-                DictionaryPerspectiveToField.parent_object_id == perspective_oid,
-                TranslationAtom.parent_id == TranslationGist.id,
-                Field.translation_gist_id == TranslationGist.id,
-                DictionaryPerspectiveToField.field_id == Field.id,
-                DictionaryPerspectiveToField.marked_for_deletion == False,
-                Field.marked_for_deletion == False,
-                TranslationAtom.locale_id <= 2)
-
-            .group_by('field_cid', 'field_oid')
-            .order_by('position')
-            .all())
-
-
-    def has_word(word, text):
-        return bool(re.search(r'\b' + word + r'\b', text))
-
-
     xcript_fid = None
     xlat_fid = None
     with_cognates = False
@@ -3467,4 +3474,41 @@ def get_json_tree(only_in_toc=True):
         print(f"{xcript_fname}: {' | '.join(xcript[0].content for xcript in xcripts)}")
         print(f"{xlat_fname}: {' | '.join(xlat[0].content for xlat in xlats)}")
         print(f"Cognate_groups: {str(linked_group)}\n")
+
+    # Summary tree
+
+    summary_сte = (
+        SyncDBSession
+            .query(
+                language_сte.c.language_level,
+                language_сte.c.language_cid,
+                language_сte.c.language_oid,
+                language_сte.c.language_title,
+
+                dictionary_сte.c.dictionary_cid,
+                dictionary_сte.c.dictionary_oid,
+                dictionary_сte.c.dictionary_title,
+
+                perspective_сte.c.perspective_cid,
+                perspective_сte.c.perspective_oid,
+                perspective_сte.c.perspective_title)
+
+            .filter(
+                language_сte.c.language_cid == dictionary_сte.c.language_cid,
+                language_сte.c.language_oid == dictionary_сte.c.language_oid,
+                dictionary_сte.c.dictionary_cid == perspective_сte.c.dictionary_cid,
+                dictionary_сte.c.dictionary_oid == perspective_сte.c.dictionary_oid)
+
+            .order_by(
+                language_сte.c.language_level,
+                language_сte.c.language_cid,
+                language_сte.c.language_oid,
+
+                dictionary_сte.c.dictionary_cid,
+                dictionary_сte.c.dictionary_oid,
+
+                perspective_сte.c.perspective_cid,
+                perspective_сte.c.perspective_oid,)
+
+            .yield_per(100))
     """
