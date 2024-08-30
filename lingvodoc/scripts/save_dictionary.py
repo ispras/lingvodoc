@@ -3289,13 +3289,13 @@ def get_cte_dict(only_in_toc):
         func.length(TranslationAtom.content) > 0,
         TranslationAtom.marked_for_deletion == False ]
 
-    language_сte = (
+    language_cte = (
         SyncDBSession
             .query(
-                func.min(language_step.c.level).label('language_level'),
                 language_step.c.client_id.label('language_cid'),
                 language_step.c.object_id.label('language_oid'),
-                func.array_agg(TranslationAtom.content).label('language_title'))
+                func.array_agg(TranslationAtom.content).label('language_title'),
+                func.min(language_step.c.level).label('language_level'))
 
             .filter(
                 language_step.c.translation_gist_client_id == TranslationGist.client_id,
@@ -3310,18 +3310,19 @@ def get_cte_dict(only_in_toc):
 
     # Getting dictionaries with self titles
 
-    dictionary_сte = (
+    dictionary_cte = (
         SyncDBSession
             .query(
                 Dictionary.parent_client_id.label('language_cid'),
                 Dictionary.parent_object_id.label('language_oid'),
                 Dictionary.client_id.label('dictionary_cid'),
                 Dictionary.object_id.label('dictionary_oid'),
-                func.array_agg(TranslationAtom.content).label('dictionary_title'))
+                func.array_agg(TranslationAtom.content).label('dictionary_title'),
+                func.min(language_cte.c.language_level).label('language_level'))
 
             .filter(
-                Dictionary.parent_client_id == language_сte.c.language_cid,
-                Dictionary.parent_object_id == language_сte.c.language_oid,
+                Dictionary.parent_client_id == language_cte.c.language_cid,
+                Dictionary.parent_object_id == language_cte.c.language_oid,
                 Dictionary.marked_for_deletion == False,
                 Dictionary.translation_gist_id == TranslationGist.id,
                 *get_translation_atom)
@@ -3336,18 +3337,19 @@ def get_cte_dict(only_in_toc):
 
     # Getting perspectives with self titles
 
-    perspective_сte = (
+    perspective_cte = (
         SyncDBSession
             .query(
                 DictionaryPerspective.parent_client_id.label('dictionary_cid'),
                 DictionaryPerspective.parent_object_id.label('dictionary_oid'),
                 DictionaryPerspective.client_id.label('perspective_cid'),
                 DictionaryPerspective.object_id.label('perspective_oid'),
-                func.array_agg(TranslationAtom.content).label('perspective_title'))
+                func.array_agg(TranslationAtom.content).label('perspective_title'),
+                func.min(dictionary_cte.c.language_level).label('language_level'))
 
             .filter(
-                DictionaryPerspective.parent_client_id == dictionary_сte.c.dictionary_cid,
-                DictionaryPerspective.parent_object_id == dictionary_сte.c.dictionary_oid,
+                DictionaryPerspective.parent_client_id == dictionary_cte.c.dictionary_cid,
+                DictionaryPerspective.parent_object_id == dictionary_cte.c.dictionary_oid,
                 DictionaryPerspective.marked_for_deletion == False,
                 DictionaryPerspective.translation_gist_id == TranslationGist.id,
                 *get_translation_atom)
@@ -3365,16 +3367,17 @@ def get_cte_dict(only_in_toc):
     field_cte = (
         SyncDBSession
             .query(
-                perspective_сte.c.perspective_cid,
-                perspective_сte.c.perspective_oid,
+                perspective_cte.c.perspective_cid,
+                perspective_cte.c.perspective_oid,
                 Field.client_id.label('field_cid'),
                 Field.object_id.label('field_oid'),
                 func.array_agg(func.lower(TranslationAtom.content)).label('field_title'),
-                func.min(DictionaryPerspectiveToField.position).label('field_position'))
+                func.min(DictionaryPerspectiveToField.position).label('field_position'),
+                func.min(perspective_cte.c.language_level).label('language_level'))
 
             .filter(
-                DictionaryPerspectiveToField.parent_client_id == perspective_сte.c.perspective_cid,
-                DictionaryPerspectiveToField.parent_object_id == perspective_сte.c.perspective_oid,
+                DictionaryPerspectiveToField.parent_client_id == perspective_cte.c.perspective_cid,
+                DictionaryPerspectiveToField.parent_object_id == perspective_cte.c.perspective_oid,
                 DictionaryPerspectiveToField.marked_for_deletion == False,
                 DictionaryPerspectiveToField.field_id == Field.id,
                 Field.marked_for_deletion == False,
@@ -3382,16 +3385,16 @@ def get_cte_dict(only_in_toc):
                 *get_translation_atom, TranslationAtom.locale_id <= 2)
 
             .group_by(
-                perspective_сte.c.perspective_cid,
-                perspective_сte.c.perspective_oid,
+                perspective_cte.c.perspective_cid,
+                perspective_cte.c.perspective_oid,
                 'field_cid', 'field_oid')
 
             .cte())
 
     return {
-        'language_сte': language_сte,
-        'dictionary_сte': dictionary_сte,
-        'perspective_сte': perspective_сte,
+        'language_cte': language_cte,
+        'dictionary_cte': dictionary_cte,
+        'perspective_cte': perspective_cte,
         'field_cte': field_cte
     }
 
@@ -3405,7 +3408,7 @@ def has_etymology(field_cte):
 
     # Group fields by perspective
     fields_by_perspective = itertools.groupby(
-        SyncDBSession.query(field_cte).yield_per(100),
+        SyncDBSession.query(field_cte).order_by(field_cte.c.language_level).yield_per(100),
         key=lambda x: (x[0], x[1]))
 
     for perspective_id, fields_group in fields_by_perspective:
@@ -3417,7 +3420,7 @@ def has_etymology(field_cte):
         xlat_fid = None
         with_cognates = False
 
-        for _, _, field_cid, field_oid, title, _ in fields_list:
+        for _, _, field_cid, field_oid, title, _, _ in fields_list:
 
             title = "; ".join(title)
 
@@ -3493,38 +3496,38 @@ def has_etymology(field_cte):
     """
     # Summary tree
 
-    summary_сte = (
+    summary_cte = (
         SyncDBSession
             .query(
-                language_сte.c.language_level,
-                language_сte.c.language_cid,
-                language_сte.c.language_oid,
-                language_сte.c.language_title,
+                language_cte.c.language_level,
+                language_cte.c.language_cid,
+                language_cte.c.language_oid,
+                language_cte.c.language_title,
 
-                dictionary_сte.c.dictionary_cid,
-                dictionary_сte.c.dictionary_oid,
-                dictionary_сte.c.dictionary_title,
+                dictionary_cte.c.dictionary_cid,
+                dictionary_cte.c.dictionary_oid,
+                dictionary_cte.c.dictionary_title,
 
-                perspective_сte.c.perspective_cid,
-                perspective_сte.c.perspective_oid,
-                perspective_сte.c.perspective_title)
+                perspective_cte.c.perspective_cid,
+                perspective_cte.c.perspective_oid,
+                perspective_cte.c.perspective_title)
 
             .filter(
-                language_сte.c.language_cid == dictionary_сte.c.language_cid,
-                language_сte.c.language_oid == dictionary_сte.c.language_oid,
-                dictionary_сte.c.dictionary_cid == perspective_сte.c.dictionary_cid,
-                dictionary_сte.c.dictionary_oid == perspective_сte.c.dictionary_oid)
+                language_cte.c.language_cid == dictionary_cte.c.language_cid,
+                language_cte.c.language_oid == dictionary_cte.c.language_oid,
+                dictionary_cte.c.dictionary_cid == perspective_cte.c.dictionary_cid,
+                dictionary_cte.c.dictionary_oid == perspective_cte.c.dictionary_oid)
 
             .order_by(
-                language_сte.c.language_level,
-                language_сte.c.language_cid,
-                language_сte.c.language_oid,
+                language_cte.c.language_level,
+                language_cte.c.language_cid,
+                language_cte.c.language_oid,
 
-                dictionary_сte.c.dictionary_cid,
-                dictionary_сte.c.dictionary_oid,
+                dictionary_cte.c.dictionary_cid,
+                dictionary_cte.c.dictionary_oid,
 
-                perspective_сte.c.perspective_cid,
-                perspective_сte.c.perspective_oid,)
+                perspective_cte.c.perspective_cid,
+                perspective_cte.c.perspective_oid,)
 
             .yield_per(100))
     """
