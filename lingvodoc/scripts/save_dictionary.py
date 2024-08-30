@@ -3277,15 +3277,16 @@ def get_json_tree(only_in_toc=True):
     get_translation_atom = [
         TranslationGist.marked_for_deletion == False,
         TranslationAtom.parent_id == TranslationGist.id,
+        func.length(TranslationAtom.content) > 0,
         TranslationAtom.marked_for_deletion == False ]
 
     language_tree = (
         SyncDBSession
             .query(
+                func.min(language_list.c.level).label('language_level'),
                 language_list.c.client_id.label('language_cid'),
                 language_list.c.object_id.label('language_oid'),
-                func.array_agg(TranslationAtom.content).label('language_title'),
-                func.min(language_list.c.level).label('language_level'))
+                func.array_agg(TranslationAtom.content).label('language_title'))
 
             .filter(
                 language_list.c.translation_gist_client_id == TranslationGist.client_id,
@@ -3301,10 +3302,10 @@ def get_json_tree(only_in_toc=True):
     dictionary_tree = (
         SyncDBSession
             .query(
+                language_tree.c.language_level,
                 language_tree.c.language_cid,
                 language_tree.c.language_oid,
                 language_tree.c.language_title,
-                language_tree.c.language_level,
 
                 Dictionary.client_id.label('dictionary_cid'),
                 Dictionary.object_id.label('dictionary_oid'),
@@ -3318,10 +3319,11 @@ def get_json_tree(only_in_toc=True):
                 *get_translation_atom)
 
             .group_by(
+                language_tree.c.language_level,
                 language_tree.c.language_cid,
                 language_tree.c.language_oid,
                 language_tree.c.language_title,
-                language_tree.c.language_level,
+
                 'dictionary_cid',
                 'dictionary_oid')
 
@@ -3332,10 +3334,10 @@ def get_json_tree(only_in_toc=True):
     perspective_tree = (
         SyncDBSession
             .query(
+                dictionary_tree.c.language_level,
                 dictionary_tree.c.language_cid,
                 dictionary_tree.c.language_oid,
                 dictionary_tree.c.language_title,
-                dictionary_tree.c.language_level,
 
                 dictionary_tree.c.dictionary_cid,
                 dictionary_tree.c.dictionary_oid,
@@ -3353,10 +3355,10 @@ def get_json_tree(only_in_toc=True):
                 *get_translation_atom)
 
             .group_by(
+                dictionary_tree.c.language_level,
                 dictionary_tree.c.language_cid,
                 dictionary_tree.c.language_oid,
                 dictionary_tree.c.language_title,
-                dictionary_tree.c.language_level,
 
                 dictionary_tree.c.dictionary_cid,
                 dictionary_tree.c.dictionary_oid,
