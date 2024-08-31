@@ -3260,6 +3260,7 @@ def get_json_tree(only_in_toc=True):
 
     ) in fields_getter(field_cte):
 
+        # Init dictionary_id and language_id
         dictionary_id = cur_dictionary_id
         language_id = cur_language_id
 
@@ -3306,6 +3307,7 @@ def get_json_tree(only_in_toc=True):
             xcript_text,
             xlat_text,
             linked_group
+
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
 
             print(f"{xcript_fname}: {xcript_text}")
@@ -3521,7 +3523,7 @@ def fields_getter(field_cte):
         # Sorting fields by position
         fields_list = sorted(list(fields_group), key=lambda x: x[5])
 
-        xcript_fid, xlat_fid, xcript_fname, xlat_fname, xcript_text, xlat_text = [None] * 6
+        xcript_fid, xlat_fid, xcript_fname, xlat_fname = [None] * 4
         with_cognates = False
 
         for _, _, field_cid, field_oid, title, _, _ in fields_list:
@@ -3558,6 +3560,9 @@ def fields_getter(field_cte):
 
 
 def entities_getter(perspective_id, xcript_fid, xlat_fid):
+
+    xcript_text = None
+    xlat_text = None
 
     entities = (
         SyncDBSession
