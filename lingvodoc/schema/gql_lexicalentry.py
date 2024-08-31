@@ -50,7 +50,7 @@ from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
 
 # Dirty debugging!
-from lingvodoc.scripts.save_dictionary import get_json_tree
+from lingvodoc.scripts.list_cognates import get_json_tree
 
 from uuid import uuid4
 
@@ -72,7 +72,10 @@ class LexicalEntry(LingvodocObjectType):
      #moved_to            | text                        |
      #additional_metadata | jsonb                       |
     """
-    entities = graphene.List(Entity, mode=graphene.String(), xfields=graphene.Boolean())
+    entities = graphene.List(Entity,
+                             mode=graphene.String(),
+                             xfields=graphene.Boolean(),
+                             only_in_toc=graphene.Boolean())
     dbType = dbLexicalEntry
     gql_Entities = None
 
@@ -88,11 +91,11 @@ class LexicalEntry(LingvodocObjectType):
 
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
-    def resolve_entities(self, info, mode='all', xfields=False):
+    def resolve_entities(self, info, mode='all', xfields=False, only_in_toc=False):
 
         # Dirty debugging!
         if xfields:
-            get_json_tree(only_in_toc=True)
+            get_json_tree(only_in_toc)
 
         if self.gql_Entities is not None:
             return self.gql_Entities
