@@ -3241,15 +3241,121 @@ def save_dictionary(
 
 def get_json_tree(only_in_toc=True):
 
-    cte_dict = get_cte_dict(only_in_toc)
-    lex_iterator = lex_with_etymology(cte_dict['field_cte'])
-    A()
-    #json = compile_json(cte_dict, lex_iterator)
+    result_json = {}
+    cur_language_id = None
+    cur_dictionary_id = None
+    cur_perspective_id = None
 
+    # Getting set of cte
+    (
+        language_cte, dictionary_cte, perspective_cte, field_cte
+
+    ) = get_cte_set(only_in_toc)
+
+    # Getting perspective_id and etymology fields ids and names in cycle
+    for (
+        perspective_id,
+        (xcript_fid, xcript_fname),
+        (xlat_fid, xlat_fname)
+
+    ) in fields_getter(field_cte):
+
+        dictionary_id = cur_dictionary_id
+        language_id = cur_language_id
+
+        # Getting next perspective_title and dictionary_id
+        if perspective_id != cur_perspective_id:
+            (
+                perspective_title,
+                dictionary_cid,
+                dictionary_oid
+
+            ) = perspective_getter(perspective_cte, perspective_id)
+
+            cur_perspective_id = perspective_id
+            dictionary_id = (dictionary_cid, dictionary_oid)
+
+            print(f"\n* Perspective: {perspective_id} | {perspective_title}")
+
+        # Getting next dictionary_title and language_id
+        if dictionary_id != cur_dictionary_id:
+            (
+                dictionary_title,
+                language_cid,
+                language_oid
+
+            ) = dictionary_getter(dictionary_cte, dictionary_id)
+
+            cur_dictionary_id = dictionary_id
+            language_id = (language_cid, language_oid)
+
+            print(f"** Dictionary: {dictionary_id} | {dictionary_title}")
+
+        # Getting next language_title
+        if language_id != cur_language_id:
+            (
+                language_title,
+
+            ) = language_getter(language_cte, language_id)
+
+            cur_language_id = language_id
+
+            print(f"*** Language: {language_id} | {language_title}")
+
+        for (
+            xcript_text,
+            xlat_text,
+            linked_group
+        ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
+
+            print(f"{xcript_fname}: {xcript_text}")
+            print(f"{xlat_fname}: {xlat_text}")
+            print(f"Cognate_groups: {str(linked_group)}\n")
+
+
+def perspective_getter(perspective_cte, perspective_id):
+    return (
+        SyncDBSession
+            .query(
+                perspective_cte.c.perspective_title,
+                perspective_cte.c.dictionary_cid,
+                perspective_cte.c.dictionary_oid)
+
+            .filter(
+                perspective_cte.c.perspective_cid == perspective_id[0],
+                perspective_cte.c.perspective_oid == perspective_id[1])
+
+            .one())
+
+def dictionary_getter(dictionary_cte, dictionary_id):
+    return (
+        SyncDBSession
+            .query(
+                dictionary_cte.c.dictionary_title,
+                dictionary_cte.c.language_cid,
+                dictionary_cte.c.language_oid)
+
+            .filter(
+                dictionary_cte.c.dictionary_cid == dictionary_id[0],
+                dictionary_cte.c.dictionary_oid == dictionary_id[1])
+
+            .one())
+
+def language_getter(language_cte, language_id):
+    return (
+        SyncDBSession
+            .query(
+                language_cte.c.language_title)
+
+            .filter(
+                language_cte.c.language_cid == language_id[0],
+                language_cte.c.language_oid == language_id[1])
+
+            .one())
 
 # Getting cte for languages, dictionaries, perspectives and fields
 
-def get_cte_dict(only_in_toc):
+def get_cte_set(only_in_toc):
 
     # Getting root languages
 
@@ -3392,17 +3498,15 @@ def get_cte_dict(only_in_toc):
 
             .cte())
 
-    return {
-        'language_cte': language_cte,
-        'dictionary_cte': dictionary_cte,
-        'perspective_cte': perspective_cte,
-        'field_cte': field_cte
-    }
-
+    return (
+        language_cte,
+        dictionary_cte,
+        perspective_cte,
+        field_cte)
 
 # Getting perspectives with transcription, translation and cognates
 
-def lex_with_etymology(field_cte):
+def fields_getter(field_cte):
 
     def has_word(word, text):
         return bool(re.search(r'\b' + word + r'\b', text))
@@ -3447,99 +3551,58 @@ def lex_with_etymology(field_cte):
                 break
 
         if xcript_fid and xlat_fid and with_cognates:
-
-            entities = (
-                SyncDBSession
-                    .query(
-                        LexicalEntry.client_id,
-                        LexicalEntry.object_id,
-                        Entity.field_id,
-                        Entity.content)
-
-                    .filter(
-                        LexicalEntry.parent_id == perspective_id,
-                        Entity.parent_id == LexicalEntry.id,
-                        Entity.field_id.in_([xcript_fid, xlat_fid]),
-                        Entity.marked_for_deletion == False,
-                        Entity.client_id == PublishingEntity.client_id,
-                        Entity.object_id == PublishingEntity.object_id,
-                        PublishingEntity.published == True,
-                        PublishingEntity.accepted == True)
-
-                    .yield_per(100))
-
-            entities_by_lex = itertools.groupby(entities, key=lambda x: (x[0], x[1]))
-
-            for lex_id, entities_group in entities_by_lex:
-
-                linked_group = (
-                    SyncDBSession
-                        .execute(
-                            f'select * from linked_group(66, 25, {lex_id[0]}, {lex_id[1]})')
-                        .fetchall())
-
-                entities_by_field = itertools.groupby(entities_group, key = lambda x: (x[2], x[3]))
-
-                for field_id, group in entities_by_field:
-
-                    field_text = [x[4] for x in group]
-
-                    if field_id == xcript_fid:
-                        xcript_text = field_text
-                    elif field_id == xlat_fid:
-                        xlat_text = field_text
-
-                """
-                print(f"Perspective_id: {perspective_id}")
-                print(f"{xcript_fname}: {xcript_text}")
-                print(f"{xlat_fname}: {xlat_text}")
-                print(f"Cognate_groups: {str(linked_group)}\n")
-                """
-
-                # Return current found lexical entry with perspective_id
-
-                yield {
-                    (xcript_fid, xcript_fname): xcript_text,
-                    (xlat_fid, xlat_fname): xlat_text,
-                    "linked_groups": str(linked_group)
-                }, perspective_id
+            yield (
+                perspective_id,
+                (xcript_fid, xcript_fname),
+                (xlat_fid, xlat_fname))
 
 
-    """
-    # Summary tree
+def entities_getter(perspective_id, xcript_fid, xlat_fid):
 
-    summary_cte = (
+    entities = (
         SyncDBSession
             .query(
-                language_cte.c.language_level,
-                language_cte.c.language_cid,
-                language_cte.c.language_oid,
-                language_cte.c.language_title,
-
-                dictionary_cte.c.dictionary_cid,
-                dictionary_cte.c.dictionary_oid,
-                dictionary_cte.c.dictionary_title,
-
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid,
-                perspective_cte.c.perspective_title)
+                LexicalEntry.client_id,
+                LexicalEntry.object_id,
+                Entity.field_id,
+                Entity.content)
 
             .filter(
-                language_cte.c.language_cid == dictionary_cte.c.language_cid,
-                language_cte.c.language_oid == dictionary_cte.c.language_oid,
-                dictionary_cte.c.dictionary_cid == perspective_cte.c.dictionary_cid,
-                dictionary_cte.c.dictionary_oid == perspective_cte.c.dictionary_oid)
-
-            .order_by(
-                language_cte.c.language_level,
-                language_cte.c.language_cid,
-                language_cte.c.language_oid,
-
-                dictionary_cte.c.dictionary_cid,
-                dictionary_cte.c.dictionary_oid,
-
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid,)
+                LexicalEntry.parent_id == perspective_id,
+                Entity.parent_id == LexicalEntry.id,
+                Entity.field_id.in_([xcript_fid, xlat_fid]),
+                Entity.marked_for_deletion == False,
+                Entity.client_id == PublishingEntity.client_id,
+                Entity.object_id == PublishingEntity.object_id,
+                PublishingEntity.published == True,
+                PublishingEntity.accepted == True)
 
             .yield_per(100))
-    """
+
+    entities_by_lex = itertools.groupby(entities, key=lambda x: (x[0], x[1]))
+
+    for lex_id, entities_group in entities_by_lex:
+
+        linked_group = (
+            SyncDBSession
+                .execute(
+                    f'select * from linked_group(66, 25, {lex_id[0]}, {lex_id[1]})')
+                .fetchall())
+
+        entities_by_field = itertools.groupby(entities_group, key = lambda x: (x[2], x[3]))
+
+        for field_id, group in entities_by_field:
+
+            field_text = [x[4] for x in group]
+
+            if field_id == xcript_fid:
+                xcript_text = field_text
+            elif field_id == xlat_fid:
+                xlat_text = field_text
+
+        # Return current found lexical entry with perspective_id
+
+        yield (
+            xcript_text,
+            xlat_text,
+            linked_group)
