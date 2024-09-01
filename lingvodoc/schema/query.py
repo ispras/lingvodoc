@@ -7260,7 +7260,9 @@ class CognatesSummary(graphene.Mutation):
 
                 # Saving local copies, if required.
                 if __debug_flag__:
-                    shutil.copyfile(tmp_json_file_path, f'cognates_summary_{only_in_toc}_{offset}_{limit}.json')
+                    shutil.copyfile(
+                        tmp_json_file_path,
+                        f'cognates_summary_{offset}_to_{offset+limit}{"_toc" if only_in_toc else ""}.json')
 
                 request = info.context.request
 
@@ -7285,7 +7287,7 @@ class CognatesSummary(graphene.Mutation):
                         '/'.join((
                             'cognates_summary',
                             f'{current_time:.6f}',
-                            f'{offset}_{limit}.json')))
+                            f'cognates_summary_{offset}_to_{offset+limit}{"_toc" if only_in_toc else ""}.json')))
 
                 (etag, version_id) = (
                     minio_client.fput_object(
