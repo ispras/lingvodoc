@@ -3,9 +3,8 @@ import time
 import string
 import random
 import logging
-import re
 
-from sqlalchemy import tuple_, func
+from sqlalchemy import tuple_
 
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
@@ -35,10 +34,7 @@ from lingvodoc.models import (
     Group as dbGroup,
     LexicalEntry as dbLexicalEntry,
     User as dbUser,
-    BaseGroup as dbBaseGroup,
-    DictionaryPerspectiveToField as dbColumn,
-    TranslationAtom as dbTranslationAtom,
-    TranslationGist as dbTranslationGist
+    BaseGroup as dbBaseGroup
 )
 from lingvodoc.schema.gql_entity import Entity
 
@@ -48,14 +44,9 @@ from lingvodoc.utils.creation import create_lexicalentry
 from lingvodoc.utils.deletion import real_delete_entity
 from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
-
-# Dirty debugging!
-from lingvodoc.scripts.list_cognates import get_json_tree
-
 from uuid import uuid4
 
 from lingvodoc.cache.caching import CACHE
-from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -72,10 +63,7 @@ class LexicalEntry(LingvodocObjectType):
      #moved_to            | text                        |
      #additional_metadata | jsonb                       |
     """
-    entities = graphene.List(Entity,
-                             mode=graphene.String(),
-                             xfields=graphene.Boolean(),
-                             only_in_toc=graphene.Boolean())
+    entities = graphene.List(Entity, mode=graphene.String())
     dbType = dbLexicalEntry
     gql_Entities = None
 
@@ -91,12 +79,7 @@ class LexicalEntry(LingvodocObjectType):
 
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
-    def resolve_entities(self, info, mode='all', xfields=False, only_in_toc=False):
-
-        # Dirty debugging!
-        if xfields:
-            get_json_tree(only_in_toc)
-
+    def resolve_entities(self, info, mode='all'):
         if self.gql_Entities is not None:
             return self.gql_Entities
         if mode == 'all':
@@ -117,20 +100,17 @@ class LexicalEntry(LingvodocObjectType):
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
 
-        entities = (
-            DBSession
-                .query(dbEntity, dbPublishingEntity)
-                .filter(
-                    dbEntity.parent_client_id == self.dbObject.client_id,
-                    dbEntity.parent_object_id == self.dbObject.object_id,
-                    dbEntity.client_id == dbPublishingEntity.client_id,
-                    dbEntity.object_id == dbPublishingEntity.object_id,
-                    dbEntity.marked_for_deletion == False))
-
+        result = list()
+        entities = DBSession.query(dbEntity, dbPublishingEntity).\
+            filter(dbEntity.parent_client_id == self.dbObject.client_id,
+                   dbEntity.parent_object_id == self.dbObject.object_id,
+                   dbEntity.client_id == dbPublishingEntity.client_id,
+                   dbEntity.object_id == dbPublishingEntity.object_id)
         if publish is not None:
             entities = entities.filter(dbPublishingEntity.published == publish)
         if accept is not None:
             entities = entities.filter(dbPublishingEntity.accepted == accept)
+        entities = entities.filter(dbEntity.marked_for_deletion == False).yield_per(100)
 
         def graphene_entity(cur_entity, cur_publishing):
             ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
@@ -138,7 +118,26 @@ class LexicalEntry(LingvodocObjectType):
             ent.publishingentity = cur_publishing
             return ent
 
-        return [graphene_entity(entity[0], entity[1]) for entity in entities.yield_per(100)]
+        result = [graphene_entity(entity[0], entity[1]) for entity in entities]
+        # for db_entity in self.dbObject.entity:
+        #     publ = db_entity.publishingentity
+        #     if publish is not None and publ.published != publish:
+        #         continue
+        #     if accept is not None and publ.accepted != accept:
+        #         continue
+        #     if db_entity.marked_for_deletion:
+        #         continue
+        #     ent = Entity(id = [db_entity.client_id, db_entity.object_id])
+        #     ent.dbObject = db_entity
+        #     ent.publishingentity = publ
+        #     result.append(ent)
+
+
+        return result
+
+
+
+
 
 
 class CreateLexicalEntry(graphene.Mutation):
