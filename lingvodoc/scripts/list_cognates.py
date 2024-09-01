@@ -130,7 +130,7 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
 
             pers_slot['entities'][id2str(lex_id)] = (
-                xcript_text, xlat_text, map(lambda x: tuple(x), linked_group)
+                xcript_text, xlat_text, list(map(lambda x: tuple(x), linked_group))
             )
 
             if debug_flag:
