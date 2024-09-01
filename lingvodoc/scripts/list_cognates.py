@@ -130,7 +130,7 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
 
             pers_slot['entities'][id2str(lex_id)] = (
-                xcript_text, xlat_text, list(map(lambda x: tuple(x), linked_group))
+                xcript_text, xlat_text, linked_group
             )
 
             if debug_flag:
@@ -421,6 +421,9 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid):
                 .execute(
                     f'select * from linked_group(66, 25, {lex_id[0]}, {lex_id[1]})')
                 .fetchall())
+
+        # Preparing of linked_group for json-serialization
+        linked_group = list(map(lambda x: tuple(x), linked_group))
 
         entities_by_field = itertools.groupby(entities_group, key = lambda x: (x[2], x[3]))
 

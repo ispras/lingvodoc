@@ -7247,59 +7247,51 @@ class CognatesSummary(graphene.Mutation):
             limit = args.get('limit', 10)
             __debug_flag__ = args.get('debug_flag', False)
 
-            """
-            if __debug_flag__ and user.id != 1:
-                return (
-                    ResponseError(
-                        message='Only administrator can use debug mode.'))
-            """
+            result_json, language_list = list_cognates.get_json_tree(
+                only_in_toc, offset, limit, __debug_flag__)
 
             with tempfile.TemporaryDirectory() as tmp_dir_path:
 
                 tmp_json_file_path = (
                     os.path.join(tmp_dir_path, 'cognates_summary.json'))
 
-            result_json, language_list = list_cognates.get_json_tree(
-                only_in_toc, offset, limit, __debug_flag__)
+                with open(tmp_json_file_path, 'w') as tmp_json_file:
+                    tmp_json_file.write(result_json)
 
-            with open(tmp_json_file_path, 'w') as tmp_json_file:
+                # Saving local copies, if required.
+                if __debug_flag__:
+                    shutil.copyfile(tmp_json_file_path, f'cognates_summary_{only_in_toc}_{offset}_{limit}.json')
 
-                tmp_json_file.write(result_json)
+                request = info.context.request
 
-            # Saving local copies, if required.
-            if __debug_flag__:
-                shutil.copyfile(tmp_json_file_path, f'cognates_summary_{only_in_toc}_{offset}_{limit}.json')
+                # Saving processed files.
+                storage = (
+                    request.registry.settings['storage'])
+                storage_temporary = storage['temporary']
+                host = storage_temporary['host']
+                bucket = storage_temporary['bucket']
 
-            request = info.context.request
+                minio_client = (
+                    minio.Minio(
+                        host,
+                        access_key=storage_temporary['access_key'],
+                        secret_key=storage_temporary['secret_key'],
+                        secure=True))
 
-            # Saving processed files.
-            storage = (
-                request.registry.settings['storage'])
-            storage_temporary = storage['temporary']
-            host = storage_temporary['host']
-            bucket = storage_temporary['bucket']
+                current_time = time.time()
 
-            minio_client = (
-                minio.Minio(
-                    host,
-                    access_key=storage_temporary['access_key'],
-                    secret_key=storage_temporary['secret_key'],
-                    secure=True))
+                object_name = (
+                        storage_temporary['prefix'] +
+                        '/'.join((
+                            'cognates_summary',
+                            f'{current_time:.6f}',
+                            f'{offset}_{limit}.json')))
 
-            current_time = time.time()
-
-            object_name = (
-                    storage_temporary['prefix'] +
-                    '/'.join((
-                        'cognates_summary',
-                        f'{current_time:.6f}',
-                        f'{offset}_{limit}.json')))
-
-            (etag, version_id) = (
-                minio_client.fput_object(
-                    bucket,
-                    object_name,
-                    tmp_json_file_path))
+                (etag, version_id) = (
+                    minio_client.fput_object(
+                        bucket,
+                        object_name,
+                        tmp_json_file_path))
 
             url = (
                 '/'.join((
