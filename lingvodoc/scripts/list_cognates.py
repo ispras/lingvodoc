@@ -19,12 +19,12 @@ from lingvodoc.models import (
 )
 
 from sqlalchemy.orm import aliased
+from pdb import set_trace as A
 
 
 def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
 
     result_dict = {}
-    result_json = None
     language_list = []
     cur_language_id = None
     cur_dictionary_id = None
@@ -40,7 +40,7 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
     ) = get_cte_set(only_in_toc, offset, limit)
 
     def id2str(id):
-        return ','.join(id)
+        return f'{id[0],id[1]}'
 
     # Getting perspective_id and etymology fields ids and names in cycle
     for (
@@ -83,8 +83,8 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
 
             ) = language_getter(language_cte, language_id)
 
-            result_dict[language_id] = {}
-            result_dict[language_id]['title'] = language_title
+            lang_slot = result_dict[id2str(language_id)] = {}
+            lang_slot['title'] = language_title
 
             # Logging processed languages
             language_list.append(language_title)
@@ -99,8 +99,8 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
 
         if dictionary_id != cur_dictionary_id:
 
-            result_dict[language_id][dictionary_id] = {}
-            result_dict[language_id][dictionary_id]['title'] = dictionary_title
+            dict_slot = lang_slot[id2str(dictionary_id)] = {}
+            dict_slot['title'] = dictionary_title
 
             cur_dictionary_id = dictionary_id
 
@@ -109,38 +109,36 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
 
         if perspective_id != cur_perspective_id:
 
-            result_dict[language_id][dictionary_id][perspective_id] = {}
-            result_dict[language_id][dictionary_id][perspective_id]['title'] = perspective_title
-            result_dict[language_id][dictionary_id][perspective_id]['fields'] = [
+            pers_slot = dict_slot[id2str(perspective_id)] = {}
+            pers_slot['title'] = perspective_title
+            pers_slot['fields'] = [
                 (xcript_fid, xcript_fname), (xlat_fid, xlat_fname)
             ]
-            result_dict[language_id][dictionary_id][perspective_id]['entities'] = []
+            pers_slot['entities'] = {}
 
             cur_perspective_id = perspective_id
 
             if debug_flag:
-                print(f"\n* Perspective: {perspective_id} | {perspective_title}")
+                print(f"* Perspective: {perspective_id} | {perspective_title}\n")
 
         for (
+            lex_id,
             xcript_text,
             xlat_text,
             linked_group
 
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
 
-            result_dict[language_id][dictionary_id][perspective_id]['entities'].append(
-                [xcript_text, xlat_text, linked_group]
+            pers_slot['entities'][id2str(lex_id)] = (
+                xcript_text, xlat_text, map(lambda x: tuple(x), linked_group)
             )
 
             if debug_flag:
-                print(f"\n{xcript_fname}: {xcript_text}")
+                print(f"{xcript_fname}: {xcript_text}")
                 print(f"{xlat_fname}: {xlat_text}")
-                print(f"Cognate_groups: {str(linked_group)}")
-    else:
-        # On ending without any break
-        result_json = json.dumps(result_dict)
+                print(f"Cognate_groups: {str(linked_group)}\n")
 
-    return result_json, language_list
+    return json.dumps(result_dict), language_list
 
 
 def perspective_getter(perspective_cte, perspective_id):
@@ -438,6 +436,7 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid):
         # Return current found lexical entry with perspective_id
 
         yield (
+            lex_id,
             xcript_text,
             xlat_text,
             linked_group)
