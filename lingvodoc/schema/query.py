@@ -7243,6 +7243,8 @@ class CognatesSummary(graphene.Mutation):
                         message='Only administrator can get cognates summary'))
 
             only_in_toc = args.get('only_in_toc', False)
+            offset = args.get('offset', 0)
+            limit = args.get('limit', 10)
             __debug_flag__ = args.get('debug_flag', False)
 
             """
@@ -7319,7 +7321,7 @@ class CognatesSummary(graphene.Mutation):
             return (
                 CognatesSummary(
                     triumph=True,
-                    xlsx_url=url,
+                    json_url=url,
                     language_list=language_list))
 
         except Exception as exception:

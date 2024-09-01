@@ -126,9 +126,7 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
 
             result_dict[language_id][dictionary_id][perspective_id]['entities'].append(
-                xcript_text,
-                xlat_text,
-                linked_group
+                [xcript_text, xlat_text, linked_group]
             )
 
             if debug_flag:
