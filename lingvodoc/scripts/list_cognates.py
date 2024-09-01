@@ -39,6 +39,9 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
 
     ) = get_cte_set(only_in_toc, offset, limit)
 
+    def id2str(id):
+        return ','.join(id)
+
     # Getting perspective_id and etymology fields ids and names in cycle
     for (
         perspective_id,
