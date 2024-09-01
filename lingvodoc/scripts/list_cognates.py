@@ -1,4 +1,5 @@
 import itertools
+import json
 import re
 
 from sqlalchemy import func, literal
@@ -20,18 +21,23 @@ from lingvodoc.models import (
 from sqlalchemy.orm import aliased
 
 
-def get_json_tree(only_in_toc=False):
+def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
 
-    result_json = {}
+    result_dict = {}
+    result_json = None
+    language_list = []
     cur_language_id = None
     cur_dictionary_id = None
     cur_perspective_id = None
+
+    dictionary_title = None
+    perspective_title = None
 
     # Getting set of cte
     (
         language_cte, dictionary_cte, perspective_cte, field_cte
 
-    ) = get_cte_set(only_in_toc)
+    ) = get_cte_set(only_in_toc, offset, limit)
 
     # Getting perspective_id and etymology fields ids and names in cycle
     for (
@@ -54,10 +60,7 @@ def get_json_tree(only_in_toc=False):
 
             ) = perspective_getter(perspective_cte, perspective_id)
 
-            cur_perspective_id = perspective_id
             dictionary_id = (dictionary_cid, dictionary_oid)
-
-            print(f"\n* Perspective: {perspective_id} | {perspective_title}")
 
         # Getting next dictionary_title and language_id
         if dictionary_id != cur_dictionary_id:
@@ -68,10 +71,7 @@ def get_json_tree(only_in_toc=False):
 
             ) = dictionary_getter(dictionary_cte, dictionary_id)
 
-            cur_dictionary_id = dictionary_id
             language_id = (language_cid, language_oid)
-
-            print(f"** Dictionary: {dictionary_id} | {dictionary_title}")
 
         # Getting next language_title
         if language_id != cur_language_id:
@@ -80,9 +80,43 @@ def get_json_tree(only_in_toc=False):
 
             ) = language_getter(language_cte, language_id)
 
+            result_dict[language_id] = {}
+            result_dict[language_id]['title'] = language_title
+
+            # Logging processed languages
+            language_list.append(language_title)
+
             cur_language_id = language_id
 
-            print(f"*** Language: {language_id} | {language_title}")
+            if debug_flag:
+                print(f"*** Language: {language_id} | {language_title}")
+
+        # Once again check conditions for dictionary and perspective
+        # and put the data into result_dict
+
+        if dictionary_id != cur_dictionary_id:
+
+            result_dict[language_id][dictionary_id] = {}
+            result_dict[language_id][dictionary_id]['title'] = dictionary_title
+
+            cur_dictionary_id = dictionary_id
+
+            if debug_flag:
+                print(f"** Dictionary: {dictionary_id} | {dictionary_title}")
+
+        if perspective_id != cur_perspective_id:
+
+            result_dict[language_id][dictionary_id][perspective_id] = {}
+            result_dict[language_id][dictionary_id][perspective_id]['title'] = perspective_title
+            result_dict[language_id][dictionary_id][perspective_id]['fields'] = [
+                (xcript_fid, xcript_fname), (xlat_fid, xlat_fname)
+            ]
+            result_dict[language_id][dictionary_id][perspective_id]['entities'] = []
+
+            cur_perspective_id = perspective_id
+
+            if debug_flag:
+                print(f"\n* Perspective: {perspective_id} | {perspective_title}")
 
         for (
             xcript_text,
@@ -91,9 +125,21 @@ def get_json_tree(only_in_toc=False):
 
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
 
-            print(f"\n{xcript_fname}: {xcript_text}")
-            print(f"{xlat_fname}: {xlat_text}")
-            print(f"Cognate_groups: {str(linked_group)}")
+            result_dict[language_id][dictionary_id][perspective_id]['entities'].append(
+                xcript_text,
+                xlat_text,
+                linked_group
+            )
+
+            if debug_flag:
+                print(f"\n{xcript_fname}: {xcript_text}")
+                print(f"{xlat_fname}: {xlat_text}")
+                print(f"Cognate_groups: {str(linked_group)}")
+    else:
+        # On ending without any break
+        result_json = json.dumps(result_dict)
+
+    return result_json, language_list
 
 
 def perspective_getter(perspective_cte, perspective_id):
@@ -138,7 +184,7 @@ def language_getter(language_cte, language_id):
 
 # Getting cte for languages, dictionaries, perspectives and fields
 
-def get_cte_set(only_in_toc):
+def get_cte_set(only_in_toc, offset, limit):
 
     # Getting root languages
 
@@ -196,6 +242,8 @@ def get_cte_set(only_in_toc):
                 'language_cid',
                 'language_oid')
 
+            .offset(offset)
+            .limit(limit)
             .cte())
 
     # Getting dictionaries with self titles
