@@ -23,7 +23,7 @@ else
 
 # Updating all parsers.
 
-PARSER_LIST=("apertium-kaz" "apertium-tat" "apertium-rus" "apertium-kaz-rus" "apertium-tat-rus" "apertium-sah" "apertium-bak" "apertium-tat-bak");
+PARSER_LIST=("apertium-kaz" "apertium-tat" "apertium-rus" "apertium-kaz-rus" "apertium-tat-rus" "apertium-sah" "apertium-bak" "apertium-tat-bak" "apertium-tyv" "apertium-eng");
 
 fi;
 

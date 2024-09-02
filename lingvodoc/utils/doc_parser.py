@@ -468,6 +468,12 @@ def apertium_bak(dedoc_output, apertium_path):
 def apertium_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'rus')
 
+def apertium_eng(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'eng')
+
+def apertium_tuv(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'tyv')
+
 def hfst_kalmyk(dedoc_output):
     return hfst_parser(dedoc_output, 'xal')
 
