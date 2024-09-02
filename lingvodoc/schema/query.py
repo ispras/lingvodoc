@@ -308,6 +308,7 @@ import lingvodoc.scripts.adverb as adverb
 import lingvodoc.scripts.valency as valency
 import lingvodoc.scripts.docx_import as docx_import
 import lingvodoc.scripts.docx_to_xlsx as docx_to_xlsx
+import lingvodoc.scripts.list_cognates as list_cognates
 
 from lingvodoc.scripts.save_dictionary import save_dictionary as sync_save_dictionary
 
@@ -7206,6 +7207,132 @@ class Docx2Xlsx(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
+class CognatesSummary(graphene.Mutation):
+    """
+    Gets 'languages -< dictionaries -< perspectives -< etymologies' tree
+    using offset and limit for languages amount in output result
+    """
+
+    class Arguments:
+
+        only_in_toc = graphene.Boolean(required=True)
+        limit = graphene.Int()
+        offset = graphene.Int()
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    json_url = graphene.String()
+    language_list = graphene.List(graphene.String)
+    message = graphene.String()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+            client_id = (
+                info.context.client_id)
+
+            user = (
+                Client.get_user_by_client_id(client_id))
+
+            if not user or user.id != 1:
+                return (
+                    CognatesSummary(
+                        triumph=False,
+                        message='Only administrator can get cognates summary'))
+
+            only_in_toc = args.get('only_in_toc', False)
+            offset = args.get('offset', 0)
+            limit = args.get('limit', 10)
+            __debug_flag__ = args.get('debug_flag', False)
+
+            result_json, language_list = list_cognates.get_json_tree(
+                only_in_toc, offset, limit, __debug_flag__)
+
+            with tempfile.TemporaryDirectory() as tmp_dir_path:
+
+                tmp_json_file_path = (
+                    os.path.join(tmp_dir_path, 'cognates_summary.json'))
+
+                with open(tmp_json_file_path, 'w') as tmp_json_file:
+                    tmp_json_file.write(result_json)
+
+                # Saving local copies, if required.
+                if __debug_flag__:
+                    shutil.copyfile(
+                        tmp_json_file_path,
+                        f'cognates_summary_{offset+1}_to_{offset+limit}{"_toc" if only_in_toc else ""}.json')
+
+                request = info.context.request
+
+                # Saving processed files.
+                storage = (
+                    request.registry.settings['storage'])
+                storage_temporary = storage['temporary']
+                host = storage_temporary['host']
+                bucket = storage_temporary['bucket']
+
+                minio_client = (
+                    minio.Minio(
+                        host,
+                        access_key=storage_temporary['access_key'],
+                        secret_key=storage_temporary['secret_key'],
+                        secure=True))
+
+                current_time = time.time()
+
+                object_name = (
+                        storage_temporary['prefix'] +
+                        '/'.join((
+                            'cognates_summary',
+                            f'{current_time:.6f}',
+                            f'cognates_summary_{offset+1}_to_{offset+limit}{"_toc" if only_in_toc else ""}.json')))
+
+                (etag, version_id) = (
+                    minio_client.fput_object(
+                        bucket,
+                        object_name,
+                        tmp_json_file_path))
+
+            url = (
+                '/'.join((
+                    'https:/',
+                    host,
+                    bucket,
+                    object_name)))
+
+            log.debug(
+                '\nobject_name:\n{}'
+                '\netag:\n{}'
+                '\nversion_id:\n{}'
+                '\nurl:\n{}'.format(
+                    object_name,
+                    etag,
+                    version_id,
+                    url))
+
+            return (
+                CognatesSummary(
+                    triumph=True,
+                    json_url=url,
+                    language_list=language_list))
+
+        except Exception as exception:
+
+            traceback_string = (
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('cognates_summary: exception')
+            log.warning(traceback_string)
+
+            return (
+                ResponseError(
+                    'Exception:\n' + traceback_string))
+
+
 class BidirectionalLinks(graphene.Mutation):
     """
     Ensures that links between Lexical Entries and Paradigms perspectives of each specified dictionary are
@@ -7637,6 +7764,7 @@ class MyMutations(graphene.ObjectType):
     save_valency_data = SaveValencyData.Field()
     set_valency_annotation = SetValencyAnnotation.Field()
     bidirectional_links = BidirectionalLinks.Field()
+    cognates_summary = CognatesSummary.Field()
 
 
 schema = graphene.Schema(
