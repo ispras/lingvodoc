@@ -241,6 +241,7 @@ def get_cte_set(only_in_toc, offset, limit):
                 'language_cid',
                 'language_oid')
 
+            .order_by('language_level')
             .offset(offset)
             .limit(limit)
             .cte())
