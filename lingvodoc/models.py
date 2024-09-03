@@ -2001,9 +2001,6 @@ class LexicalEntry(
 
         if filter:
 
-            # We filter using Entity model in parallels twice,
-            # so we need to use cte(), we can't use .with_entities
-
             # Filter from special fields
             filtered_entities = entities_query.filter(
                 Entity.field_id != (66, 25))
@@ -2023,15 +2020,9 @@ class LexicalEntry(
                     filtered_entities = filtered_entities.filter(
                         Entity.content.ilike(f"%{filter}%")).cte()
 
-            filtered_lexes = (
-                DBSession
-                    .query(
-                        filtered_entities.c.parent_client_id,
-                        filtered_entities.c.parent_object_id))
-
             entities_query = entities_query.filter(
-                Entity.parent_id
-                    .in_(filtered_lexes))
+                Entity.parent_client_id == filtered_entities.c.parent_client_id,
+                Entity.parent_object_id == filtered_entities.c.parent_object_id)
 
         entities_cte = entities_query.cte()
 
