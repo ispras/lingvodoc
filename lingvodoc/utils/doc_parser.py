@@ -9,6 +9,7 @@ from uniparser_komi_zyrian import KomiZyrianAnalyzer
 from nltk.tokenize import RegexpTokenizer
 from hfst_dev import HfstTransducer
 from lxml.html import fromstring
+from pdb import set_trace as A
 import csv
 import os
 import tempfile
@@ -331,24 +332,20 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-tat-rus tat-rus-biltrans >> " +  biltrans_filename)
         s2 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-tat-rus tat-rus-morph >> " +  morph_filename)
 
-    if lang == 'kaz':
+    elif lang == 'kaz':
         s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-kaz-rus kaz-rus-biltrans >> " + biltrans_filename)
         s2 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-kaz-rus kaz-rus-morph >> " + morph_filename)
 
-    if lang == 'bak-tat':
+    elif lang == 'bak-tat':
         s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-tat-bak bak-tat-biltrans >> " + biltrans_filename)
         s2 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-tat-bak bak-tat-morph >> " + morph_filename)
 
-    if lang == 'sah':
+    elif lang == 'sah':
         s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-sah sah-morph >> " + morph_filename)
         s2 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-sah sah-multi >> " + multi_filename)
 
-    if lang == 'bak':
-        s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-bak bak-morph >> " + morph_filename)
-        s2 = s1
-
-    if lang == 'rus':
-        s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-rus rus-morph >> " + morph_filename)
+    else:
+        s1 = os.system(f"cat '{input_filename}' | apertium -d {apertium_path}/apertium-{lang} {lang}-morph >> {morph_filename}")
         s2 = s1
 
     if s1 != 0 or s2 != 0:
