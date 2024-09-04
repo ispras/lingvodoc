@@ -1984,6 +1984,16 @@ class LexicalEntry(
                     Entity.parent_client_id == Tempo.client_id,
                     Entity.parent_object_id == Tempo.object_id))
 
+        # Pre-filtering
+        # This should be processed firstly because we don't want to sort by deleted or unpublished entities
+
+        if accept is not None:
+            entities_query = entities_query.filter(PublishingEntity.accepted == accept)
+        if publish is not None:
+            entities_query = entities_query.filter(PublishingEntity.published == publish)
+        if delete is not None:
+            entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
+
         filed_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
 
         # Collect all empty lexes including created ones
@@ -1999,16 +2009,6 @@ class LexicalEntry(
                         .notin_(filed_lexes))
 
                 .all())
-
-        # Pre-filtering
-        # This should be processed firstly because we don't want to sort by deleted or unpublished entities
-
-        if accept is not None:
-            entities_query = entities_query.filter(PublishingEntity.accepted == accept)
-        if publish is not None:
-            entities_query = entities_query.filter(PublishingEntity.published == publish)
-        if delete is not None:
-            entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
 
         # Apply user's custom filter
 
@@ -2106,6 +2106,8 @@ class LexicalEntry(
             entities_result
                 .filter(
                     tuple_(Entity.parent_client_id, Entity.parent_object_id)
+                        .in_(filed_lexes),
+                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
                         .in_(created_entries)))
 
         # Filter and join at once to get and sort old entities
@@ -2128,8 +2130,8 @@ class LexicalEntry(
                 old_entities_result = old_entities_result.order_by(
                     entities_cte.c.first_entity,
                     nullsfirst(entities_cte.c.count_entity),  # for 'Paradigm and contexts' field
-                    entities_cte.c.parent_client_id,
-                    entities_cte.c.parent_object_id,
+                    desc(entities_cte.c.parent_client_id),
+                    desc(entities_cte.c.parent_object_id),
                     func.lower(entities_cte.c.order_content)
                 )
 
@@ -2138,16 +2140,16 @@ class LexicalEntry(
                 old_entities_result = old_entities_result.order_by(
                     desc(entities_cte.c.last_entity),
                     nullslast(entities_cte.c.count_entity.desc()),  # for 'Paradigm and contexts' field
-                    entities_cte.c.parent_client_id,
-                    entities_cte.c.parent_object_id,
+                    desc(entities_cte.c.parent_client_id),
+                    desc(entities_cte.c.parent_object_id),
                     desc(func.lower(entities_cte.c.order_content))
                 )
 
         # Default sorting
 
         old_entities_result = old_entities_result.order_by(
-            Entity.parent_client_id,
-            Entity.parent_object_id,
+            desc(Entity.parent_client_id),
+            desc(Entity.parent_object_id),
             Entity.client_id,
             Entity.object_id)
 

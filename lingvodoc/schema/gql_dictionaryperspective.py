@@ -192,16 +192,6 @@ def entries_with_entities(lexes, mode,
     if limit > 0:
         lexical_entries = lexical_entries[:offset + limit]
 
-    # In any mode we show empty new lexes if any
-    # Adding them at the beginning of list
-
-    for lex_ids in new_empty_lexes:
-
-        lexical_entries.insert(0,
-            gql_lexicalentry(
-                cur_lexical_entry = lex_id_to_obj[lex_ids],
-                cur_entities = []))
-
     # Add lexes with new_entities at the beginning of list
 
     ent_iter = itertools.chain(list(new_entities))
@@ -212,10 +202,21 @@ def entries_with_entities(lexes, mode,
             gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
             for x in entity_with_published]
 
-        lexical_entries.insert(i,
+        if lex_ids in lex_id_to_obj:
+            lexical_entries.insert(0,
+                gql_lexicalentry(
+                    cur_lexical_entry = lex_id_to_obj[lex_ids],
+                    cur_entities = gql_entities_list))
+
+    # In any mode we show empty new lexes if any
+    # Adding them at the beginning of list
+
+    for lex_ids in new_empty_lexes:
+
+        lexical_entries.insert(0,
             gql_lexicalentry(
                 cur_lexical_entry = lex_id_to_obj[lex_ids],
-                cur_entities = gql_entities_list))
+                cur_entities = []))
 
     return lexical_entries, total_entries
 
