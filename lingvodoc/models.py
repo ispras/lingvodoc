@@ -23,9 +23,13 @@ from sqlalchemy import (
     Index,
     literal,
     or_,
+    func,
+    desc,
     Sequence,
     Table,
     tuple_)
+
+from sqlalchemy.sql.expression import nullsfirst, nullslast
 
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
@@ -66,7 +70,7 @@ from zope.sqlalchemy import ZopeTransactionExtension
 # Project imports.
 
 import lingvodoc.cache.caching as caching
-
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -1022,6 +1026,25 @@ class Dictionary(
     domain = Column(Integer, default=0)
 
 
+class PerspectivePage(
+    CompositeIdMixin,
+    TableNameMixin,
+    ParentMixin,
+    CreatedAtMixin,
+    TranslationMixin,
+    StateMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    ObjectTOCMixin,
+    Base):
+    """
+    This object used to compile and get list of lexical entries with extra information
+    after filtering, sorting and pagination on backend
+    Parent: DictionaryPerspective
+    """
+    __parentname__ = 'DictionaryPerspective'
+
+
 class DictionaryPerspective(
     CompositeIdMixin,
     TableNameMixin,
@@ -1899,99 +1922,238 @@ class LexicalEntry(
     @classmethod
     def graphene_track_multiple(
         cls,
-        lexs,
+        lexes,
         publish = None,
         accept = None,
         delete = False,
+        filter = None,
+        sort_by_field = None,
+        is_ascending = None,
+        is_case_sens = True,
+        is_regexp = False,
+        created_entries = [],
         check_perspective = True):
 
+        deleted_per = []
+        alive_lexes = []
+
         if check_perspective:
+            deleted_per = DictionaryPerspective.get_deleted()
 
-            filtered_lexes = []
+        for x in lexes:
 
-            deleted_persps = DictionaryPerspective.get_deleted()
-            for i in lexs:
-                if (i[2], i[3]) not in deleted_persps:
-                    filtered_lexes.append(i)
+            if len(x) >= 4 and (x[2], x[3]) in deleted_per:
+                continue
 
-        else:
-
-            filtered_lexes = lexs
-
-        ls = []
-
-        for i, x in enumerate(filtered_lexes):
-            ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
-
-        if not ls:
-            return []
-
-        pub_filter = ""
-
-        if publish is not None or accept is not None or delete is not None:
-            where_cond = list()
-            if accept:
-                where_cond.append("publishingentity.accepted = True")
-            if accept is False:
-                where_cond.append("publishingentity.accepted = False")
-            if publish:
-                where_cond.append("publishingentity.published = True")
-            if publish is False:
-                where_cond.append("publishingentity.published = False")
-            if delete:
-                where_cond.append("cte_expr.marked_for_deletion = True")
-            if delete is False:
-                where_cond.append("cte_expr.marked_for_deletion = False")
-            where_cond = ["WHERE", " AND ".join(where_cond)]
-            pub_filter = " ".join(where_cond)
+            alive_lexes.append({'client_id': x[0], 'object_id': x[1]})
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
         DBSession.execute(
-            '''create TEMPORARY TABLE %s (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
+            '''create TEMPORARY TABLE %s (client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
 
-        DBSession.execute(
-            '''insert into %s (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''' % temp_table_name,
-            ls)
+        class Tempo(Base):
 
-        statement = text('''
-        WITH cte_expr AS
-        (SELECT
-           entity.*,
-           {0}.traversal_lexical_order AS traversal_lexical_order
-         FROM entity
-           INNER JOIN {0}
-             ON
-               entity.parent_client_id = {0}.client_id
-               AND entity.parent_object_id = {0}.object_id
-        )
-        SELECT
-          cte_expr.client_id,
-          cte_expr.object_id,
-          cte_expr.parent_client_id,
-          cte_expr.parent_object_id,
-          cte_expr.self_client_id,
-          cte_expr.self_object_id,
-          cte_expr.link_client_id,
-          cte_expr.link_object_id,
-          cte_expr.field_client_id,
-          cte_expr.field_object_id,
-          cte_expr.locale_id,
-          cte_expr.marked_for_deletion,
-          cte_expr.content,
-          cte_expr.additional_metadata,
-          cte_expr.created_at,
-          publishingentity.*
-        FROM cte_expr
-          LEFT JOIN publishingentity
-            ON publishingentity.client_id = cte_expr.client_id AND publishingentity.object_id = cte_expr.object_id
-          {1}
-        ORDER BY cte_expr.traversal_lexical_order;
-        '''.format(temp_table_name, pub_filter))
+            __tablename__ = temp_table_name
+            __table_args__ = {'prefixes': ['TEMPORARY']}
 
-        entries = DBSession.query(Entity, PublishingEntity).from_statement(statement) .options(joinedload('publishingentity')).yield_per(100)
+            client_id = Column(SLBigInteger(), primary_key=True)
+            object_id = Column(SLBigInteger(), primary_key=True)
 
-        return entries
+        if alive_lexes:
+            DBSession.execute(
+                Tempo.__table__
+                    .insert()
+                    .values(alive_lexes))
+
+        # We need just lexical entry and entity id and entity's content for sorting and filtering
+
+        entities_query = (
+            DBSession
+                .query(
+                    Entity.client_id,
+                    Entity.object_id,
+                    Entity.parent_client_id,
+                    Entity.parent_object_id,
+                    Entity.content)
+
+                .filter(
+                    Entity.parent_client_id == Tempo.client_id,
+                    Entity.parent_object_id == Tempo.object_id))
+
+        filed_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
+
+        # Collect all empty lexes including created ones
+
+        empty_lexes = (
+            DBSession
+                .query(
+                    Tempo.client_id,
+                    Tempo.object_id)
+
+                .filter(
+                    tuple_(Tempo.client_id, Tempo.object_id)
+                        .notin_(filed_lexes))
+
+                .all())
+
+        # Apply user's custom filter
+
+        if filter:
+
+            # Filter from special fields
+            filtered_entities = entities_query.filter(
+                Entity.field_id != (66, 25))
+
+            if is_regexp:
+                if is_case_sens:
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.op('~')(filter)).cte()
+                else:
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.op('~*')(filter)).cte()
+            else:
+                if is_case_sens:
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.like(f"%{filter}%")).cte()
+                else:
+                    filtered_entities = filtered_entities.filter(
+                        Entity.content.ilike(f"%{filter}%")).cte()
+
+            entities_query = entities_query.filter(
+                Entity.parent_client_id == filtered_entities.c.parent_client_id,
+                Entity.parent_object_id == filtered_entities.c.parent_object_id)
+
+        entities_cte = entities_query.cte()
+
+        # Create sorting_cte to order by it
+
+        sorting_cte = None
+
+        if sort_by_field:
+
+            field_entities = entities_query.filter(Entity.field_id == sort_by_field).cte()
+
+            alpha_entities = (
+                DBSession
+                    .query(
+                        field_entities.c.parent_client_id.label('lex_client_id'),
+                        field_entities.c.parent_object_id.label('lex_object_id'),
+                        func.min(func.lower(field_entities.c.content)).label('first_entity'),
+                        func.max(func.lower(field_entities.c.content)).label('last_entity'),
+                        func.count().label('count_entity'))
+
+                    #.filter(func.length(field_entities.c.content) > 0)
+
+                    .group_by('lex_client_id', 'lex_object_id')
+
+                    .cte()
+                )
+
+            sorting_cte = (
+                DBSession
+                    .query(
+                        entities_cte.c.parent_client_id,
+                        entities_cte.c.parent_object_id,
+                        entities_cte.c.client_id,
+                        entities_cte.c.object_id,
+                        alpha_entities.c.first_entity,
+                        alpha_entities.c.last_entity,
+                        alpha_entities.c.count_entity,
+                        field_entities.c.content.label('order_content'))
+
+                    .outerjoin(
+                        alpha_entities, and_(
+                            alpha_entities.c.lex_client_id == entities_cte.c.parent_client_id,
+                            alpha_entities.c.lex_object_id == entities_cte.c.parent_object_id))
+
+                    .outerjoin(
+                        field_entities, and_(
+                            field_entities.c.client_id == entities_cte.c.client_id,
+                            field_entities.c.object_id == entities_cte.c.object_id))
+
+                    .cte())
+
+            entities_cte = sorting_cte
+
+        # Finally, filter and sort Entity and PublishingEntity objects
+
+        entities_result = (
+            DBSession
+                .query(
+                    Entity,
+                    PublishingEntity)
+
+                .outerjoin(
+                    PublishingEntity))
+
+        # Pre-filtering
+
+        if accept is not None:
+            entities_result = entities_result.filter(PublishingEntity.accepted == accept)
+        if publish is not None:
+            entities_result = entities_result.filter(PublishingEntity.published == publish)
+        if delete is not None:
+            entities_result = entities_result.filter(Entity.marked_for_deletion == delete)
+
+        # Get new entities from entities_before_custom_filtering
+
+        new_entities_result = (
+            entities_result
+                .filter(
+                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
+                        .in_(created_entries)))
+
+        # Filter and join at once to get and sort old entities
+
+        old_entities_result = (
+            entities_result
+                .filter(
+                    entities_cte.c.client_id == Entity.client_id,
+                    entities_cte.c.object_id == Entity.object_id,
+
+                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
+                        .notin_(created_entries)))
+
+        # Custom sorting
+
+        if sorting_cte is not None:
+
+            if is_ascending:
+
+                old_entities_result = old_entities_result.order_by(
+                    entities_cte.c.first_entity,
+                    nullsfirst(entities_cte.c.count_entity),  # for 'Paradigm and contexts' field
+                    entities_cte.c.parent_client_id,
+                    entities_cte.c.parent_object_id,
+                    func.lower(entities_cte.c.order_content)
+                )
+
+            else:
+
+                old_entities_result = old_entities_result.order_by(
+                    desc(entities_cte.c.last_entity),
+                    nullslast(entities_cte.c.count_entity.desc()),  # for 'Paradigm and contexts' field
+                    entities_cte.c.parent_client_id,
+                    entities_cte.c.parent_object_id,
+                    desc(func.lower(entities_cte.c.order_content))
+                )
+
+        # Default sorting
+
+        old_entities_result = old_entities_result.order_by(
+            Entity.parent_client_id,
+            Entity.parent_object_id,
+            Entity.client_id,
+            Entity.object_id)
+
+        return (
+            new_entities_result,
+            old_entities_result
+                .options(
+                    joinedload('publishingentity'))
+                .yield_per(100),
+            empty_lexes)
 
 
 class Entity(

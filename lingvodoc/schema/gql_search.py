@@ -615,7 +615,7 @@ def search_mechanism(
 
             # Compiling search results.
 
-            result_lexical_entries = (
+            result_lexical_entries, _ = (
 
                 entries_with_entities(
                     lexical_entry_list,
@@ -1072,7 +1072,7 @@ def search_mechanism(
 
     if load_entities:
 
-        res_lexical_entries = (
+        res_lexical_entries, _ = (
 
             # Don't need to check for perspective deletion, we explicitly look only in undeleted dictionaries
             # and undeleted perspectives.
