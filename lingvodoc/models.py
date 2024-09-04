@@ -1977,6 +1977,9 @@ class LexicalEntry(
                     Entity.parent_object_id,
                     Entity.content)
 
+                .outerjoin(
+                    PublishingEntity)
+
                 .filter(
                     Entity.parent_client_id == Tempo.client_id,
                     Entity.parent_object_id == Tempo.object_id))
@@ -1996,6 +1999,16 @@ class LexicalEntry(
                         .notin_(filed_lexes))
 
                 .all())
+
+        # Pre-filtering
+        # This should be processed firstly because we don't want to sort by deleted or unpublished entities
+
+        if accept is not None:
+            entities_query = entities_query.filter(PublishingEntity.accepted == accept)
+        if publish is not None:
+            entities_query = entities_query.filter(PublishingEntity.published == publish)
+        if delete is not None:
+            entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
 
         # Apply user's custom filter
 
@@ -2086,15 +2099,6 @@ class LexicalEntry(
 
                 .outerjoin(
                     PublishingEntity))
-
-        # Pre-filtering
-
-        if accept is not None:
-            entities_result = entities_result.filter(PublishingEntity.accepted == accept)
-        if publish is not None:
-            entities_result = entities_result.filter(PublishingEntity.published == publish)
-        if delete is not None:
-            entities_result = entities_result.filter(Entity.marked_for_deletion == delete)
 
         # Get new entities from entities_before_custom_filtering
 
