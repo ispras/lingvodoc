@@ -4,6 +4,7 @@
 import datetime
 import logging
 import uuid
+import builtins
 
 # Library imports.
 
@@ -1945,26 +1946,7 @@ class LexicalEntry(
             if len(x) >= 4 and (x[2], x[3]) in deleted_per:
                 continue
 
-            alive_lexes.append({'client_id': x[0], 'object_id': x[1]})
-
-        temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
-
-        DBSession.execute(
-            '''create TEMPORARY TABLE %s (client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
-
-        class Tempo(Base):
-
-            __tablename__ = temp_table_name
-            __table_args__ = {'prefixes': ['TEMPORARY']}
-
-            client_id = Column(SLBigInteger(), primary_key=True)
-            object_id = Column(SLBigInteger(), primary_key=True)
-
-        if alive_lexes:
-            DBSession.execute(
-                Tempo.__table__
-                    .insert()
-                    .values(alive_lexes))
+            alive_lexes.append((x[0], x[1]))
 
         # We need just lexical entry and entity id and entity's content for sorting and filtering
 
@@ -1977,12 +1959,18 @@ class LexicalEntry(
                     Entity.parent_object_id,
                     Entity.content)
 
-                .outerjoin(
-                    PublishingEntity)
+                .filter(
+                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
+                        .in_(alive_lexes))
 
                 .filter(
-                    Entity.parent_client_id == Tempo.client_id,
-                    Entity.parent_object_id == Tempo.object_id))
+                    PublishingEntity.client_id == Entity.client_id,
+                    PublishingEntity.object_id == Entity.object_id))
+
+        # Collect all empty lexes including created ones
+        entities = entities_query.yield_per(100)
+        filed_lexes = [(ent[2], ent[3]) for ent in entities]
+        empty_lexes = builtins.filter(lambda lex: lex not in filed_lexes, alive_lexes)
 
         # Pre-filtering
         # This should be processed firstly because we don't want to sort by deleted or unpublished entities
@@ -1994,21 +1982,7 @@ class LexicalEntry(
         if delete is not None:
             entities_query = entities_query.filter(Entity.marked_for_deletion == delete)
 
-        filed_lexes = entities_query.with_entities('parent_client_id', 'parent_object_id')
-
-        # Collect all empty lexes including created ones
-
-        empty_lexes = (
-            DBSession
-                .query(
-                    Tempo.client_id,
-                    Tempo.object_id)
-
-                .filter(
-                    tuple_(Tempo.client_id, Tempo.object_id)
-                        .notin_(filed_lexes))
-
-                .all())
+        pre_filtered_lexes = entities_query.cte()
 
         # Apply user's custom filter
 
@@ -2056,8 +2030,6 @@ class LexicalEntry(
                         func.max(func.lower(field_entities.c.content)).label('last_entity'),
                         func.count().label('count_entity'))
 
-                    #.filter(func.length(field_entities.c.content) > 0)
-
                     .group_by('lex_client_id', 'lex_object_id')
 
                     .cte()
@@ -2097,8 +2069,9 @@ class LexicalEntry(
                     Entity,
                     PublishingEntity)
 
-                .outerjoin(
-                    PublishingEntity))
+                .filter(
+                    PublishingEntity.client_id == Entity.client_id,
+                    PublishingEntity.object_id == Entity.object_id))
 
         # Get new entities from entities_before_custom_filtering
 
@@ -2106,20 +2079,21 @@ class LexicalEntry(
             entities_result
                 .filter(
                     tuple_(Entity.parent_client_id, Entity.parent_object_id)
-                        .in_(filed_lexes),
-                    tuple_(Entity.parent_client_id, Entity.parent_object_id)
-                        .in_(created_entries)))
+                        .in_(created_entries),
+
+                    Entity.parent_client_id == pre_filtered_lexes.c.parent_client_id,
+                    Entity.parent_object_id == pre_filtered_lexes.c.parent_object_id))
 
         # Filter and join at once to get and sort old entities
 
         old_entities_result = (
             entities_result
                 .filter(
-                    entities_cte.c.client_id == Entity.client_id,
-                    entities_cte.c.object_id == Entity.object_id,
-
                     tuple_(Entity.parent_client_id, Entity.parent_object_id)
-                        .notin_(created_entries)))
+                        .notin_(created_entries),
+
+                    Entity.client_id == entities_cte.c.client_id,
+                    Entity.object_id == entities_cte.c.object_id))
 
         # Custom sorting
 
