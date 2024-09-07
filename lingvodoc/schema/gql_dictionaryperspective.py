@@ -162,6 +162,7 @@ def entries_with_entities(lexes, mode,
     """
 
     lexical_entries = []
+    total_entries = len(list(empty_lexes))
 
     # We have empty lexes only if is_edit_mode
     for lex_ids in old_empty_lexes:
@@ -171,27 +172,29 @@ def entries_with_entities(lexes, mode,
                 cur_lexical_entry = lex_id_to_obj[lex_ids],
                 cur_entities = []))
 
+    # Edges of pagination
+    first_lex = offset - len(old_empty_lexes)
+    last_lex = offset + limit - len(old_empty_lexes)
+
+    i = 0
     for lex_ids, entity_with_published in itertools.groupby(old_entities, key = group_by_lex):
 
-        gql_entities_list = [
-            gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
-            for x in entity_with_published]
+        # Pagination
+        if (first_lex if first_lex > 0 else 0) <= i < last_lex:
+            gql_entities_list = [
+                gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
+                for x in entity_with_published]
 
-        lexical_entries.append(
-            gql_lexicalentry(
-                cur_lexical_entry = lex_id_to_obj[lex_ids],
-                cur_entities = gql_entities_list))
+            lexical_entries.append(
+                gql_lexicalentry(
+                    cur_lexical_entry = lex_id_to_obj[lex_ids],
+                    cur_entities = gql_entities_list))
+        i += 1
 
-    # Pagination
-
-    total_entries = len(lexical_entries)
-
-    lexical_entries = lexical_entries[offset:]
-    if limit > 0:
-        lexical_entries = lexical_entries[:offset + limit]
+    total_entries += i
 
     # Add lexes with new_entities at the beginning of list
-
+    i = 0
     for lex_ids, entity_with_published in itertools.groupby(new_entities, key = group_by_lex):
 
         gql_entities_list = [
@@ -203,6 +206,9 @@ def entries_with_entities(lexes, mode,
             gql_lexicalentry(
                 cur_lexical_entry = lex_id_to_obj[lex_ids],
                 cur_entities = gql_entities_list))
+        i += 1
+
+    total_entries += i
 
     # In any mode we show empty new lexes if any
     # Adding them at the beginning of list
