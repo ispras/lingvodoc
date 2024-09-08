@@ -1950,6 +1950,9 @@ class LexicalEntry(
 
         # We need just lexical entry and entity id and entity's content for sorting and filtering
 
+        if not len(alive_lexes):
+            return [], [], []
+
         entities_query = (
             DBSession
                 .query(
@@ -2082,7 +2085,8 @@ class LexicalEntry(
                         .in_(created_entries),
 
                     Entity.parent_client_id == pre_filtered_lexes.c.parent_client_id,
-                    Entity.parent_object_id == pre_filtered_lexes.c.parent_object_id))
+                    Entity.parent_object_id == pre_filtered_lexes.c.parent_object_id)
+        ) if len(created_entries) else []
 
         # Filter and join at once to get and sort old entities
 
