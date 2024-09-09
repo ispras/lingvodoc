@@ -173,14 +173,14 @@ def entries_with_entities(lexes, mode,
                 cur_entities = []))
 
     # Edges of pagination
-    first_lex = offset - len(old_empty_lexes)
-    last_lex = offset + limit - len(old_empty_lexes)
+    left_edge = offset - len(old_empty_lexes)
+    right_edge = offset + limit - len(old_empty_lexes)
 
     i = 0
     for lex_ids, entity_with_published in itertools.groupby(old_entities, key = group_by_lex):
 
         # Pagination
-        if (first_lex if first_lex > 0 else 0) <= i < last_lex:
+        if not limit or (left_edge if left_edge > 0 else 0) <= i < right_edge:
             gql_entities_list = [
                 gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
                 for x in entity_with_published]
