@@ -23,7 +23,7 @@ from pdb import set_trace as A
 
 
 def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10, debug_flag=False):
-    debug_flag = True
+
     result_dict = {}
     language_list = []
     cur_language_id = None
@@ -387,7 +387,9 @@ def fields_getter(field_cte):
                 if (has_word("transcription", title) or
                         has_word("word", title) or
                         has_word("транскрипция", title) or
-                        has_word("слово", title)):
+                        has_word("слово", title) or
+                        has_word("лексема", title) or
+                        has_word("праформа", title)):
                     xcript_fid = (field_cid, field_oid)
                     xcript_fname = title
 
