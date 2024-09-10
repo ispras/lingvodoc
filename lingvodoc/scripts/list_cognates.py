@@ -2,7 +2,7 @@ import itertools
 import json
 import re
 
-from sqlalchemy import func, literal
+from sqlalchemy import func, literal, tuple_
 
 from lingvodoc.models import (
     DBSession as SyncDBSession,
@@ -22,8 +22,8 @@ from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
 
-def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
-
+def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10, debug_flag=False):
+    debug_flag = True
     result_dict = {}
     language_list = []
     cur_language_id = None
@@ -37,7 +37,7 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
     (
         language_cte, dictionary_cte, perspective_cte, field_cte
 
-    ) = get_cte_set(only_in_toc, offset, limit)
+    ) = get_cte_set(only_in_toc, group, title, offset, limit)
 
     def id2str(id):
         return f'{id[0],id[1]}'
@@ -183,7 +183,27 @@ def language_getter(language_cte, language_id):
 
 # Getting cte for languages, dictionaries, perspectives and fields
 
-def get_cte_set(only_in_toc, offset, limit):
+def get_cte_set(only_in_toc, group, title, offset, limit):
+
+    get_translation_atom = [
+        TranslationGist.marked_for_deletion == False,
+        TranslationAtom.parent_id == TranslationGist.id,
+        func.length(TranslationAtom.content) > 0,
+        TranslationAtom.marked_for_deletion == False ]
+
+    def get_language_ids(name):
+        nonlocal get_translation_atom
+        return (
+            SyncDBSession
+                .query(
+                    Language.client_id,
+                    Language.object_id)
+                .filter(
+                    Language.marked_for_deletion == False,
+                    Language.translation_gist_id == TranslationGist.id,
+                    *get_translation_atom,
+                    TranslationAtom.content == name)
+                .all())
 
     # Getting root languages
 
@@ -194,11 +214,21 @@ def get_cte_set(only_in_toc, offset, limit):
                 literal(0).label('level'))
 
             .filter(
-                Language.parent_client_id == None,
-                Language.parent_object_id == None,
-                Language.marked_for_deletion == False)
+                Language.marked_for_deletion == False))
 
-            .cte(recursive=True))
+    if not group and not title:
+        language_init = language_init.filter(
+            Language.parent_client_id == None,
+            Language.parent_object_id == None)
+    else:
+        if group and (group_ids := get_language_ids(group)):
+            language_init = language_init.filter(
+                tuple_(Language.parent_client_id, Language.parent_object_id).in_(group_ids))
+        if title and (title_ids := get_language_ids(title)):
+            language_init = language_init.filter(
+                tuple_(Language.client_id, Language.object_id).in_(title_ids))
+
+    language_init = language_init.cte(recursive=True)
 
     prnLanguage = aliased(language_init)
     subLanguage = aliased(Language)
@@ -217,12 +247,6 @@ def get_cte_set(only_in_toc, offset, limit):
                 subLanguage.marked_for_deletion == False))
 
     if_only_in_toc = [language_step.c.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
-
-    get_translation_atom = [
-        TranslationGist.marked_for_deletion == False,
-        TranslationAtom.parent_id == TranslationGist.id,
-        func.length(TranslationAtom.content) > 0,
-        TranslationAtom.marked_for_deletion == False ]
 
     language_cte = (
         SyncDBSession

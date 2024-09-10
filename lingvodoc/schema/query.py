@@ -7216,6 +7216,8 @@ class CognatesSummary(graphene.Mutation):
     class Arguments:
 
         only_in_toc = graphene.Boolean(required=True)
+        group = graphene.String()
+        title = graphene.String()
         limit = graphene.Int()
         offset = graphene.Int()
         debug_flag = graphene.Boolean()
@@ -7236,19 +7238,27 @@ class CognatesSummary(graphene.Mutation):
             user = (
                 Client.get_user_by_client_id(client_id))
 
-            if not user or user.id != 1:
+            if not user:
                 return (
                     CognatesSummary(
                         triumph=False,
-                        message='Only administrator can get cognates summary'))
+                        message='Only registered users can get cognates summary'))
 
             only_in_toc = args.get('only_in_toc', False)
+            group = args.get('group', None)
+            title = args.get('title', None)
             offset = args.get('offset', 0)
             limit = args.get('limit', 10)
             __debug_flag__ = args.get('debug_flag', False)
 
+            if __debug_flag__ and user_id != 1:
+                return (
+                    CognatesSummary(
+                        triumph=False,
+                        message='Only administrator can use debug mode.'))
+
             result_json, language_list = list_cognates.get_json_tree(
-                only_in_toc, offset, limit, __debug_flag__)
+                only_in_toc, group, title, offset, limit, __debug_flag__)
 
             with tempfile.TemporaryDirectory() as tmp_dir_path:
 
@@ -7262,7 +7272,7 @@ class CognatesSummary(graphene.Mutation):
                 if __debug_flag__:
                     shutil.copyfile(
                         tmp_json_file_path,
-                        f'cognates_summary_{offset+1}_to_{offset+limit}{"_toc" if only_in_toc else ""}.json')
+                        f'cognates_{group}:{title}_{offset}:{limit}{"_toc" if only_in_toc else ""}.json')
 
                 request = info.context.request
 
@@ -7287,7 +7297,7 @@ class CognatesSummary(graphene.Mutation):
                         '/'.join((
                             'cognates_summary',
                             f'{current_time:.6f}',
-                            f'cognates_summary_{offset+1}_to_{offset+limit}{"_toc" if only_in_toc else ""}.json')))
+                            f'cognates_{group}:{title}_{offset}:{limit}{"_toc" if only_in_toc else ""}.json')))
 
                 (etag, version_id) = (
                     minio_client.fput_object(
