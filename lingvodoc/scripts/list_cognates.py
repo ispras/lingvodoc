@@ -2,7 +2,7 @@ import itertools
 import json
 import re
 
-from sqlalchemy import func, literal
+from sqlalchemy import func, literal, tuple_
 
 from lingvodoc.models import (
     DBSession as SyncDBSession,
@@ -18,11 +18,12 @@ from lingvodoc.models import (
     PublishingEntity
 )
 
+from lingvodoc.schema.gql_holders import ResponseError
 from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
 
-def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
+def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10, debug_flag=False):
 
     result_dict = {}
     language_list = []
@@ -35,9 +36,9 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
 
     # Getting set of cte
     (
-        language_cte, dictionary_cte, perspective_cte, field_cte
+        language_cte, dictionary_cte, perspective_cte, field_query
 
-    ) = get_cte_set(only_in_toc, offset, limit)
+    ) = get_cte_set(only_in_toc, group, title, offset, limit)
 
     def id2str(id):
         return f'{id[0],id[1]}'
@@ -48,7 +49,7 @@ def get_json_tree(only_in_toc=False, offset=0, limit=10, debug_flag=False):
         (xcript_fid, xcript_fname),
         (xlat_fid, xlat_fname)
 
-    ) in fields_getter(field_cte):
+    ) in fields_getter(field_query):
 
         # Init dictionary_id and language_id
         dictionary_id = cur_dictionary_id
@@ -183,7 +184,26 @@ def language_getter(language_cte, language_id):
 
 # Getting cte for languages, dictionaries, perspectives and fields
 
-def get_cte_set(only_in_toc, offset, limit):
+def get_cte_set(only_in_toc, group, title, offset, limit):
+
+    get_translation_atom = [
+        TranslationGist.marked_for_deletion == False,
+        TranslationAtom.parent_id == TranslationGist.id,
+        func.length(TranslationAtom.content) > 0,
+        TranslationAtom.marked_for_deletion == False ]
+
+    def get_language_ids(name):
+        nonlocal get_translation_atom
+        return (
+            SyncDBSession
+                .query(
+                    Language.client_id,
+                    Language.object_id)
+                .filter(
+                    Language.translation_gist_id == TranslationGist.id,
+                    *get_translation_atom,
+                    func.lower(TranslationAtom.content) == name.lower())
+                .all())
 
     # Getting root languages
 
@@ -194,11 +214,27 @@ def get_cte_set(only_in_toc, offset, limit):
                 literal(0).label('level'))
 
             .filter(
-                Language.parent_client_id == None,
-                Language.parent_object_id == None,
-                Language.marked_for_deletion == False)
+                Language.marked_for_deletion == False))
 
-            .cte(recursive=True))
+    if not group and not title:
+        language_init = language_init.filter(
+            Language.parent_client_id == None,
+            Language.parent_object_id == None)
+    else:
+        if group:
+            if group_ids := get_language_ids(group):
+                language_init = language_init.filter(
+                    tuple_(Language.parent_client_id, Language.parent_object_id).in_(group_ids))
+            else:
+                raise ResponseError(message="No such language parent group in the database")
+        if title:
+            if title_ids := get_language_ids(title):
+                language_init = language_init.filter(
+                    tuple_(Language.client_id, Language.object_id).in_(title_ids))
+            else:
+                raise ResponseError(message="No such language group or title in the database")
+
+    language_init = language_init.cte(recursive=True)
 
     prnLanguage = aliased(language_init)
     subLanguage = aliased(Language)
@@ -218,12 +254,6 @@ def get_cte_set(only_in_toc, offset, limit):
 
     if_only_in_toc = [language_step.c.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
 
-    get_translation_atom = [
-        TranslationGist.marked_for_deletion == False,
-        TranslationAtom.parent_id == TranslationGist.id,
-        func.length(TranslationAtom.content) > 0,
-        TranslationAtom.marked_for_deletion == False ]
-
     language_cte = (
         SyncDBSession
             .query(
@@ -241,9 +271,6 @@ def get_cte_set(only_in_toc, offset, limit):
                 'language_cid',
                 'language_oid')
 
-            .order_by('language_level')
-            .offset(offset)
-            .limit(limit)
             .cte())
 
     # Getting dictionaries with self titles
@@ -298,11 +325,18 @@ def get_cte_set(only_in_toc, offset, limit):
                 'perspective_cid',
                 'perspective_oid')
 
+            .order_by(
+                'language_level',
+                'perspective_cid',
+                'perspective_oid')
+
+            .offset(offset)
+            .limit(limit)
             .cte())
 
     # Getting fields with self title
 
-    field_cte = (
+    field_query = (
         SyncDBSession
             .query(
                 perspective_cte.c.perspective_cid,
@@ -327,25 +361,28 @@ def get_cte_set(only_in_toc, offset, limit):
                 perspective_cte.c.perspective_oid,
                 'field_cid', 'field_oid')
 
-            .cte())
+            .order_by(
+                'language_level',
+                perspective_cte.c.perspective_cid,
+                perspective_cte.c.perspective_oid)
+
+            .yield_per(100))
 
     return (
         language_cte,
         dictionary_cte,
         perspective_cte,
-        field_cte)
+        field_query)
 
 # Getting perspectives with transcription, translation and cognates
 
-def fields_getter(field_cte):
+def fields_getter(field_query):
 
     def has_word(word, text):
         return bool(re.search(r'\b' + word + r'\b', text))
 
     # Group fields by perspective
-    fields_by_perspective = itertools.groupby(
-        SyncDBSession.query(field_cte).order_by(field_cte.c.language_level).yield_per(100),
-        key=lambda x: (x[0], x[1]))
+    fields_by_perspective = itertools.groupby(field_query, key=lambda x: (x[0], x[1]))
 
     for perspective_id, fields_group in fields_by_perspective:
 
@@ -363,7 +400,9 @@ def fields_getter(field_cte):
                 if (has_word("transcription", title) or
                         has_word("word", title) or
                         has_word("транскрипция", title) or
-                        has_word("слово", title)):
+                        has_word("слово", title) or
+                        has_word("лексема", title) or
+                        has_word("праформа", title)):
                     xcript_fid = (field_cid, field_oid)
                     xcript_fname = title
 
