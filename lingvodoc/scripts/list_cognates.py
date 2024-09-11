@@ -35,7 +35,7 @@ def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10,
 
     # Getting set of cte
     (
-        language_cte, dictionary_cte, perspective_cte, field_cte
+        language_cte, dictionary_cte, perspective_cte, field_query
 
     ) = get_cte_set(only_in_toc, group, title, offset, limit)
 
@@ -48,7 +48,7 @@ def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10,
         (xcript_fid, xcript_fname),
         (xlat_fid, xlat_fname)
 
-    ) in fields_getter(field_cte):
+    ) in fields_getter(field_query):
 
         # Init dictionary_id and language_id
         dictionary_id = cur_dictionary_id
@@ -264,7 +264,6 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 'language_cid',
                 'language_oid')
 
-            .order_by('language_level')
             .cte())
 
     # Getting dictionaries with self titles
@@ -319,13 +318,18 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 'perspective_cid',
                 'perspective_oid')
 
+            .order_by(
+                'language_level',
+                'perspective_cid',
+                'perspective_oid')
+
             .offset(offset)
             .limit(limit)
             .cte())
 
     # Getting fields with self title
 
-    field_cte = (
+    field_query = (
         SyncDBSession
             .query(
                 perspective_cte.c.perspective_cid,
@@ -350,25 +354,28 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 perspective_cte.c.perspective_oid,
                 'field_cid', 'field_oid')
 
-            .cte())
+            .order_by(
+                'language_level',
+                perspective_cte.c.perspective_cid,
+                perspective_cte.c.perspective_oid)
+
+            .yield_per(100))
 
     return (
         language_cte,
         dictionary_cte,
         perspective_cte,
-        field_cte)
+        field_query)
 
 # Getting perspectives with transcription, translation and cognates
 
-def fields_getter(field_cte):
+def fields_getter(field_query):
 
     def has_word(word, text):
         return bool(re.search(r'\b' + word + r'\b', text))
 
     # Group fields by perspective
-    fields_by_perspective = itertools.groupby(
-        SyncDBSession.query(field_cte).order_by(field_cte.c.language_level).yield_per(100),
-        key=lambda x: (x[0], x[1]))
+    fields_by_perspective = itertools.groupby(field_query, key=lambda x: (x[0], x[1]))
 
     for perspective_id, fields_group in fields_by_perspective:
 
