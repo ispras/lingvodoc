@@ -265,8 +265,6 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 'language_oid')
 
             .order_by('language_level')
-            .offset(offset)
-            .limit(limit)
             .cte())
 
     # Getting dictionaries with self titles
@@ -321,6 +319,8 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 'perspective_cid',
                 'perspective_oid')
 
+            .offset(offset)
+            .limit(limit)
             .cte())
 
     # Getting fields with self title
