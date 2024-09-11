@@ -199,10 +199,9 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                     Language.client_id,
                     Language.object_id)
                 .filter(
-                    Language.marked_for_deletion == False,
                     Language.translation_gist_id == TranslationGist.id,
                     *get_translation_atom,
-                    TranslationAtom.content == name)
+                    func.lower(TranslationAtom.content) == name.lower())
                 .all())
 
     # Getting root languages
