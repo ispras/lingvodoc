@@ -7251,14 +7251,21 @@ class CognatesSummary(graphene.Mutation):
             limit = args.get('limit', 10)
             __debug_flag__ = args.get('debug_flag', False)
 
-            if __debug_flag__ and user_id != 1:
+            if __debug_flag__ and user.id != 1:
                 return (
                     CognatesSummary(
                         triumph=False,
-                        message='Only administrator can use debug mode.'))
+                        message='Only administrator can use debug mode'))
 
-            result_json, language_list = list_cognates.get_json_tree(
-                only_in_toc, group, title, offset, limit, __debug_flag__)
+            try:
+                result_json, language_list = list_cognates.get_json_tree(
+                    only_in_toc, group, title, offset, limit, __debug_flag__)
+
+            except ResponseError as e:
+                return (
+                    CognatesSummary(
+                        triumph=False,
+                        message=e.message))
 
             with tempfile.TemporaryDirectory() as tmp_dir_path:
 

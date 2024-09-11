@@ -18,6 +18,7 @@ from lingvodoc.models import (
     PublishingEntity
 )
 
+from lingvodoc.schema.gql_holders import ResponseError
 from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
@@ -220,12 +221,18 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
             Language.parent_client_id == None,
             Language.parent_object_id == None)
     else:
-        if group and (group_ids := get_language_ids(group)):
-            language_init = language_init.filter(
-                tuple_(Language.parent_client_id, Language.parent_object_id).in_(group_ids))
-        if title and (title_ids := get_language_ids(title)):
-            language_init = language_init.filter(
-                tuple_(Language.client_id, Language.object_id).in_(title_ids))
+        if group:
+            if group_ids := get_language_ids(group):
+                language_init = language_init.filter(
+                    tuple_(Language.parent_client_id, Language.parent_object_id).in_(group_ids))
+            else:
+                raise ResponseError(message="No such language parent group in the database")
+        if title:
+            if title_ids := get_language_ids(title):
+                language_init = language_init.filter(
+                    tuple_(Language.client_id, Language.object_id).in_(title_ids))
+            else:
+                raise ResponseError(message="No such language group or title in the database")
 
     language_init = language_init.cte(recursive=True)
 
