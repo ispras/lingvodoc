@@ -7220,6 +7220,7 @@ class CognatesSummary(graphene.Mutation):
         title = graphene.String()
         limit = graphene.Int()
         offset = graphene.Int()
+        p_id = LingvodocID()
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -7249,6 +7250,7 @@ class CognatesSummary(graphene.Mutation):
             title = args.get('title', None)
             offset = args.get('offset', 0)
             limit = args.get('limit', 10)
+            p_id = args.get('p_id', None)
             __debug_flag__ = args.get('debug_flag', False)
 
             if __debug_flag__ and user.id != 1:
@@ -7259,7 +7261,7 @@ class CognatesSummary(graphene.Mutation):
 
             try:
                 result_json, language_list = list_cognates.get_json_tree(
-                    only_in_toc, group, title, offset, limit, __debug_flag__)
+                    only_in_toc, group, title, offset, limit, p_id, __debug_flag__)
 
             except ResponseError as e:
                 return (
@@ -7283,7 +7285,9 @@ class CognatesSummary(graphene.Mutation):
                         f'{"_"+group if group else ""}'
                         f'{"_"+title if title else ""}'
                         f'_{offset+1}to{offset+limit}'
-                        f'{"_onlyInToc" if only_in_toc else ""}.json')
+                        f'{"_onlyInToc" if only_in_toc else ""}.json'
+                        if not p_id else
+                        f'cognates_{p_id}.json')
 
                 request = info.context.request
 
@@ -7312,7 +7316,9 @@ class CognatesSummary(graphene.Mutation):
                             f'{"_"+group if group else ""}'
                             f'{"_"+title if title else ""}'
                             f'_{offset+1}to{offset+limit}'
-                            f'{"_onlyInToc" if only_in_toc else ""}.json')))
+                            f'{"_onlyInToc" if only_in_toc else ""}.json'
+                            if not p_id else
+                            f'cognates_{p_id}.json')))
 
 
                 (etag, version_id) = (

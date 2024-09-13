@@ -23,7 +23,14 @@ from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
 
-def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10, debug_flag=False):
+def get_json_tree(
+        only_in_toc=False,
+        l_group=None,
+        l_title=None,
+        p_offset=0,
+        p_limit=10,
+        p_id=None,
+        debug_flag=False):
 
     result_dict = {}
     language_list = []
@@ -38,7 +45,7 @@ def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10,
     (
         language_cte, dictionary_cte, perspective_cte, field_query
 
-    ) = get_cte_set(only_in_toc, group, title, offset, limit)
+    ) = get_cte_set(only_in_toc, l_group, l_title, p_offset, p_limit, p_id)
 
     def id2str(id):
         return f'{id[0],id[1]}'
@@ -184,7 +191,7 @@ def language_getter(language_cte, language_id):
 
 # Getting cte for languages, dictionaries, perspectives and fields
 
-def get_cte_set(only_in_toc, group, title, offset, limit):
+def get_cte_set(only_in_toc, l_group, l_title, p_offset, p_limit, p_id):
 
     get_translation_atom = [
         TranslationGist.marked_for_deletion == False,
@@ -216,19 +223,19 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
             .filter(
                 Language.marked_for_deletion == False))
 
-    if not group and not title:
+    if not l_group and not l_title:
         language_init = language_init.filter(
             Language.parent_client_id == None,
             Language.parent_object_id == None)
     else:
-        if group:
-            if group_ids := get_language_ids(group):
+        if l_group:
+            if group_ids := get_language_ids(l_group):
                 language_init = language_init.filter(
                     tuple_(Language.parent_client_id, Language.parent_object_id).in_(group_ids))
             else:
                 raise ResponseError(message="No such language parent group in the database")
-        if title:
-            if title_ids := get_language_ids(title):
+        if l_title:
+            if title_ids := get_language_ids(l_title):
                 language_init = language_init.filter(
                     tuple_(Language.client_id, Language.object_id).in_(title_ids))
             else:
@@ -330,17 +337,25 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 'perspective_cid',
                 'perspective_oid')
 
-            .offset(offset)
-            .limit(limit)
+            .offset(p_offset)
+            .limit(p_limit if not p_id else None)
             .cte())
 
     # Getting fields with self title
 
+    get_p_id = [
+        DictionaryPerspectiveToField.parent_client_id == p_id[0],
+        DictionaryPerspectiveToField.parent_object_id == p_id[1]
+    ] if p_id else [
+        DictionaryPerspectiveToField.parent_client_id == perspective_cte.c.perspective_cid,
+        DictionaryPerspectiveToField.parent_object_id == perspective_cte.c.perspective_oid
+    ]
+
     field_query = (
         SyncDBSession
             .query(
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid,
+                DictionaryPerspectiveToField.parent_client_id,
+                DictionaryPerspectiveToField.parent_object_id,
                 Field.client_id.label('field_cid'),
                 Field.object_id.label('field_oid'),
                 func.array_agg(func.lower(TranslationAtom.content)).label('field_title'),
@@ -348,8 +363,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 func.min(perspective_cte.c.language_level).label('language_level'))
 
             .filter(
-                DictionaryPerspectiveToField.parent_client_id == perspective_cte.c.perspective_cid,
-                DictionaryPerspectiveToField.parent_object_id == perspective_cte.c.perspective_oid,
+                *get_p_id,
                 DictionaryPerspectiveToField.marked_for_deletion == False,
                 DictionaryPerspectiveToField.field_id == Field.id,
                 Field.marked_for_deletion == False,
@@ -357,14 +371,14 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 *get_translation_atom, TranslationAtom.locale_id <= 2)
 
             .group_by(
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid,
+                DictionaryPerspectiveToField.parent_client_id,
+                DictionaryPerspectiveToField.parent_object_id,
                 'field_cid', 'field_oid')
 
             .order_by(
                 'language_level',
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid)
+                DictionaryPerspectiveToField.parent_client_id,
+                DictionaryPerspectiveToField.parent_object_id)
 
             .yield_per(100))
 
