@@ -186,14 +186,14 @@ def language_getter(language_cte, language_id):
 
 def get_cte_set(only_in_toc, group, title, offset, limit):
 
-    get_translation_atom = [
+    get_xlat_atoms = [
         TranslationGist.marked_for_deletion == False,
         TranslationAtom.parent_id == TranslationGist.id,
         func.length(TranslationAtom.content) > 0,
-        TranslationAtom.marked_for_deletion == False ]
+        TranslationAtom.marked_for_deletion == False]
 
     def get_language_ids(name):
-        nonlocal get_translation_atom
+        nonlocal get_xlat_atoms
         return (
             SyncDBSession
                 .query(
@@ -201,7 +201,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                     Language.object_id)
                 .filter(
                     Language.translation_gist_id == TranslationGist.id,
-                    *get_translation_atom,
+                    *get_xlat_atoms,
                     func.lower(TranslationAtom.content) == name.lower())
                 .all())
 
@@ -234,6 +234,10 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
             else:
                 raise ResponseError(message="No such language group or title in the database")
 
+    if not language_init.count():
+        raise ResponseError(message=
+            "Seems like the parent group is not closest one for the target group or any of them is deleted")
+
     language_init = language_init.cte(recursive=True)
 
     prnLanguage = aliased(language_init)
@@ -265,13 +269,18 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
             .filter(
                 language_step.c.translation_gist_client_id == TranslationGist.client_id,
                 language_step.c.translation_gist_object_id == TranslationGist.object_id,
-                *get_translation_atom, *if_only_in_toc)
+                *get_xlat_atoms, *if_only_in_toc)
 
             .group_by(
                 'language_cid',
                 'language_oid')
 
             .cte())
+
+    get_dicts_for_langs = [
+        Dictionary.parent_client_id == language_cte.c.language_cid,
+        Dictionary.parent_object_id == language_cte.c.language_oid,
+        Dictionary.marked_for_deletion == False]
 
     # Getting dictionaries with self titles
 
@@ -286,11 +295,9 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 func.min(language_cte.c.language_level).label('language_level'))
 
             .filter(
-                Dictionary.parent_client_id == language_cte.c.language_cid,
-                Dictionary.parent_object_id == language_cte.c.language_oid,
-                Dictionary.marked_for_deletion == False,
+                *get_dicts_for_langs,
                 Dictionary.translation_gist_id == TranslationGist.id,
-                *get_translation_atom)
+                *get_xlat_atoms)
 
             .group_by(
                 'language_cid',
@@ -299,6 +306,10 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 'dictionary_oid')
 
             .cte())
+
+    get_pers_for_dicts = [
+        DictionaryPerspective.parent_id == Dictionary.id,
+        DictionaryPerspective.marked_for_deletion == False]
 
     # Getting perspectives with self titles
 
@@ -313,11 +324,10 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 func.min(dictionary_cte.c.language_level).label('language_level'))
 
             .filter(
-                DictionaryPerspective.parent_client_id == dictionary_cte.c.dictionary_cid,
-                DictionaryPerspective.parent_object_id == dictionary_cte.c.dictionary_oid,
-                DictionaryPerspective.marked_for_deletion == False,
+                *get_dicts_for_langs,
+                *get_pers_for_dicts,
                 DictionaryPerspective.translation_gist_id == TranslationGist.id,
-                *get_translation_atom)
+                *get_xlat_atoms)
 
             .group_by(
                 'dictionary_cid',
@@ -339,8 +349,8 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
     field_query = (
         SyncDBSession
             .query(
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid,
+                DictionaryPerspective.client_id,
+                DictionaryPerspective.object_id,
                 Field.client_id.label('field_cid'),
                 Field.object_id.label('field_oid'),
                 func.array_agg(func.lower(TranslationAtom.content)).label('field_title'),
@@ -348,23 +358,24 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 func.min(perspective_cte.c.language_level).label('language_level'))
 
             .filter(
-                DictionaryPerspectiveToField.parent_client_id == perspective_cte.c.perspective_cid,
-                DictionaryPerspectiveToField.parent_object_id == perspective_cte.c.perspective_oid,
+                *get_dicts_for_langs,
+                *get_pers_for_dicts,
+                DictionaryPerspectiveToField.parent_id == DictionaryPerspective.id,
                 DictionaryPerspectiveToField.marked_for_deletion == False,
                 DictionaryPerspectiveToField.field_id == Field.id,
                 Field.marked_for_deletion == False,
                 Field.translation_gist_id == TranslationGist.id,
-                *get_translation_atom, TranslationAtom.locale_id <= 2)
+                *get_xlat_atoms, TranslationAtom.locale_id <= 2)
 
             .group_by(
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid,
+                DictionaryPerspective.client_id,
+                DictionaryPerspective.object_id,
                 'field_cid', 'field_oid')
 
             .order_by(
                 'language_level',
-                perspective_cte.c.perspective_cid,
-                perspective_cte.c.perspective_oid)
+                DictionaryPerspective.client_id,
+                DictionaryPerspective.object_id)
 
             .yield_per(100))
 
@@ -442,6 +453,7 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid):
 
             .filter(
                 LexicalEntry.parent_id == perspective_id,
+                LexicalEntry.marked_for_deletion == False,
                 Entity.parent_id == LexicalEntry.id,
                 Entity.field_id.in_([xcript_fid, xlat_fid]),
                 Entity.marked_for_deletion == False,
