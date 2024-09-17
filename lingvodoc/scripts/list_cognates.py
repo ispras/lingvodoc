@@ -25,7 +25,6 @@ from lingvodoc.models import (
     PublishingEntity
 )
 
-from lingvodoc.schema.gql_holders import ResponseError
 from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
@@ -219,7 +218,7 @@ def perspective_getter(perspective_cte, perspective_id):
                 perspective_cte.c.perspective_cid == perspective_id[0],
                 perspective_cte.c.perspective_oid == perspective_id[1])
 
-            .one())
+            .first())
 
 
 def dictionary_getter(dictionary_cte, dictionary_id):
@@ -387,18 +386,26 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
 
     # Get perspectives count
 
-    perspective_count = (
+    perspective_limit = (
         DBSession
             .query(
-                DictionaryPerspective)
+                DictionaryPerspective.client_id,
+                DictionaryPerspective.object_id)
 
             .filter(
                 *get_dicts_for_langs,
                 *get_pers_for_dicts)
 
+            .order_by(
+                DictionaryPerspective.client_id,
+                DictionaryPerspective.object_id
+            )
+
             .offset(offset)
-            .limit(limit)
-            .count())
+            .limit(limit))
+
+    perspective_count = perspective_limit.count()
+    perspective_limit = perspective_limit.cte()
 
     # Getting perspectives with self titles
 
@@ -424,13 +431,6 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 'perspective_cid',
                 'perspective_oid')
 
-            .order_by(
-                'language_level',
-                'perspective_cid',
-                'perspective_oid')
-
-            .offset(offset)
-            .limit(limit)
             .cte())
 
     # Getting fields with self title
@@ -449,6 +449,8 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
             .filter(
                 *get_dicts_for_langs,
                 *get_pers_for_dicts,
+                DictionaryPerspective.client_id == perspective_limit.c.client_id,
+                DictionaryPerspective.object_id == perspective_limit.c.object_id,
                 DictionaryPerspectiveToField.parent_id == DictionaryPerspective.id,
                 DictionaryPerspectiveToField.marked_for_deletion == False,
                 DictionaryPerspectiveToField.field_id == Field.id,
@@ -466,8 +468,6 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 DictionaryPerspective.client_id,
                 DictionaryPerspective.object_id)
 
-            .offset(offset)
-            .limit(limit)
             .yield_per(100))
 
     return (
