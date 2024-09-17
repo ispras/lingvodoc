@@ -64,8 +64,10 @@ def async_get_json_tree(
     if cte_set := get_cte_set(only_in_toc, group, title, offset, limit, task_status):
         language_cte, dictionary_cte, perspective_count, perspective_cte, field_query = cte_set
     else:
+        '''
         if task_status:
             task_status.set(1, 100, "Finished (ERROR): it's something wrong with queries, please ask administrator")
+        '''
         return False
 
     def id2str(id):
