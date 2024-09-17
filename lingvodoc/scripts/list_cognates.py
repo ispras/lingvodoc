@@ -25,6 +25,7 @@ from lingvodoc.models import (
     PublishingEntity
 )
 
+from lingvodoc.schema.gql_holders import ResponseError
 from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
@@ -296,7 +297,6 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 if task_status:
                     task_status.set(2, 100, 'Finished (ERROR):\n' + 'No such language parent group in the database')
                 return False
-
         if title:
             if title_ids := get_language_ids(title):
                 language_init = language_init.filter(
@@ -424,6 +424,13 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 'perspective_cid',
                 'perspective_oid')
 
+            .order_by(
+                'language_level',
+                'perspective_cid',
+                'perspective_oid')
+
+            .offset(offset)
+            .limit(limit)
             .cte())
 
     # Getting fields with self title
