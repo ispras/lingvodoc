@@ -198,8 +198,10 @@ def async_get_json_tree(
             task_status.set(3, 100, "Finished (ERROR):\n" + "Result file can't be stored\n" + str(e))
         return False
 
+    language_list = '\n'.join(str(title) for title in language_list)
+
     if task_status:
-        task_status.set(3, 100, 'Finished. Processed languages:\n' + '\n'.join(language_list), json_url)
+        task_status.set(3, 100, 'Finished. Processed languages:\n' + language_list, json_url)
 
     return True
 
