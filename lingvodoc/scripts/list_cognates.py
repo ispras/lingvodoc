@@ -1,11 +1,18 @@
 import itertools
 import json
+import shutil
+import minio
+import tempfile
+import time
+import os
 import re
 
-from sqlalchemy import func, literal, tuple_
+from sqlalchemy import func, literal, tuple_, create_engine
+from lingvodoc.queue.celery import celery
+from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
 from lingvodoc.models import (
-    DBSession as SyncDBSession,
+    DBSession,
     TranslationAtom,
     TranslationGist,
     Field,
@@ -18,12 +25,22 @@ from lingvodoc.models import (
     PublishingEntity
 )
 
-from lingvodoc.schema.gql_holders import ResponseError
 from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
 
-def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10, debug_flag=False):
+@celery.task
+def async_get_json_tree(
+        task_key,
+        sqlalchemy_url,
+        cache_kwargs,
+        storage,
+        only_in_toc=False,
+        group=None,
+        title=None,
+        offset=0,
+        limit=10,
+        debug_flag=False):
 
     result_dict = {}
     language_list = []
@@ -34,22 +51,42 @@ def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10,
     dictionary_title = None
     perspective_title = None
 
-    # Getting set of cte
-    (
-        language_cte, dictionary_cte, perspective_cte, field_query
+    # Ok, and now we go on with task execution.
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind=engine)
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
 
-    ) = get_cte_set(only_in_toc, group, title, offset, limit)
+    # Getting set of cte
+    if cte_set := get_cte_set(only_in_toc, group, title, offset, limit, task_status):
+        language_cte, dictionary_cte, perspective_count, perspective_cte, field_query = cte_set
+    else:
+        return False
 
     def id2str(id):
         return f'{id[0],id[1]}'
 
     # Getting perspective_id and etymology fields ids and names in cycle
-    for (
-        perspective_id,
-        (xcript_fid, xcript_fname),
-        (xlat_fid, xlat_fname)
+    j = 0
+    for i, current_perspective in enumerate(fields_getter(field_query)):
 
-    ) in fields_getter(field_query):
+        if current_perspective is None:
+            j += 1
+
+        if task_status:
+            task_status.set(
+                1, i * 85 // perspective_count,
+                f'So far {i}/{j} of {perspective_count} perspectives are processed / are not suitable.')
+
+        if current_perspective is None:
+            continue
+
+        (
+            perspective_id,
+            (xcript_fid, xcript_fname),
+            (xlat_fid, xlat_fname)
+
+        ) = current_perspective
 
         # Init dictionary_id and language_id
         dictionary_id = cur_dictionary_id
@@ -139,12 +176,32 @@ def get_json_tree(only_in_toc=False, group=None, title=None, offset=0, limit=10,
                 print(f"{xlat_fname}: {xlat_text}")
                 print(f"Cognate_groups: {str(linked_group)}\n")
 
-    return json.dumps(result_dict), language_list
+    if task_status:
+        task_status.set(2, 85, 'Writing result file...')
+
+    file_name = (
+        f'cognates'
+        f'{"_" + group if group else ""}'
+        f'{"_" + title if title else ""}'
+        f'_{offset + 1}to{offset + limit}'
+        f'{"_onlyInToc" if only_in_toc else ""}.json')
+
+    try:
+        json_url = write_json_file(json.dumps(result_dict), file_name, storage, debug_flag)
+    except Exception as e:
+        if task_status:
+            task_status.set(2, 100, "Finished (ERROR):\n" + "Result file can't be stored\n" + str(e))
+        return False
+
+    if task_status:
+        task_status.set(2, 100, 'Finished. Processed languages:\n' + '\n'.join(language_list), json_url)
+
+    return True
 
 
 def perspective_getter(perspective_cte, perspective_id):
     return (
-        SyncDBSession
+        DBSession
             .query(
                 perspective_cte.c.perspective_title,
                 perspective_cte.c.dictionary_cid,
@@ -156,9 +213,10 @@ def perspective_getter(perspective_cte, perspective_id):
 
             .one())
 
+
 def dictionary_getter(dictionary_cte, dictionary_id):
     return (
-        SyncDBSession
+        DBSession
             .query(
                 dictionary_cte.c.dictionary_title,
                 dictionary_cte.c.language_cid,
@@ -170,9 +228,10 @@ def dictionary_getter(dictionary_cte, dictionary_id):
 
             .one())
 
+
 def language_getter(language_cte, language_id):
     return (
-        SyncDBSession
+        DBSession
             .query(
                 language_cte.c.language_title)
 
@@ -182,9 +241,10 @@ def language_getter(language_cte, language_id):
 
             .one())
 
+
 # Getting cte for languages, dictionaries, perspectives and fields
 
-def get_cte_set(only_in_toc, group, title, offset, limit):
+def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
 
     get_xlat_atoms = [
         TranslationGist.marked_for_deletion == False,
@@ -195,7 +255,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
     def get_language_ids(name):
         nonlocal get_xlat_atoms
         return (
-            SyncDBSession
+            DBSession
                 .query(
                     Language.client_id,
                     Language.object_id)
@@ -208,7 +268,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
     # Getting root languages
 
     language_init = (
-        SyncDBSession
+        DBSession
             .query(
                 Language,
                 literal(0).label('level'))
@@ -226,17 +286,24 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 language_init = language_init.filter(
                     tuple_(Language.parent_client_id, Language.parent_object_id).in_(group_ids))
             else:
-                raise ResponseError(message="No such language parent group in the database")
+                if task_status:
+                    task_status.set(1, 100, 'Finished (ERROR):\n' + 'No such language parent group in the database')
+                return False
+
         if title:
             if title_ids := get_language_ids(title):
                 language_init = language_init.filter(
                     tuple_(Language.client_id, Language.object_id).in_(title_ids))
             else:
-                raise ResponseError(message="No such language group or title in the database")
+                if task_status:
+                    task_status.set(1, 100, 'Finished (ERROR):\n' + 'No such language group or title in the database')
+                return False
 
     if not language_init.count():
-        raise ResponseError(message=
-            "Seems like the parent group is not closest one for the target group or any of them is deleted")
+        if task_status:
+            task_status.set(1, 100, 'Finished (ERROR):\n' +
+                'Seems like the parent group is not closest one for the target group or any of them is deleted')
+        return False
 
     language_init = language_init.cte(recursive=True)
 
@@ -246,7 +313,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
     # Recursively getting tree of languages
 
     language_step = language_init.union_all(
-        SyncDBSession
+        DBSession
             .query(
                 subLanguage,
                 (prnLanguage.c.level + 1).label("level"))
@@ -259,7 +326,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
     if_only_in_toc = [language_step.c.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
 
     language_cte = (
-        SyncDBSession
+        DBSession
             .query(
                 language_step.c.client_id.label('language_cid'),
                 language_step.c.object_id.label('language_oid'),
@@ -285,7 +352,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
     # Getting dictionaries with self titles
 
     dictionary_cte = (
-        SyncDBSession
+        DBSession
             .query(
                 Dictionary.parent_client_id.label('language_cid'),
                 Dictionary.parent_object_id.label('language_oid'),
@@ -311,10 +378,25 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
         DictionaryPerspective.parent_id == Dictionary.id,
         DictionaryPerspective.marked_for_deletion == False]
 
+    # Get perspectives count
+
+    perspective_count = (
+        DBSession
+            .query(
+                DictionaryPerspective)
+
+            .filter(
+                *get_dicts_for_langs,
+                *get_pers_for_dicts)
+
+            .offset(offset)
+            .limit(limit)
+            .count())
+
     # Getting perspectives with self titles
 
     perspective_cte = (
-        SyncDBSession
+        DBSession
             .query(
                 DictionaryPerspective.parent_client_id.label('dictionary_cid'),
                 DictionaryPerspective.parent_object_id.label('dictionary_oid'),
@@ -335,19 +417,12 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 'perspective_cid',
                 'perspective_oid')
 
-            .order_by(
-                'language_level',
-                'perspective_cid',
-                'perspective_oid')
-
-            .offset(offset)
-            .limit(limit)
             .cte())
 
     # Getting fields with self title
 
     field_query = (
-        SyncDBSession
+        DBSession
             .query(
                 DictionaryPerspective.client_id,
                 DictionaryPerspective.object_id,
@@ -377,11 +452,14 @@ def get_cte_set(only_in_toc, group, title, offset, limit):
                 DictionaryPerspective.client_id,
                 DictionaryPerspective.object_id)
 
+            .offset(offset)
+            .limit(limit)
             .yield_per(100))
 
     return (
         language_cte,
         dictionary_cte,
+        perspective_count,
         perspective_cte,
         field_query)
 
@@ -436,6 +514,8 @@ def fields_getter(field_query):
                 perspective_id,
                 (xcript_fid, xcript_fname),
                 (xlat_fid, xlat_fname))
+        else:
+            yield None
 
 
 def entities_getter(perspective_id, xcript_fid, xlat_fid):
@@ -444,7 +524,7 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid):
     xlat_text = None
 
     entities = (
-        SyncDBSession
+        DBSession
             .query(
                 LexicalEntry.client_id,
                 LexicalEntry.object_id,
@@ -469,7 +549,7 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid):
     for lex_id, entities_group in entities_by_lex:
 
         linked_group = (
-            SyncDBSession
+            DBSession
                 .execute(
                     f'select * from linked_group(66, 25, {lex_id[0]}, {lex_id[1]})')
                 .fetchall())
@@ -495,3 +575,54 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid):
             xcript_text,
             xlat_text,
             linked_group)
+
+
+def write_json_file(result_json, file_name, storage, debug_flag):
+
+    with tempfile.TemporaryDirectory() as tmp_dir_path:
+        tmp_json_file_path = (
+            os.path.join(tmp_dir_path, 'cognates_summary.json'))
+
+        with open(tmp_json_file_path, 'w') as tmp_json_file:
+            tmp_json_file.write(result_json)
+
+        # Saving local copies, if required.
+        if debug_flag:
+            shutil.copyfile(
+                tmp_json_file_path,
+                file_name)
+
+        # Saving processed files.
+        storage_temporary = storage['temporary']
+        host = storage_temporary['host']
+        bucket = storage_temporary['bucket']
+
+        minio_client = (
+            minio.Minio(
+                host,
+                access_key=storage_temporary['access_key'],
+                secret_key=storage_temporary['secret_key'],
+                secure=True))
+
+        current_time = time.time()
+
+        object_name = (
+                storage_temporary['prefix'] +
+                '/'.join((
+                    'cognates_summary',
+                    f'{current_time:.6f}',
+                    file_name)))
+
+        minio_client.fput_object(
+            bucket,
+            object_name,
+            tmp_json_file_path)
+
+    url = (
+        '/'.join((
+            'https:/',
+            host,
+            bucket,
+            object_name)))
+
+    return url
