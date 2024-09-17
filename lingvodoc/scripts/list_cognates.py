@@ -57,10 +57,15 @@ def async_get_json_tree(
     initialize_cache(cache_kwargs)
     task_status = TaskStatus.get_from_cache(task_key)
 
+    if task_status:
+        task_status.set(1, 10, 'Getting required data from database...')
+
     # Getting set of cte
     if cte_set := get_cte_set(only_in_toc, group, title, offset, limit, task_status):
         language_cte, dictionary_cte, perspective_count, perspective_cte, field_query = cte_set
     else:
+        if task_status:
+            task_status.set(1, 100, "Finished (ERROR): it's something wrong with queries, please ask administrator")
         return False
 
     def id2str(id):
@@ -75,8 +80,8 @@ def async_get_json_tree(
 
         if task_status:
             task_status.set(
-                1, i * 85 // perspective_count,
-                f'So far {i}/{j} of {perspective_count} perspectives are processed / are not suitable.')
+                2, 10 + i * 95 // perspective_count,
+                f'So far {i}/{j} of {perspective_count} perspectives are processed / are not suitable')
 
         if current_perspective is None:
             continue
@@ -177,7 +182,7 @@ def async_get_json_tree(
                 print(f"Cognate_groups: {str(linked_group)}\n")
 
     if task_status:
-        task_status.set(2, 85, 'Writing result file...')
+        task_status.set(3, 95, 'Writing result file...')
 
     file_name = (
         f'cognates'
@@ -190,11 +195,11 @@ def async_get_json_tree(
         json_url = write_json_file(json.dumps(result_dict), file_name, storage, debug_flag)
     except Exception as e:
         if task_status:
-            task_status.set(2, 100, "Finished (ERROR):\n" + "Result file can't be stored\n" + str(e))
+            task_status.set(3, 100, "Finished (ERROR):\n" + "Result file can't be stored\n" + str(e))
         return False
 
     if task_status:
-        task_status.set(2, 100, 'Finished. Processed languages:\n' + '\n'.join(language_list), json_url)
+        task_status.set(3, 100, 'Finished. Processed languages:\n' + '\n'.join(language_list), json_url)
 
     return True
 
@@ -262,7 +267,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 .filter(
                     Language.translation_gist_id == TranslationGist.id,
                     *get_xlat_atoms,
-                    func.lower(TranslationAtom.content) == name.lower())
+                    func.lower(TranslationAtom.content) == name.lower().strip())
                 .all())
 
     # Getting root languages
@@ -287,7 +292,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                     tuple_(Language.parent_client_id, Language.parent_object_id).in_(group_ids))
             else:
                 if task_status:
-                    task_status.set(1, 100, 'Finished (ERROR):\n' + 'No such language parent group in the database')
+                    task_status.set(2, 100, 'Finished (ERROR):\n' + 'No such language parent group in the database')
                 return False
 
         if title:
@@ -296,12 +301,12 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                     tuple_(Language.client_id, Language.object_id).in_(title_ids))
             else:
                 if task_status:
-                    task_status.set(1, 100, 'Finished (ERROR):\n' + 'No such language group or title in the database')
+                    task_status.set(2, 100, 'Finished (ERROR):\n' + 'No such language group or title in the database')
                 return False
 
     if not language_init.count():
         if task_status:
-            task_status.set(1, 100, 'Finished (ERROR):\n' +
+            task_status.set(2, 100, 'Finished (ERROR):\n' +
                 'Seems like the parent group is not closest one for the target group or any of them is deleted')
         return False
 

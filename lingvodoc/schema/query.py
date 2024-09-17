@@ -7254,7 +7254,7 @@ class CognatesSummary(graphene.Mutation):
                         triumph=False,
                         message='Only administrator can use debug mode'))
 
-            task_status = TaskStatus(user.id, 'Cognates summary computation', '', 2)
+            task_status = TaskStatus(user.id, 'Cognates summary computation', '', 3)
             request = info.context.request
 
             list_cognates.async_get_json_tree.delay(
