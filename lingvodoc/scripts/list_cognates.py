@@ -218,7 +218,7 @@ def perspective_getter(perspective_cte, perspective_id):
                 perspective_cte.c.perspective_cid == perspective_id[0],
                 perspective_cte.c.perspective_oid == perspective_id[1])
 
-            .first())
+            .one())
 
 
 def dictionary_getter(dictionary_cte, dictionary_id):
@@ -318,6 +318,8 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
 
     # Recursively getting tree of languages
 
+    if_only_in_toc = [subLanguage.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
+
     language_step = language_init.union_all(
         DBSession
             .query(
@@ -327,22 +329,20 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
             .filter(
                 subLanguage.parent_client_id == prnLanguage.c.client_id,
                 subLanguage.parent_object_id == prnLanguage.c.object_id,
-                subLanguage.marked_for_deletion == False))
-
-    if_only_in_toc = [language_step.c.additional_metadata['toc_mark'] == 'true'] if only_in_toc else []
+                subLanguage.marked_for_deletion == False,
+                *if_only_in_toc))
 
     language_cte = (
         DBSession
             .query(
                 language_step.c.client_id.label('language_cid'),
                 language_step.c.object_id.label('language_oid'),
-                func.array_agg(TranslationAtom.content).label('language_title'),
-                func.min(language_step.c.level).label('language_level'))
+                func.array_agg(TranslationAtom.content).label('language_title'))
 
             .filter(
                 language_step.c.translation_gist_client_id == TranslationGist.client_id,
                 language_step.c.translation_gist_object_id == TranslationGist.object_id,
-                *get_xlat_atoms, *if_only_in_toc)
+                *get_xlat_atoms)
 
             .group_by(
                 'language_cid',
@@ -351,8 +351,8 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
             .cte())
 
     get_dicts_for_langs = [
-        Dictionary.parent_client_id == language_cte.c.language_cid,
-        Dictionary.parent_object_id == language_cte.c.language_oid,
+        Dictionary.parent_client_id == language_step.c.client_id,
+        Dictionary.parent_object_id == language_step.c.object_id,
         Dictionary.marked_for_deletion == False]
 
     # Getting dictionaries with self titles
@@ -364,8 +364,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 Dictionary.parent_object_id.label('language_oid'),
                 Dictionary.client_id.label('dictionary_cid'),
                 Dictionary.object_id.label('dictionary_oid'),
-                func.array_agg(TranslationAtom.content).label('dictionary_title'),
-                func.min(language_cte.c.language_level).label('language_level'))
+                func.array_agg(TranslationAtom.content).label('dictionary_title'))
 
             .filter(
                 *get_dicts_for_langs,
@@ -390,13 +389,15 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
         DBSession
             .query(
                 DictionaryPerspective.client_id,
-                DictionaryPerspective.object_id)
+                DictionaryPerspective.object_id,
+                language_step.c.level)
 
             .filter(
                 *get_dicts_for_langs,
                 *get_pers_for_dicts)
 
             .order_by(
+                language_step.c.level,
                 DictionaryPerspective.client_id,
                 DictionaryPerspective.object_id
             )
@@ -416,8 +417,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 DictionaryPerspective.parent_object_id.label('dictionary_oid'),
                 DictionaryPerspective.client_id.label('perspective_cid'),
                 DictionaryPerspective.object_id.label('perspective_oid'),
-                func.array_agg(TranslationAtom.content).label('perspective_title'),
-                func.min(dictionary_cte.c.language_level).label('language_level'))
+                func.array_agg(TranslationAtom.content).label('perspective_title'))
 
             .filter(
                 *get_dicts_for_langs,
@@ -444,7 +444,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 Field.object_id.label('field_oid'),
                 func.array_agg(func.lower(TranslationAtom.content)).label('field_title'),
                 func.min(DictionaryPerspectiveToField.position).label('field_position'),
-                func.min(perspective_cte.c.language_level).label('language_level'))
+                func.min(language_step.c.level).label('language_level'))
 
             .filter(
                 *get_dicts_for_langs,
