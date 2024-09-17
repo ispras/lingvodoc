@@ -7223,9 +7223,6 @@ class CognatesSummary(graphene.Mutation):
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
-
-    json_url = graphene.String()
-    language_list = graphene.List(graphene.String)
     message = graphene.String()
 
     @staticmethod
@@ -7249,100 +7246,30 @@ class CognatesSummary(graphene.Mutation):
             title = args.get('title', None)
             offset = args.get('offset', 0)
             limit = args.get('limit', 10)
-            __debug_flag__ = args.get('debug_flag', False)
+            debug_flag = args.get('debug_flag', False)
 
-            if __debug_flag__ and user.id != 1:
+            if debug_flag and user.id != 1:
                 return (
                     CognatesSummary(
                         triumph=False,
                         message='Only administrator can use debug mode'))
 
-            try:
-                result_json, language_list = list_cognates.get_json_tree(
-                    only_in_toc, group, title, offset, limit, __debug_flag__)
+            task_status = TaskStatus(user.id, 'Cognates summary computation', '', 3)
+            request = info.context.request
 
-            except ResponseError as e:
-                return (
-                    CognatesSummary(
-                        triumph=False,
-                        message=e.message))
+            list_cognates.async_get_json_tree.delay(
+                task_status.key,
+                request.registry.settings['sqlalchemy.url'],
+                request.registry.settings['cache_kwargs'],
+                request.registry.settings['storage'],
+                only_in_toc,
+                group,
+                title,
+                offset,
+                limit,
+                debug_flag)
 
-            with tempfile.TemporaryDirectory() as tmp_dir_path:
-
-                tmp_json_file_path = (
-                    os.path.join(tmp_dir_path, 'cognates_summary.json'))
-
-                with open(tmp_json_file_path, 'w') as tmp_json_file:
-                    tmp_json_file.write(result_json)
-
-                # Saving local copies, if required.
-                if __debug_flag__:
-                    shutil.copyfile(
-                        tmp_json_file_path,
-                        f'cognates'
-                        f'{"_"+group if group else ""}'
-                        f'{"_"+title if title else ""}'
-                        f'_{offset+1}to{offset+limit}'
-                        f'{"_onlyInToc" if only_in_toc else ""}.json')
-
-                request = info.context.request
-
-                # Saving processed files.
-                storage = (
-                    request.registry.settings['storage'])
-                storage_temporary = storage['temporary']
-                host = storage_temporary['host']
-                bucket = storage_temporary['bucket']
-
-                minio_client = (
-                    minio.Minio(
-                        host,
-                        access_key=storage_temporary['access_key'],
-                        secret_key=storage_temporary['secret_key'],
-                        secure=True))
-
-                current_time = time.time()
-
-                object_name = (
-                        storage_temporary['prefix'] +
-                        '/'.join((
-                            'cognates_summary',
-                            f'{current_time:.6f}',
-                            f'cognates'
-                            f'{"_"+group if group else ""}'
-                            f'{"_"+title if title else ""}'
-                            f'_{offset+1}to{offset+limit}'
-                            f'{"_onlyInToc" if only_in_toc else ""}.json')))
-
-
-                (etag, version_id) = (
-                    minio_client.fput_object(
-                        bucket,
-                        object_name,
-                        tmp_json_file_path))
-
-            url = (
-                '/'.join((
-                    'https:/',
-                    host,
-                    bucket,
-                    object_name)))
-
-            log.debug(
-                '\nobject_name:\n{}'
-                '\netag:\n{}'
-                '\nversion_id:\n{}'
-                '\nurl:\n{}'.format(
-                    object_name,
-                    etag,
-                    version_id,
-                    url))
-
-            return (
-                CognatesSummary(
-                    triumph=True,
-                    json_url=url,
-                    language_list=language_list))
+            return CognatesSummary(triumph=True)
 
         except Exception as exception:
 
