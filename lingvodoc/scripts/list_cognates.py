@@ -74,18 +74,17 @@ def async_get_json_tree(
         return f'{id[0],id[1]}'
 
     # Getting perspective_id and etymology fields ids and names in cycle
+    i = -1
     j = 0
     for i, current_perspective in enumerate(fields_getter(field_query)):
 
-        if current_perspective is None:
-            j += 1
-
         if task_status:
             task_status.set(
-                2, 10 + i * 95 // perspective_count,
-                f'So far {i}/{j} of {perspective_count} perspectives are processed / are not suitable')
+                2, 10 + i * 85 // perspective_count,
+                f'Perspectives: {i-j}/{i}/{perspective_count} (result/processed/total) so far...')
 
         if current_perspective is None:
+            j += 1
             continue
 
         (
@@ -101,32 +100,44 @@ def async_get_json_tree(
 
         # Getting next perspective_title and dictionary_id
         if perspective_id != cur_perspective_id:
-            (
-                perspective_title,
-                dictionary_cid,
-                dictionary_oid
+            if next_perspective := perspective_getter(perspective_cte, perspective_id):
+                (
+                    perspective_title,
+                    dictionary_cid,
+                    dictionary_oid
 
-            ) = perspective_getter(perspective_cte, perspective_id)
+                ) = next_perspective
+
+            else:
+                continue
 
             dictionary_id = (dictionary_cid, dictionary_oid)
 
         # Getting next dictionary_title and language_id
         if dictionary_id != cur_dictionary_id:
-            (
-                dictionary_title,
-                language_cid,
-                language_oid
+            if next_dictionary := dictionary_getter(dictionary_cte, dictionary_id):
+                (
+                    dictionary_title,
+                    language_cid,
+                    language_oid
 
-            ) = dictionary_getter(dictionary_cte, dictionary_id)
+                ) = next_dictionary
+
+            else:
+                continue
 
             language_id = (language_cid, language_oid)
 
         # Getting next language_title
         if language_id != cur_language_id:
-            (
-                language_title,
+            if next_language := language_getter(language_cte, language_id):
+                (
+                    language_title,
 
-            ) = language_getter(language_cte, language_id)
+                ) = next_language
+
+            else:
+                continue
 
             lang_slot = result_dict[id2str(language_id)] = {}
             lang_slot['title'] = language_title
@@ -190,65 +201,82 @@ def async_get_json_tree(
         f'cognates'
         f'{"_" + group if group else ""}'
         f'{"_" + title if title else ""}'
+        f'_got{i+1-j}from'
         f'_{offset + 1}to{offset + limit}'
         f'{"_onlyInToc" if only_in_toc else ""}.json')
 
     try:
-        json_url = write_json_file(json.dumps(result_dict), file_name, storage, debug_flag)
+        url_list = write_json_file(
+            json.dumps(result_dict),
+            '\n'.join(str(title) for title in language_list),
+            file_name, storage, debug_flag)
+
     except Exception as e:
         if task_status:
             task_status.set(3, 100, "Finished (ERROR):\n" + "Result file can't be stored\n" + str(e))
         return False
 
-    language_list = '\n'.join(str(title) for title in language_list)
-
     if task_status:
-        task_status.set(3, 100, 'Finished. Processed languages:\n' + language_list, json_url)
+        task_status.set(3, 100,
+                        f'Finished. Perspectives: {i+1-j}/{j}/{perspective_count} (result/waste/total)',
+                        result_link_list = url_list)
 
     return True
 
 
 def perspective_getter(perspective_cte, perspective_id):
-    return (
-        DBSession
-            .query(
-                perspective_cte.c.perspective_title,
-                perspective_cte.c.dictionary_cid,
-                perspective_cte.c.dictionary_oid)
+    try:
+        return (
+            DBSession
+                .query(
+                    perspective_cte.c.perspective_title,
+                    perspective_cte.c.dictionary_cid,
+                    perspective_cte.c.dictionary_oid)
 
-            .filter(
-                perspective_cte.c.perspective_cid == perspective_id[0],
-                perspective_cte.c.perspective_oid == perspective_id[1])
+                .filter(
+                    perspective_cte.c.perspective_cid == perspective_id[0],
+                    perspective_cte.c.perspective_oid == perspective_id[1])
 
-            .one())
+                .one())
+    except:
+        print(f'Skipped perspective: {perspective_id}')
+        return None
 
 
 def dictionary_getter(dictionary_cte, dictionary_id):
-    return (
-        DBSession
-            .query(
-                dictionary_cte.c.dictionary_title,
-                dictionary_cte.c.language_cid,
-                dictionary_cte.c.language_oid)
+    try:
+        return (
+            DBSession
+                .query(
+                    dictionary_cte.c.dictionary_title,
+                    dictionary_cte.c.language_cid,
+                    dictionary_cte.c.language_oid)
 
-            .filter(
-                dictionary_cte.c.dictionary_cid == dictionary_id[0],
-                dictionary_cte.c.dictionary_oid == dictionary_id[1])
+                .filter(
+                    dictionary_cte.c.dictionary_cid == dictionary_id[0],
+                    dictionary_cte.c.dictionary_oid == dictionary_id[1])
 
-            .one())
+                .one())
+    except:
+        print(f'Skipped dictionary: {dictionary_id}')
+        return None
 
 
 def language_getter(language_cte, language_id):
-    return (
-        DBSession
-            .query(
-                language_cte.c.language_title)
+    try:
+        return (
+            DBSession
+                .query(
+                    language_cte.c.language_title)
 
-            .filter(
-                language_cte.c.language_cid == language_id[0],
-                language_cte.c.language_oid == language_id[1])
+                .filter(
+                    language_cte.c.language_cid == language_id[0],
+                    language_cte.c.language_oid == language_id[1])
 
-            .one())
+                .one())
+    except:
+        print(f'Skipped language: {language_id}')
+        return None
 
 
 # Getting cte for languages, dictionaries, perspectives and fields
@@ -385,41 +413,17 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
         DictionaryPerspective.parent_id == Dictionary.id,
         DictionaryPerspective.marked_for_deletion == False]
 
-    # Get perspectives count
-
-    perspective_limit = (
-        DBSession
-            .query(
-                DictionaryPerspective.client_id,
-                DictionaryPerspective.object_id,
-                language_step.c.level)
-
-            .filter(
-                *get_dicts_for_langs,
-                *get_pers_for_dicts)
-
-            .order_by(
-                language_step.c.level,
-                DictionaryPerspective.client_id,
-                DictionaryPerspective.object_id
-            )
-
-            .offset(offset)
-            .limit(limit))
-
-    perspective_count = perspective_limit.count()
-    perspective_limit = perspective_limit.cte()
-
     # Getting perspectives with self titles
 
-    perspective_cte = (
+    perspective_limit = (
         DBSession
             .query(
                 DictionaryPerspective.parent_client_id.label('dictionary_cid'),
                 DictionaryPerspective.parent_object_id.label('dictionary_oid'),
                 DictionaryPerspective.client_id.label('perspective_cid'),
                 DictionaryPerspective.object_id.label('perspective_oid'),
-                func.array_agg(TranslationAtom.content).label('perspective_title'))
+                func.array_agg(TranslationAtom.content).label('perspective_title'),
+                func.min(language_step.c.level).label('language_level'))
 
             .filter(
                 *get_dicts_for_langs,
@@ -433,7 +437,16 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 'perspective_cid',
                 'perspective_oid')
 
-            .cte())
+            .order_by(
+                'language_level',
+                DictionaryPerspective.client_id,
+                DictionaryPerspective.object_id)
+
+            .offset(offset)
+            .limit(limit))
+
+    perspective_count = perspective_limit.count()
+    perspective_cte = perspective_limit.cte()
 
     # Getting fields with self title
 
@@ -446,13 +459,11 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 Field.object_id.label('field_oid'),
                 func.array_agg(func.lower(TranslationAtom.content)).label('field_title'),
                 func.min(DictionaryPerspectiveToField.position).label('field_position'),
-                func.min(language_step.c.level).label('language_level'))
+                func.min(perspective_cte.c.language_level).label('language_level'))
 
             .filter(
-                *get_dicts_for_langs,
-                *get_pers_for_dicts,
-                DictionaryPerspective.client_id == perspective_limit.c.client_id,
-                DictionaryPerspective.object_id == perspective_limit.c.object_id,
+                DictionaryPerspective.client_id == perspective_cte.c.perspective_cid,
+                DictionaryPerspective.object_id == perspective_cte.c.perspective_oid,
                 DictionaryPerspectiveToField.parent_id == DictionaryPerspective.id,
                 DictionaryPerspectiveToField.marked_for_deletion == False,
                 DictionaryPerspectiveToField.field_id == Field.id,
@@ -593,7 +604,7 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid):
             linked_group)
 
 
-def write_json_file(result_json, file_name, storage, debug_flag):
+def write_json_file(result_json, result_langs, file_name, storage, debug_flag):
 
     with tempfile.TemporaryDirectory() as tmp_dir_path:
         tmp_json_file_path = (
@@ -601,6 +612,12 @@ def write_json_file(result_json, file_name, storage, debug_flag):
 
         with open(tmp_json_file_path, 'w') as tmp_json_file:
             tmp_json_file.write(result_json)
+
+        tmp_txt_file_path = (
+            os.path.join(tmp_dir_path, 'processed_languages.txt'))
+
+        with open(tmp_txt_file_path, 'w') as tmp_txt_file:
+            tmp_txt_file.write(result_langs)
 
         # Saving local copies, if required.
         if debug_flag:
@@ -621,24 +638,26 @@ def write_json_file(result_json, file_name, storage, debug_flag):
                 secure=True))
 
         current_time = time.time()
+        urls = []
 
-        object_name = (
-                storage_temporary['prefix'] +
+        for (f_name, f_temp) in (file_name, tmp_json_file_path), ('processed_languages.txt', tmp_txt_file_path):
+            object_name = (
+                    storage_temporary['prefix'] +
+                    '/'.join((
+                        'cognates_summary',
+                        f'{current_time:.6f}',
+                        f_name)))
+
+            minio_client.fput_object(
+                bucket,
+                object_name,
+                f_temp)
+
+            urls.append(
                 '/'.join((
-                    'cognates_summary',
-                    f'{current_time:.6f}',
-                    file_name)))
+                    'https:/',
+                    host,
+                    bucket,
+                    object_name)))
 
-        minio_client.fput_object(
-            bucket,
-            object_name,
-            tmp_json_file_path)
-
-    url = (
-        '/'.join((
-            'https:/',
-            host,
-            bucket,
-            object_name)))
-
-    return url
+    return urls
