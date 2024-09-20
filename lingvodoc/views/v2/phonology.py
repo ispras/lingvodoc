@@ -73,6 +73,7 @@ from sqlalchemy.orm import aliased
 
 from transaction import manager
 import xlsxwriter
+import pickle
 
 # Project imports.
 
@@ -7417,4 +7418,74 @@ if __name__ == '__main__':
 
     else:
         print('Please specify command to execute.')
+
+
+def refresh_version(storage):
+
+    storage_dir = path.join(storage['path'], 'phonology')
+    makedirs(storage_dir, exist_ok=True)
+    version_path = path.join(storage_dir, 'cache_version.json')
+
+    current_datetime = datetime.datetime.now(datetime.timezone.utc)
+    cache_version = f'{current_datetime.year:04d}{current_datetime.month:02d}{current_datetime.day:02d}'
+
+    with open(version_path, 'w') as version_file:
+        json.dump(cashe_version, version_file)
+
+    return cache_version
+
+def read_version(storage, perspective_id):
+
+    storage_dir = path.join(storage['path'], 'phonology')
+    makedirs(storage_dir, exist_ok=True)
+
+    version_path = path.join(storage_dir, 'cache_version.json')
+    init_version_flag = not path.isfile(version_path)
+
+    with open(version_path, 'r') as version_file:
+        try:
+            cache_version = json.load(version_file)
+            if type(cache_version) is not int or len(str(cache_version)) != 8:
+                init_version_flag = True
+        except ValueError:
+            init_version_flag = True
+
+    if init_version_flag:
+        cache_version = refresh_version(storage)
+
+    return cache_version
+
+
+def write_pickle(storage, perspective_id, sound_entity_id, markup_entity_id, input_data):
+
+    storage_dir = path.join(storage['path'], 'phonology')
+    makedirs(storage_dir, exist_ok=True)
+
+    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
+    version_path = path.join(storage_dir, 'cache_version.json')
+
+    init_cache_flag = not path.isfile(pickle_path)
+
+    cache_key = f'{sound_entity_id[0]}:{sound_entity_id[1]}:{markup_entity_id[0]}:{markup_entity_id[1]}'
+
+    if not init_version_flag:
+
+    with open(pickle_path, 'w+') as pickle_file:
+        if not init_cache_flag:
+            try:
+                stored_data = pickle.load(pickle_file)
+                if (type(stored_data) is not dict or
+                        cache_version not in stored_data):
+                    init_cache_flag = True
+            except ValueError:
+                init_cache_flag = True
+
+        if init_cache_flag:
+            stored_data = {}
+            stored_data[cache_version] = {}
+
+        stored_data[cache_version][cache_key] = input_data
+        pickle.dump(stored_data, pickle_file)
+
+def read_pickle(storage, perspective_id):
 
