@@ -105,6 +105,12 @@ from pdb import set_trace as A
 # Setting up logging.
 log = logging.getLogger(__name__)
 
+"""
+Current cache version
+if it's changed all the cached phonologies will be refreshed
+"""
+cache_version = 20240924
+
 
 def bessel_i0_approximation(x):
     """
@@ -2539,6 +2545,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
 def process_sound_markup(
     log_str,
+    perspective_id,
     sound_entity_id,
     sound_url,
     markup_entity_id,
@@ -2555,13 +2562,10 @@ def process_sound_markup(
         '{0}\nsound_url: {1}\nmarkup_url: {2}'.format(
         log_str, sound_url, markup_url))
 
+    cache_get = cache_set = touch_pickle(storage, perspective_id, sound_entity_id, markup_entity_id)
+
     # Checking if we have already cached sound/markup analysis result.
-
-    cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
-        sound_entity_id[0], sound_entity_id[1],
-        markup_entity_id[0], markup_entity_id[1])
-
-    cache_result = caching.CACHE.get(cache_key)
+    cache_key, cache_result = cache_get()
 
     if cache_result == 'no_vowel':
 
@@ -2650,7 +2654,7 @@ def process_sound_markup(
             if not vowel_flag:
 
                 log.debug('{0}: no vowel'.format(log_str))
-                caching.CACHE.set(cache_key, 'no_vowel')
+                cache_set('no_vowel')
 
                 return None
 
@@ -2683,7 +2687,7 @@ def process_sound_markup(
                 format_textgrid_result(
                     [None], textgrid_result_list)))
 
-            caching.CACHE.set(cache_key, textgrid_result_list)
+            cache_set(textgrid_result_list)
 
         # We have exception during sound/markup analysis, we save its info in the cache.
 
@@ -2695,8 +2699,7 @@ def process_sound_markup(
             log.debug('{0}: exception'.format(log_str))
             log.debug(traceback_string)
 
-            caching.CACHE.set(cache_key, ('exception', exception,
-                traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
+            cache_set(('exception', exception, traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
 
             return None
 
@@ -4630,12 +4633,12 @@ def analyze_sound_markup(
     err_msg = ""
     warn_msg = ""
 
-    cache_key = (
-
-        'phonology:{}:{}:{}:{}{}'.format(
-            row.Sound.client_id, row.Sound.object_id,
-            row.Markup.client_id, row.Markup.object_id,
-            '+ft' if args and args.use_fast_track else ''))
+    cache_get = cache_set = touch_pickle(
+        storage,
+        (args.perspective_cid, args.perspective_oid),
+        (row.Sound.client_id, row.Sound.object_id),
+        (row.Markup.client_id, row.Markup.object_id),
+        suffix = '+ft' if args and args.use_fast_track else '')
 
     fails_dict[row_str] = {
         'urls': f"sound_url: {sound_url}\nmarkup_url: {markup_url}",
@@ -4662,10 +4665,10 @@ def analyze_sound_markup(
 
     if not args.no_cache:
 
-        if cache_warn := caching.CACHE.get(f"{cache_key}:warn"):
+        if cache_warn := cache_get(warn=True)[1]:
             fails_dict[row_str]['warns'] += cache_warn
 
-        cache_result = caching.CACHE.get(cache_key)
+        cache_key, cache_result = cache_get()
 
         try:
             if cache_result == 'no_vowel':
@@ -4818,13 +4821,13 @@ def analyze_sound_markup(
 
         if warn_msg:
             fails_dict[row_str]['warns'] += warn_msg
-            caching.CACHE.set(f"{cache_key}:warn", warn_msg)
+            cache_set(warn_msg, warn=True)
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
 
         if not vowel_flag:
 
-            caching.CACHE.set(cache_key, 'no_vowel')
+            cache_set('no_vowel')
             state.no_vowel_counter += 1
 
             task_status.set(2, 1 + int(math.floor(
@@ -4864,7 +4867,7 @@ def analyze_sound_markup(
         textgrid_result_list = (
             process_sound(tier_data_list, sound, args.vowel_selection))
 
-        caching.CACHE.set(cache_key, textgrid_result_list)
+        cache_set(textgrid_result_list)
 
         # Showing analysis results.
 
@@ -4924,7 +4927,7 @@ def analyze_sound_markup(
 
         fails_dict[row_str]['errs'] += f"{err_msg}\n{traceback_string}"
 
-        caching.CACHE.set(cache_key, ('exception', exception,
+        cache_set(('exception', exception,
             traceback_string.replace('Traceback', 'CACHEd traceback'), err_msg))
 
         state.exception_counter += 1
@@ -5723,12 +5726,14 @@ class Sound_Markup_Iterator(object):
 
             # Checking if we have cached tier list for this pair of sound/markup.
 
-            cache_key = '{0}:{1}:{2}:{3}:{4}'.format(
-                self.cache_key_str,
-                row.Sound.client_id, row.Sound.object_id,
-                row.Markup.client_id, row.Markup.object_id)
+            cache_get, cache_set = touch_pickle(
+                storage,
+                self.perspective_id,
+                (row.Sound.client_id, row.Sound.object_id),
+                (row.Markup.client_id, row.Markup.object_id),
+                suffix = f':{self.cache_key_str}')
 
-            cache_result = caching.CACHE.get(cache_key)
+            cache_key, cache_result = cache_get()
             if cache_result is not None:
 
                 self.process_cache(row_str, cache_key, cache_result)
@@ -5764,7 +5769,7 @@ class Sound_Markup_Iterator(object):
                                                     codec = chardet.detect(markup_bytes)['encoding'])
 
                 result = self.process_sound_markup(row_str, textgrid)
-                caching.CACHE.set(cache_key, result)
+                cache_set(result)
 
             # Markup processing error, we report it and go on.
 
@@ -7420,72 +7425,47 @@ if __name__ == '__main__':
         print('Please specify command to execute.')
 
 
-def refresh_version(storage):
+# Read or write cache from/into pickle file
 
-    storage_dir = path.join(storage['path'], 'phonology')
-    makedirs(storage_dir, exist_ok=True)
-    version_path = path.join(storage_dir, 'cache_version.json')
+def touch_pickle(perspective_id, sound_entity_id, markup_entity_id, suffix=None):
 
-    current_datetime = datetime.datetime.now(datetime.timezone.utc)
-    cache_version = f'{current_datetime.year:04d}{current_datetime.month:02d}{current_datetime.day:02d}'
+    def f(input_data=None, warn=None):
+        global cache_version
 
-    with open(version_path, 'w') as version_file:
-        json.dump(cashe_version, version_file)
+        storage = request.registry.settings['storage']
+        storage_dir = path.join(storage['path'], 'phonology')
+        makedirs(storage_dir, exist_ok=True)
 
-    return cache_version
+        pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
+        init_cache_flag = not path.isfile(pickle_path)
 
-def read_version(storage, perspective_id):
+        cache_key = (f'{sound_entity_id[0]}:'
+                     f'{sound_entity_id[1]}:'
+                     f'{markup_entity_id[0]}:'
+                     f'{markup_entity_id[1]}'
+                     f'{suffix or ""}
+                     f'{":warn" if warn else ""}')
 
-    storage_dir = path.join(storage['path'], 'phonology')
-    makedirs(storage_dir, exist_ok=True)
-
-    version_path = path.join(storage_dir, 'cache_version.json')
-    init_version_flag = not path.isfile(version_path)
-
-    with open(version_path, 'r') as version_file:
-        try:
-            cache_version = json.load(version_file)
-            if type(cache_version) is not int or len(str(cache_version)) != 8:
-                init_version_flag = True
-        except ValueError:
-            init_version_flag = True
-
-    if init_version_flag:
-        cache_version = refresh_version(storage)
-
-    return cache_version
-
-
-def write_pickle(storage, perspective_id, sound_entity_id, markup_entity_id, input_data):
-
-    storage_dir = path.join(storage['path'], 'phonology')
-    makedirs(storage_dir, exist_ok=True)
-
-    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
-    version_path = path.join(storage_dir, 'cache_version.json')
-
-    init_cache_flag = not path.isfile(pickle_path)
-
-    cache_key = f'{sound_entity_id[0]}:{sound_entity_id[1]}:{markup_entity_id[0]}:{markup_entity_id[1]}'
-
-    if not init_version_flag:
-
-    with open(pickle_path, 'w+') as pickle_file:
-        if not init_cache_flag:
-            try:
-                stored_data = pickle.load(pickle_file)
-                if (type(stored_data) is not dict or
-                        cache_version not in stored_data):
+        with open(pickle_path, 'w+') as pickle_file:
+            if not init_cache_flag:
+                try:
+                    stored_data = pickle.load(pickle_file)
+                    if (type(stored_data) is not dict or
+                            cache_version not in stored_data):
+                        init_cache_flag = True
+                except ValueError:
                     init_cache_flag = True
-            except ValueError:
-                init_cache_flag = True
 
-        if init_cache_flag:
-            stored_data = {}
-            stored_data[cache_version] = {}
+            if init_cache_flag:
+                stored_data = {}
+                stored_data[cache_version] = {}
 
-        stored_data[cache_version][cache_key] = input_data
-        pickle.dump(stored_data, pickle_file)
+            if input_data:
+                stored_data[cache_version][cache_key] = input_data
 
-def read_pickle(storage, perspective_id):
+            if input_data or init_cache_flag:
+                pickle.dump(stored_data, pickle_file)
 
+        return cache_key, stored_data[cache_version].get(cache_key)
+
+    return io_doing

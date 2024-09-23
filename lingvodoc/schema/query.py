@@ -5508,6 +5508,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
                     process_sound_markup(
                         log_str,
+                        (perspective.client_id, perspective.object_id),
                         sound_id,
                         sound_url,
                         markup_id,
