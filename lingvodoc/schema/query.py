@@ -4609,8 +4609,9 @@ class Query(graphene.ObjectType):
           }
         }
         """
+        storage = info.context.request.registry.settings['storage']
 
-        answer = utils_phonology_tier_list(*perspective_id)
+        answer = utils_phonology_tier_list(storage, *perspective_id)
         return TierList(**answer)
 
     def resolve_phonology_skip_list(self, info, perspective_id):
@@ -4625,8 +4626,9 @@ class Query(graphene.ObjectType):
           }
         }
         """
+        storage = info.context.request.registry.settings['storage']
 
-        answer = utils_phonology_skip_list(*perspective_id)
+        answer = utils_phonology_skip_list(storage, *perspective_id)
         return SkipList(**answer)
 
     def resolve_phonology_link_perspective_data(self, info, perspective_id, field_id_list):

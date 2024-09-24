@@ -5676,13 +5676,14 @@ class Sound_Markup_Iterator(object):
     Iterates over sound/markup pairs of a specified perspective while keeping state.
     """
 
-    def __init__(self, perspective_id, cache_key_str):
+    def __init__(self, storage, perspective_id, cache_key_str):
         """
         Initialization of iteration parameters.
         """
 
         self.perspective_id = perspective_id
         self.cache_key_str = cache_key_str
+        self.storage = storage
 
     def run(self):
         """
@@ -5744,7 +5745,7 @@ class Sound_Markup_Iterator(object):
             )
 
             cache_get = cache_set = touch_pickle(
-                storage, self.perspective_id)
+                self.storage, self.perspective_id)
 
             cache_result = cache_get(cache_key)
 
@@ -5801,12 +5802,12 @@ class Tier_List_Iterator(Sound_Markup_Iterator):
     Iterates over sound/markup pairs of a specified perspective, compiles list of markup tier names.
     """
 
-    def __init__(self, perspective_id):
+    def __init__(self, storage, perspective_id):
         """
         Initializes state of markup tier name compilation.
         """
 
-        super().__init__(perspective_id, 'phonology_tier_list')
+        super().__init__(storage, perspective_id, 'phonology_tier_list')
 
         self.tier_count = collections.Counter()
         self.total_count = 0
@@ -5839,7 +5840,7 @@ class Tier_List_Iterator(Sound_Markup_Iterator):
             list(sorted(markup_tier_set))))
 
 
-def get_tier_list(perspective_cid, perspective_oid):
+def get_tier_list(storage, perspective_cid, perspective_oid):
     """
     Helper function, gets a list of names of phonology markup tiers for specified perspective.
     """
@@ -5848,7 +5849,7 @@ def get_tier_list(perspective_cid, perspective_oid):
         log.debug('phonology_tier_list {0}/{1}'.format(
             perspective_cid, perspective_oid))
 
-        iterator = Tier_List_Iterator((perspective_cid, perspective_oid))
+        iterator = Tier_List_Iterator(storage, (perspective_cid, perspective_oid))
         iterator.run()
 
         # Logging and returning list of all tier names we encountered.
@@ -5884,8 +5885,9 @@ def phonology_tier_list(request):
 
     perspective_cid = request.params.get('perspective_client_id')
     perspective_oid = request.params.get('perspective_object_id')
+    storage = request.registry.settings['storage']
 
-    try_ok, result = get_tier_list(perspective_cid, perspective_oid)
+    try_ok, result = get_tier_list(storage, perspective_cid, perspective_oid)
 
     if not try_ok:
 
@@ -5902,12 +5904,12 @@ class Skip_List_Iterator(Sound_Markup_Iterator):
     intervals with vowel markup.
     """
 
-    def __init__(self, perspective_id):
+    def __init__(self, storage, perspective_id):
         """
         Initializes state of markup tier name compilation.
         """
 
-        super().__init__(perspective_id, 'phonology_skip_list')
+        super().__init__(storage, perspective_id, 'phonology_skip_list')
 
         self.skip_count = collections.Counter()
         self.total_skip_count = 0
@@ -5986,7 +5988,7 @@ class Skip_List_Iterator(Sound_Markup_Iterator):
             list(sorted(skip_set)), list(sorted(neighbour_set))))
 
 
-def get_skip_list(perspective_cid, perspective_oid):
+def get_skip_list(storage, perspective_cid, perspective_oid):
     """
     Helper function, gets a list of characters skipped during processing of vowel phonology, and a list of
     characters from markup intervals adjacent to intervals with vowel markup, for specified perspective.
@@ -5996,7 +5998,7 @@ def get_skip_list(perspective_cid, perspective_oid):
         log.debug('phonology_skip_list {0}/{1}'.format(
             perspective_cid, perspective_oid))
 
-        iterator = Skip_List_Iterator((perspective_cid, perspective_oid))
+        iterator = Skip_List_Iterator(storage, (perspective_cid, perspective_oid))
         iterator.run()
 
         def info_list(character_count):
@@ -6076,8 +6078,9 @@ def phonology_skip_list(request):
 
     perspective_cid = request.params.get('perspective_client_id')
     perspective_oid = request.params.get('perspective_object_id')
+    storage = request.registry.settings['storage']
 
-    try_ok, result = get_skip_list(perspective_cid, perspective_oid)
+    try_ok, result = get_skip_list(storage, perspective_cid, perspective_oid)
 
     if not try_ok:
 
@@ -7072,10 +7075,13 @@ def main_cache_delete_exceptions(args):
 
     count = 0
     for cache_path in cache_path_list:
-        with open(cache_path, 'rb') as cache_file:
+        with open(cache_path, 'wb+') as cache_file:
             try:
                 cache_object = pickle.load(cache_file)
-                cache_result = cache_object.get(cache_version, {})
+                cache_result = cache_object.get(cache_version)
+
+                if type(cache_result) is not dict:
+                    continue
 
                 for cache_key, cache_block in cache_result.items():
                     if (isinstance(cache_block, tuple) and
@@ -7465,7 +7471,6 @@ def touch_pickle(storage, perspective_id):
 
             if input_data:
                 cache_object[cache_version][cache_key] = input_data
-
 
             if init_cache_flag or input_data:
                 pickle.dump(cache_object, pickle_file)
