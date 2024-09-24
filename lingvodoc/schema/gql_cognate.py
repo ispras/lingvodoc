@@ -1919,6 +1919,7 @@ class CognateAnalysis(graphene.Mutation):
 
     @staticmethod
     def acoustic_data(
+        perspective_id,
         base_language_id,
         sound_entity_id,
         sound_url,
@@ -1941,6 +1942,7 @@ class CognateAnalysis(graphene.Mutation):
 
             process_sound_markup(
                 log_str,
+                perspective_id,
                 sound_entity_id,
                 sound_url,
                 markup_entity_id,
@@ -3008,6 +3010,7 @@ class CognateAnalysis(graphene.Mutation):
 
                     result = (
                         CognateAnalysis.acoustic_data(
+                            perspective_id,
                             base_language_id,
                             tuple(row_list[0:2]), row_list[2],
                             tuple(row_list[3:5]), row_list[5],

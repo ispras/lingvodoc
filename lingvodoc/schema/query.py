@@ -4609,8 +4609,9 @@ class Query(graphene.ObjectType):
           }
         }
         """
+        storage = info.context.request.registry.settings['storage']
 
-        answer = utils_phonology_tier_list(*perspective_id)
+        answer = utils_phonology_tier_list(storage, *perspective_id)
         return TierList(**answer)
 
     def resolve_phonology_skip_list(self, info, perspective_id):
@@ -4625,8 +4626,9 @@ class Query(graphene.ObjectType):
           }
         }
         """
+        storage = info.context.request.registry.settings['storage']
 
-        answer = utils_phonology_skip_list(*perspective_id)
+        answer = utils_phonology_skip_list(storage, *perspective_id)
         return SkipList(**answer)
 
     def resolve_phonology_link_perspective_data(self, info, perspective_id, field_id_list):
@@ -5508,6 +5510,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
                     process_sound_markup(
                         log_str,
+                        (perspective.client_id, perspective.object_id),
                         sound_id,
                         sound_url,
                         markup_id,
@@ -5658,7 +5661,8 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
             # Updating distribution data.
 
-            if perspective_index <= 0:
+            #if perspective_index <= 0:
+            if any((val is None for val in (x_min, x_max, y_min, y_max))):
 
                 x_min, x_max = formant_array[:,0].min(), formant_array[:,0].max()
                 y_min, y_max = formant_array[:,1].min(), formant_array[:,1].max()

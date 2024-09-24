@@ -158,12 +158,12 @@ def gql_phonology(request, locale_id, args):
         raise ResponseError(message = 'External error')
 
 
-def gql_phonology_tier_list(perspective_cid, perspective_oid):
+def gql_phonology_tier_list(storage, perspective_cid, perspective_oid):
     """
     Gets a list of names of phonology markup tiers for specified perspective.
     """
 
-    try_ok, result = get_tier_list(perspective_cid, perspective_oid)
+    try_ok, result = get_tier_list(storage, perspective_cid, perspective_oid)
 
     if not try_ok:
 
@@ -173,13 +173,13 @@ def gql_phonology_tier_list(perspective_cid, perspective_oid):
     return result
 
 
-def gql_phonology_skip_list(perspective_cid, perspective_oid):
+def gql_phonology_skip_list(storage, perspective_cid, perspective_oid):
     """
     Gets a list of characters skipped during processing of vowel phonology, and a list of characters from
     markup intervals adjacent to intervals with vowel markup, for specified perspective.
     """
 
-    try_ok, result = get_skip_list(perspective_cid, perspective_oid)
+    try_ok, result = get_skip_list(storage, perspective_cid, perspective_oid)
 
     if not try_ok:
 

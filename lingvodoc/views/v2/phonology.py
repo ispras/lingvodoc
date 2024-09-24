@@ -73,11 +73,12 @@ from sqlalchemy.orm import aliased
 
 from transaction import manager
 import xlsxwriter
+import pickle
+import glob
 
 # Project imports.
 
-import lingvodoc.cache.caching as caching
-from lingvodoc.cache.caching import CACHE, initialize_cache, TaskStatus
+from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
 from lingvodoc.models import (
     Client,
@@ -103,6 +104,12 @@ from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
+
+"""
+Current cache version
+if it's changed all the cached phonologies will be refreshed
+"""
+cache_version = '20240924'
 
 
 def bessel_i0_approximation(x):
@@ -2538,6 +2545,7 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
 def process_sound_markup(
     log_str,
+    perspective_id,
     sound_entity_id,
     sound_url,
     markup_entity_id,
@@ -2554,13 +2562,15 @@ def process_sound_markup(
         '{0}\nsound_url: {1}\nmarkup_url: {2}'.format(
         log_str, sound_url, markup_url))
 
+    cache_key = (f'{sound_entity_id[0]}:'
+                 f'{sound_entity_id[1]}:'
+                 f'{markup_entity_id[0]}:'
+                 f'{markup_entity_id[1]}')
+
+    cache_get = cache_set = touch_pickle(storage, perspective_id)
+
     # Checking if we have already cached sound/markup analysis result.
-
-    cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
-        sound_entity_id[0], sound_entity_id[1],
-        markup_entity_id[0], markup_entity_id[1])
-
-    cache_result = caching.CACHE.get(cache_key)
+    cache_result = cache_get(cache_key)
 
     if cache_result == 'no_vowel':
 
@@ -2649,7 +2659,7 @@ def process_sound_markup(
             if not vowel_flag:
 
                 log.debug('{0}: no vowel'.format(log_str))
-                caching.CACHE.set(cache_key, 'no_vowel')
+                cache_set(cache_key, 'no_vowel')
 
                 return None
 
@@ -2682,7 +2692,7 @@ def process_sound_markup(
                 format_textgrid_result(
                     [None], textgrid_result_list)))
 
-            caching.CACHE.set(cache_key, textgrid_result_list)
+            cache_set(cache_key, textgrid_result_list)
 
         # We have exception during sound/markup analysis, we save its info in the cache.
 
@@ -2694,8 +2704,7 @@ def process_sound_markup(
             log.debug('{0}: exception'.format(log_str))
             log.debug(traceback_string)
 
-            caching.CACHE.set(cache_key, ('exception', exception,
-                traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
+            cache_set(cache_key, ('exception', exception, traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
 
             return None
 
@@ -4630,11 +4639,14 @@ def analyze_sound_markup(
     warn_msg = ""
 
     cache_key = (
+        f'{row.Sound.client_id}:'
+        f'{row.Sound.object_id}:'
+        f'{row.Markup.client_id}:'
+        f'{row.Markup.object_id}'
+        f'{"+ft" if args and args.use_fast_track else ""}')
 
-        'phonology:{}:{}:{}:{}{}'.format(
-            row.Sound.client_id, row.Sound.object_id,
-            row.Markup.client_id, row.Markup.object_id,
-            '+ft' if args and args.use_fast_track else ''))
+    cache_get = cache_set = touch_pickle(
+        storage, (args.perspective_cid, args.perspective_oid))
 
     fails_dict[row_str] = {
         'urls': f"sound_url: {sound_url}\nmarkup_url: {markup_url}",
@@ -4661,10 +4673,10 @@ def analyze_sound_markup(
 
     if not args.no_cache:
 
-        if cache_warn := caching.CACHE.get(f"{cache_key}:warn"):
+        if cache_warn := cache_get(f'{cache_key}:warn'):
             fails_dict[row_str]['warns'] += cache_warn
 
-        cache_result = caching.CACHE.get(cache_key)
+        cache_result = cache_get(cache_key)
 
         try:
             if cache_result == 'no_vowel':
@@ -4817,13 +4829,13 @@ def analyze_sound_markup(
 
         if warn_msg:
             fails_dict[row_str]['warns'] += warn_msg
-            caching.CACHE.set(f"{cache_key}:warn", warn_msg)
+            cache_set(f'{cache_key}:warn', warn_msg)
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
 
         if not vowel_flag:
 
-            caching.CACHE.set(cache_key, 'no_vowel')
+            cache_set(cache_key, 'no_vowel')
             state.no_vowel_counter += 1
 
             task_status.set(2, 1 + int(math.floor(
@@ -4863,7 +4875,7 @@ def analyze_sound_markup(
         textgrid_result_list = (
             process_sound(tier_data_list, sound, args.vowel_selection))
 
-        caching.CACHE.set(cache_key, textgrid_result_list)
+        cache_set(cache_key, textgrid_result_list)
 
         # Showing analysis results.
 
@@ -4923,7 +4935,7 @@ def analyze_sound_markup(
 
         fails_dict[row_str]['errs'] += f"{err_msg}\n{traceback_string}"
 
-        caching.CACHE.set(cache_key, ('exception', exception,
+        cache_set(cache_key, ('exception', exception,
             traceback_string.replace('Traceback', 'CACHEd traceback'), err_msg))
 
         state.exception_counter += 1
@@ -5663,13 +5675,14 @@ class Sound_Markup_Iterator(object):
     Iterates over sound/markup pairs of a specified perspective while keeping state.
     """
 
-    def __init__(self, perspective_id, cache_key_str):
+    def __init__(self, storage, perspective_id, cache_key_str):
         """
         Initialization of iteration parameters.
         """
 
         self.perspective_id = perspective_id
         self.cache_key_str = cache_key_str
+        self.storage = storage
 
     def run(self):
         """
@@ -5722,12 +5735,18 @@ class Sound_Markup_Iterator(object):
 
             # Checking if we have cached tier list for this pair of sound/markup.
 
-            cache_key = '{0}:{1}:{2}:{3}:{4}'.format(
-                self.cache_key_str,
-                row.Sound.client_id, row.Sound.object_id,
-                row.Markup.client_id, row.Markup.object_id)
+            cache_key = (
+                f'{self.cache_key_str}:'
+                f'{row.Sound.client_id}:'
+                f'{row.Sound.object_id}:'
+                f'{row.Markup.client_id}:'
+                f'{row.Markup.object_id}')
 
-            cache_result = caching.CACHE.get(cache_key)
+            cache_get = cache_set = touch_pickle(
+                self.storage, self.perspective_id)
+
+            cache_result = cache_get(cache_key)
+
             if cache_result is not None:
 
                 self.process_cache(row_str, cache_key, cache_result)
@@ -5763,7 +5782,7 @@ class Sound_Markup_Iterator(object):
                                                     codec = chardet.detect(markup_bytes)['encoding'])
 
                 result = self.process_sound_markup(row_str, textgrid)
-                caching.CACHE.set(cache_key, result)
+                cache_set(cache_key, result)
 
             # Markup processing error, we report it and go on.
 
@@ -5781,12 +5800,12 @@ class Tier_List_Iterator(Sound_Markup_Iterator):
     Iterates over sound/markup pairs of a specified perspective, compiles list of markup tier names.
     """
 
-    def __init__(self, perspective_id):
+    def __init__(self, storage, perspective_id):
         """
         Initializes state of markup tier name compilation.
         """
 
-        super().__init__(perspective_id, 'phonology_tier_list')
+        super().__init__(storage, perspective_id, 'phonology_tier_list')
 
         self.tier_count = collections.Counter()
         self.total_count = 0
@@ -5819,7 +5838,7 @@ class Tier_List_Iterator(Sound_Markup_Iterator):
             list(sorted(markup_tier_set))))
 
 
-def get_tier_list(perspective_cid, perspective_oid):
+def get_tier_list(storage, perspective_cid, perspective_oid):
     """
     Helper function, gets a list of names of phonology markup tiers for specified perspective.
     """
@@ -5828,7 +5847,7 @@ def get_tier_list(perspective_cid, perspective_oid):
         log.debug('phonology_tier_list {0}/{1}'.format(
             perspective_cid, perspective_oid))
 
-        iterator = Tier_List_Iterator((perspective_cid, perspective_oid))
+        iterator = Tier_List_Iterator(storage, (perspective_cid, perspective_oid))
         iterator.run()
 
         # Logging and returning list of all tier names we encountered.
@@ -5864,8 +5883,9 @@ def phonology_tier_list(request):
 
     perspective_cid = request.params.get('perspective_client_id')
     perspective_oid = request.params.get('perspective_object_id')
+    storage = request.registry.settings['storage']
 
-    try_ok, result = get_tier_list(perspective_cid, perspective_oid)
+    try_ok, result = get_tier_list(storage, perspective_cid, perspective_oid)
 
     if not try_ok:
 
@@ -5882,12 +5902,12 @@ class Skip_List_Iterator(Sound_Markup_Iterator):
     intervals with vowel markup.
     """
 
-    def __init__(self, perspective_id):
+    def __init__(self, storage, perspective_id):
         """
         Initializes state of markup tier name compilation.
         """
 
-        super().__init__(perspective_id, 'phonology_skip_list')
+        super().__init__(storage, perspective_id, 'phonology_skip_list')
 
         self.skip_count = collections.Counter()
         self.total_skip_count = 0
@@ -5966,7 +5986,7 @@ class Skip_List_Iterator(Sound_Markup_Iterator):
             list(sorted(skip_set)), list(sorted(neighbour_set))))
 
 
-def get_skip_list(perspective_cid, perspective_oid):
+def get_skip_list(storage, perspective_cid, perspective_oid):
     """
     Helper function, gets a list of characters skipped during processing of vowel phonology, and a list of
     characters from markup intervals adjacent to intervals with vowel markup, for specified perspective.
@@ -5976,7 +5996,7 @@ def get_skip_list(perspective_cid, perspective_oid):
         log.debug('phonology_skip_list {0}/{1}'.format(
             perspective_cid, perspective_oid))
 
-        iterator = Skip_List_Iterator((perspective_cid, perspective_oid))
+        iterator = Skip_List_Iterator(storage, (perspective_cid, perspective_oid))
         iterator.run()
 
         def info_list(character_count):
@@ -6056,8 +6076,9 @@ def phonology_skip_list(request):
 
     perspective_cid = request.params.get('perspective_client_id')
     perspective_oid = request.params.get('perspective_object_id')
+    storage = request.registry.settings['storage']
 
-    try_ok, result = get_skip_list(perspective_cid, perspective_oid)
+    try_ok, result = get_skip_list(storage, perspective_cid, perspective_oid)
 
     if not try_ok:
 
@@ -7045,34 +7066,37 @@ def main_cache_delete_exceptions(args):
     Removes cached phonology exceptions from the redis cache.
     """
 
-    parser = configparser.ConfigParser()
-    parser.read(args[0])
+    storage_dir = path.join(storage['path'], 'phonology')
+    makedirs(storage_dir, exist_ok=True)
 
-    caching.initialize_cache({
-        k: v for k, v in parser.items('cache:redis:args')})
-
-    cache_key_list = (
-
-        subprocess
-            .check_output(['redis-cli', '--scan', '--pattern', 'phonology:*'])
-            .decode('utf-8')
-            .split())
+    cache_path_list = glob.iglob(path.join(storage_dir, '*_*.pkl'))
 
     count = 0
+    for cache_path in cache_path_list:
+        with open(cache_path, 'rb') as cache_file:
+            try:
+                cache_object = pickle.load(cache_file)
+                cache_result = cache_object.get(cache_version)
 
-    for cache_key in cache_key_list:
+                if type(cache_result) is not dict:
+                    continue
 
-        cache_result = caching.CACHE.get(cache_key)
+            except (EOFError, ValueError):
+                continue
 
-        if (isinstance(cache_result, tuple) and
-            cache_result[0] == 'exception'):
+        start_count = count
+        for cache_key, cache_block in cache_result.items():
+            if (isinstance(cache_block, tuple) and
+                    cache_block[0] == 'exception'):
 
-            print(cache_result[1])
+                print(cache_block[1])
+                del cache_result[cache_key]
+                count += 1
+                print(cache_key)
 
-            caching.CACHE.rem(cache_key)
-            count += 1
-
-            print(cache_key)
+        if count > start_count:
+            with open(cache_path, 'wb') as cache_file:
+                pickle.dump(cache_object, cache_file)
 
     print('{} cached exceptions removed'.format(count))
 
@@ -7418,3 +7442,49 @@ if __name__ == '__main__':
     else:
         print('Please specify command to execute.')
 
+
+# Read or write cache from/into pickle file
+
+def touch_pickle(storage, perspective_id, debug_flag=False):
+
+    storage_dir = path.join(storage['path'], 'phonology')
+    makedirs(storage_dir, exist_ok=True)
+
+    if debug_flag:
+        print(f"{storage_dir=}")
+
+    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pkl')
+    init_cache_flag = not path.isfile(pickle_path)
+
+    if not init_cache_flag:
+        with open(pickle_path, 'rb') as pickle_file:
+            try:
+                cache_object = pickle.load(pickle_file)
+                if (type(cache_object) is not dict or
+                        cache_version not in cache_object):
+                    init_cache_flag = True
+
+            except (EOFError, ValueError):
+                init_cache_flag = True
+
+    if init_cache_flag:
+        cache_object = {}
+        cache_object[cache_version] = {}
+
+    def io_process(cache_key, input_data=None):
+
+        nonlocal cache_object, init_cache_flag
+
+        if input_data:
+            cache_object[cache_version][cache_key] = input_data
+
+        if init_cache_flag or input_data:
+
+            with open(pickle_path, 'wb') as pickle_file:
+                pickle.dump(cache_object, pickle_file)
+
+            init_cache_flag = False
+
+        return cache_object[cache_version].get(cache_key)
+
+    return io_process
