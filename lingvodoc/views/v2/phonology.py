@@ -78,8 +78,7 @@ import glob
 
 # Project imports.
 
-import lingvodoc.cache.caching as caching
-from lingvodoc.cache.caching import CACHE, initialize_cache, TaskStatus
+from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
 from lingvodoc.models import (
     Client,
@@ -4644,7 +4643,7 @@ def analyze_sound_markup(
         f'{row.Sound.object_id}:'
         f'{row.Markup.client_id}:'
         f'{row.Markup.object_id}'
-        f'{"+ft" if args and args.use_fast_track else ""}'
+        f'{"+ft" if args and args.use_fast_track else ""}')
 
     cache_get = cache_set = touch_pickle(
         storage, (args.perspective_cid, args.perspective_oid))
@@ -5741,8 +5740,7 @@ class Sound_Markup_Iterator(object):
                 f'{row.Sound.client_id}:'
                 f'{row.Sound.object_id}:'
                 f'{row.Markup.client_id}:'
-                f'{row.Markup.object_id}'
-            )
+                f'{row.Markup.object_id}')
 
             cache_get = cache_set = touch_pickle(
                 self.storage, self.perspective_id)
@@ -7455,7 +7453,7 @@ def touch_pickle(storage, perspective_id):
         pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
         init_cache_flag = not path.isfile(pickle_path)
 
-        with open(pickle_path, 'w+') as pickle_file:
+        with open(pickle_path, 'wb+') as pickle_file:
             if not init_cache_flag:
                 try:
                     cache_object = pickle.load(pickle_file)
