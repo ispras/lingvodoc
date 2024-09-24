@@ -7069,7 +7069,7 @@ def main_cache_delete_exceptions(args):
     storage_dir = path.join(storage['path'], 'phonology')
     makedirs(storage_dir, exist_ok=True)
 
-    cache_path_list = glob.iglob(path.join(storage_dir, '*_*.pickle'))
+    cache_path_list = glob.iglob(path.join(storage_dir, '*_*.pkl'))
 
     count = 0
     for cache_path in cache_path_list:
@@ -7453,7 +7453,7 @@ def touch_pickle(storage, perspective_id, debug_flag=False):
     if debug_flag:
         print(f"{storage_dir=}")
 
-    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
+    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pkl')
     init_cache_flag = not path.isfile(pickle_path)
 
     if not init_cache_flag:
