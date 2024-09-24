@@ -7447,36 +7447,40 @@ if __name__ == '__main__':
 
 def touch_pickle(storage, perspective_id):
 
-    def io_process(cache_key, input_data=None):
-        global cache_version
+    storage_dir = path.join(storage['path'], 'phonology')
+    makedirs(storage_dir, exist_ok=True)
 
-        storage_dir = path.join(storage['path'], 'phonology')
-        makedirs(storage_dir, exist_ok=True)
+    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
+    init_cache_flag = not path.isfile(pickle_path)
 
-        pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
-        init_cache_flag = not path.isfile(pickle_path)
-
-        if not init_cache_flag:
-            with open(pickle_path, 'rb') as pickle_file:
-                try:
-                    cache_object = pickle.load(pickle_file)
-                    if (type(cache_object) is not dict or
-                            cache_version not in cache_object):
-                        init_cache_flag = True
-
-                except (EOFError, ValueError):
+    if not init_cache_flag:
+        with open(pickle_path, 'rb') as pickle_file:
+            try:
+                cache_object = pickle.load(pickle_file)
+                if (type(cache_object) is not dict or
+                        cache_version not in cache_object):
                     init_cache_flag = True
 
-        if init_cache_flag:
-            cache_object = {}
-            cache_object[cache_version] = {}
+            except (EOFError, ValueError):
+                init_cache_flag = True
+
+    if init_cache_flag:
+        cache_object = {}
+        cache_object[cache_version] = {}
+
+    def io_process(cache_key, input_data=None):
+
+        nonlocal cache_object, init_cache_flag
 
         if input_data:
             cache_object[cache_version][cache_key] = input_data
 
         if init_cache_flag or input_data:
+
             with open(pickle_path, 'wb') as pickle_file:
                 pickle.dump(cache_object, pickle_file)
+
+            init_cache_flag = False
 
         return cache_object[cache_version].get(cache_key)
 
