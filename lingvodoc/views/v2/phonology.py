@@ -7073,7 +7073,7 @@ def main_cache_delete_exceptions(args):
 
     count = 0
     for cache_path in cache_path_list:
-        with open(cache_path, 'wb+') as cache_file:
+        with open(cache_path, 'rb') as cache_file:
             try:
                 cache_object = pickle.load(cache_file)
                 cache_result = cache_object.get(cache_version)
@@ -7081,19 +7081,22 @@ def main_cache_delete_exceptions(args):
                 if type(cache_result) is not dict:
                     continue
 
-                for cache_key, cache_block in cache_result.items():
-                    if (isinstance(cache_block, tuple) and
-                            cache_block[0] == 'exception'):
-
-                        print(cache_block[1])
-                        del cache_result[cache_key]
-                        count += 1
-                        print(cache_key)
-
-                pickle.dump(cache_object, cache_file)
-
-            except ValueError:
+            except (EOFError, ValueError):
                 continue
+
+        start_count = count
+        for cache_key, cache_block in cache_result.items():
+            if (isinstance(cache_block, tuple) and
+                    cache_block[0] == 'exception'):
+
+                print(cache_block[1])
+                del cache_result[cache_key]
+                count += 1
+                print(cache_key)
+
+        if count > start_count:
+            with open(cache_path, 'wb') as cache_file:
+                pickle.dump(cache_object, cache_file)
 
     print('{} cached exceptions removed'.format(count))
 
@@ -7453,24 +7456,26 @@ def touch_pickle(storage, perspective_id):
         pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
         init_cache_flag = not path.isfile(pickle_path)
 
-        with open(pickle_path, 'wb+') as pickle_file:
-            if not init_cache_flag:
+        if not init_cache_flag:
+            with open(pickle_path, 'rb') as pickle_file:
                 try:
                     cache_object = pickle.load(pickle_file)
                     if (type(cache_object) is not dict or
                             cache_version not in cache_object):
                         init_cache_flag = True
-                except ValueError:
+
+                except (EOFError, ValueError):
                     init_cache_flag = True
 
-            if init_cache_flag:
-                cache_object = {}
-                cache_object[cache_version] = {}
+        if init_cache_flag:
+            cache_object = {}
+            cache_object[cache_version] = {}
 
-            if input_data:
-                cache_object[cache_version][cache_key] = input_data
+        if input_data:
+            cache_object[cache_version][cache_key] = input_data
 
-            if init_cache_flag or input_data:
+        if init_cache_flag or input_data:
+            with open(pickle_path, 'wb') as pickle_file:
                 pickle.dump(cache_object, pickle_file)
 
         return cache_object[cache_version].get(cache_key)
