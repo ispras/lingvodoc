@@ -109,7 +109,7 @@ log = logging.getLogger(__name__)
 Current cache version
 if it's changed all the cached phonologies will be refreshed
 """
-cache_version = 20240924
+cache_version = '20240924'
 
 
 def bessel_i0_approximation(x):
@@ -7445,10 +7445,13 @@ if __name__ == '__main__':
 
 # Read or write cache from/into pickle file
 
-def touch_pickle(storage, perspective_id):
+def touch_pickle(storage, perspective_id, debug_flag=False):
 
     storage_dir = path.join(storage['path'], 'phonology')
     makedirs(storage_dir, exist_ok=True)
+
+    if debug_flag:
+        print(f"{storage_dir=}")
 
     pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle')
     init_cache_flag = not path.isfile(pickle_path)

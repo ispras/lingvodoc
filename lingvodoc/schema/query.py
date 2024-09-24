@@ -5661,7 +5661,8 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
             # Updating distribution data.
 
-            if perspective_index <= 0:
+            #if perspective_index <= 0:
+            if any((val is None for val in (x_min, x_max, y_min, y_max))):
 
                 x_min, x_max = formant_array[:,0].min(), formant_array[:,0].max()
                 y_min, y_max = formant_array[:,1].min(), formant_array[:,1].max()
