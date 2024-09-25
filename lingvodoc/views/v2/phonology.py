@@ -8,6 +8,7 @@ import configparser
 import csv
 import datetime
 from errno import EEXIST
+import glob
 import gzip
 from hashlib import md5
 import io
@@ -15,9 +16,9 @@ import itertools
 import logging
 import math
 
+import multiprocessing
 import os
 from os import makedirs, path
-import multiprocessing
 
 import pprint
 import re
@@ -57,6 +58,8 @@ import numpy.polynomial
 
 from pathvalidate import sanitize_filename
 
+import pickle
+
 import pydub
 from pydub.utils import ratio_to_db
 
@@ -74,8 +77,6 @@ from sqlalchemy.orm import aliased
 
 from transaction import manager
 import xlsxwriter
-import pickle
-import glob
 
 # Project imports.
 
@@ -435,7 +436,7 @@ def pitch_path_finder(
 
     except Exception as e:
         print(e)
-        raise RuntimeError(frames, ": path not found.")
+        raise RuntimeError("Pitch path not found.")
 
 
 # Compute pitch frames
@@ -5744,6 +5745,11 @@ class Sound_Markup_Iterator(object):
 
         self.markup_count = 0
 
+        '''
+        Cache initializing
+        '''
+        cache = PickleCache(self.storage, self.perspective_id)
+
         for index, row in enumerate(data_query.yield_per(100)):
 
             self.markup_count += 1
@@ -5765,11 +5771,6 @@ class Sound_Markup_Iterator(object):
                 f'{row.Sound.object_id}:'
                 f'{row.Markup.client_id}:'
                 f'{row.Markup.object_id}')
-
-            '''
-            Cache initializing
-            '''
-            cache = PickleCache(self.storage, self.perspective_id)
 
             cache_result = cache.get(cache_key)
 
@@ -5810,11 +5811,6 @@ class Sound_Markup_Iterator(object):
                 result = self.process_sound_markup(row_str, textgrid)
                 cache.set(cache_key, result)
 
-                '''
-                Writing cache to file if there is any change
-                '''
-                cache.flush()
-
             # Markup processing error, we report it and go on.
 
             except Exception as exception:
@@ -5824,6 +5820,11 @@ class Sound_Markup_Iterator(object):
 
                 log.debug('{0}: exception'.format(row_str))
                 log.debug(traceback_string)
+
+        '''
+        Writing cache to file if there is any change
+        '''
+        cache.flush()
 
 
 class Tier_List_Iterator(Sound_Markup_Iterator):
