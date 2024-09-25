@@ -5420,8 +5420,8 @@ def perform_phonology(args, task_status, storage):
             '''
             Cache initializing
             '''
-            if not perspective_cache_dict.get(perspective_id):
-                perspective_cache_dict[perspective_id] = PickleCache(storage, perspective_id)
+            if not perspective_cache_dict.get(tuple(perspective_id)):
+                perspective_cache_dict[tuple(perspective_id)] = PickleCache(storage, perspective_id)
 
             # Skipping automatic markup, if required.
 
@@ -5463,7 +5463,7 @@ def perform_phonology(args, task_status, storage):
                     index, row, row_str,
                     text_list,
                     fails_dict,
-                    perspective_cache_dict[perspective_id])
+                    perspective_cache_dict[tuple(perspective_id)])
 
                 # If we had cache processing error, we terminate.
 
@@ -5813,7 +5813,7 @@ class Sound_Markup_Iterator(object):
                 '''
                 Writing cache to file if there is any change
                 '''
-                cache.flush
+                cache.flush()
 
             # Markup processing error, we report it and go on.
 
