@@ -8,15 +8,17 @@ import configparser
 import csv
 import datetime
 from errno import EEXIST
+import glob
+import gzip
 from hashlib import md5
 import io
 import itertools
 import logging
 import math
 
+import multiprocessing
 import os
 from os import makedirs, path
-import multiprocessing
 
 import pprint
 import re
@@ -56,6 +58,8 @@ import numpy.polynomial
 
 from pathvalidate import sanitize_filename
 
+import pickle
+
 import pydub
 from pydub.utils import ratio_to_db
 
@@ -73,8 +77,6 @@ from sqlalchemy.orm import aliased
 
 from transaction import manager
 import xlsxwriter
-import pickle
-import glob
 
 # Project imports.
 
@@ -434,7 +436,7 @@ def pitch_path_finder(
 
     except Exception as e:
         print(e)
-        raise RuntimeError(frames, ": path not found.")
+        raise RuntimeError("Pitch path not found.")
 
 
 # Compute pitch frames
@@ -2545,12 +2547,12 @@ def process_sound(tier_data_list, sound, vowel_selection = None):
 
 def process_sound_markup(
     log_str,
-    perspective_id,
     sound_entity_id,
     sound_url,
     markup_entity_id,
     markup_url,
     storage,
+    cache,
     vowel_selection = None,
     __debug_flag__ = False):
     """
@@ -2567,10 +2569,8 @@ def process_sound_markup(
                  f'{markup_entity_id[0]}:'
                  f'{markup_entity_id[1]}')
 
-    cache_get = cache_set = touch_pickle(storage, perspective_id)
-
     # Checking if we have already cached sound/markup analysis result.
-    cache_result = cache_get(cache_key)
+    cache_result = cache.get(cache_key)
 
     if cache_result == 'no_vowel':
 
@@ -2659,7 +2659,7 @@ def process_sound_markup(
             if not vowel_flag:
 
                 log.debug('{0}: no vowel'.format(log_str))
-                cache_set(cache_key, 'no_vowel')
+                cache.set(cache_key, 'no_vowel')
 
                 return None
 
@@ -2692,7 +2692,7 @@ def process_sound_markup(
                 format_textgrid_result(
                     [None], textgrid_result_list)))
 
-            cache_set(cache_key, textgrid_result_list)
+            cache.set(cache_key, textgrid_result_list)
 
         # We have exception during sound/markup analysis, we save its info in the cache.
 
@@ -2704,7 +2704,9 @@ def process_sound_markup(
             log.debug('{0}: exception'.format(log_str))
             log.debug(traceback_string)
 
-            cache_set(cache_key, ('exception', exception, traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
+            cache.set(
+                cache_key,
+                ('exception', exception, traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
 
             return None
 
@@ -4628,7 +4630,8 @@ def analyze_sound_markup(
     row,
     row_str,
     text_list,
-    fails_dict):
+    fails_dict,
+    cache):
     """
     Performs phonological analysis of a single sound/markup pair.
     """
@@ -4644,9 +4647,6 @@ def analyze_sound_markup(
         f'{row.Markup.client_id}:'
         f'{row.Markup.object_id}'
         f'{"+ft" if args and args.use_fast_track else ""}')
-
-    cache_get = cache_set = touch_pickle(
-        storage, (args.perspective_cid, args.perspective_oid))
 
     fails_dict[row_str] = {
         'urls': f"sound_url: {sound_url}\nmarkup_url: {markup_url}",
@@ -4673,10 +4673,10 @@ def analyze_sound_markup(
 
     if not args.no_cache:
 
-        if cache_warn := cache_get(f'{cache_key}:warn'):
+        if cache_warn := cache.get(f'{cache_key}:warn'):
             fails_dict[row_str]['warns'] += cache_warn
 
-        cache_result = cache_get(cache_key)
+        cache_result = cache.get(cache_key)
 
         try:
             if cache_result == 'no_vowel':
@@ -4829,13 +4829,13 @@ def analyze_sound_markup(
 
         if warn_msg:
             fails_dict[row_str]['warns'] += warn_msg
-            cache_set(f'{cache_key}:warn', warn_msg)
+            cache.set(f'{cache_key}:warn', warn_msg)
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
 
         if not vowel_flag:
 
-            cache_set(cache_key, 'no_vowel')
+            cache.set(cache_key, 'no_vowel')
             state.no_vowel_counter += 1
 
             task_status.set(2, 1 + int(math.floor(
@@ -4875,7 +4875,7 @@ def analyze_sound_markup(
         textgrid_result_list = (
             process_sound(tier_data_list, sound, args.vowel_selection))
 
-        cache_set(cache_key, textgrid_result_list)
+        cache.set(cache_key, textgrid_result_list)
 
         # Showing analysis results.
 
@@ -4935,7 +4935,7 @@ def analyze_sound_markup(
 
         fails_dict[row_str]['errs'] += f"{err_msg}\n{traceback_string}"
 
-        cache_set(cache_key, ('exception', exception,
+        cache.set(cache_key, ('exception', exception,
             traceback_string.replace('Traceback', 'CACHEd traceback'), err_msg))
 
         state.exception_counter += 1
@@ -5135,6 +5135,11 @@ def perform_phonology(args, task_status, storage):
 
     result_group_set = set()
 
+    '''
+    Cache initializing
+    '''
+    cache = PickleCache(storage, (args.perspective_cid, args.perspective_oid))
+
     # Skipping automatic markup, if required.
 
     for index, row in enumerate(row
@@ -5165,7 +5170,8 @@ def perform_phonology(args, task_status, storage):
                 state, 0.0, 99.0 / (1 + len(args.link_field_dict)),
                 index, row, row_str,
                 text_list,
-                fails_dict))
+                fails_dict,
+                cache))
 
         # If we had cache processing error, we terminate.
 
@@ -5210,6 +5216,11 @@ def perform_phonology(args, task_status, storage):
         if break_flag:
             break
 
+    '''
+    Writing cache to file if there is any change
+    '''
+    cache.flush()
+
     log.debug(
         'phonology {}/{}: {} result{}, {} no vowels, {} exceptions, {:.3f}s elapsed time'.format(
             args.perspective_cid,
@@ -5223,6 +5234,7 @@ def perform_phonology(args, task_status, storage):
     # We also process data linked through specified link fields, if we have any.
 
     perspective_field_dict = {}
+    perspective_cache_dict = {}
 
     # Query for lexical entries of the source perspective with sound/markup data.
 
@@ -5406,6 +5418,12 @@ def perform_phonology(args, task_status, storage):
             state.exception_counter = 0
             state.no_vowel_counter = 0
 
+            '''
+            Cache initializing
+            '''
+            if not perspective_cache_dict.get(tuple(perspective_id)):
+                perspective_cache_dict[tuple(perspective_id)] = PickleCache(storage, perspective_id)
+
             # Skipping automatic markup, if required.
 
             for index, row in enumerate(row
@@ -5445,7 +5463,8 @@ def perform_phonology(args, task_status, storage):
                     perspective_complete_step,
                     index, row, row_str,
                     text_list,
-                    fails_dict)
+                    fails_dict,
+                    perspective_cache_dict[tuple(perspective_id)])
 
                 # If we had cache processing error, we terminate.
 
@@ -5502,6 +5521,12 @@ def perform_phonology(args, task_status, storage):
                     perspective_id[0], perspective_id[1],
                     perspective_result_count, '' if perspective_result_count == 1 else 's',
                     state.no_vowel_counter, state.exception_counter))
+
+    '''
+    Writing cache to file if there is any change
+    '''
+    for cache in perspective_cache_dict.values():
+        cache.flush()
 
     #for row in fails_dict.values(): print(row.get('errs'))
     #sys.stdout.flush()
@@ -5720,6 +5745,11 @@ class Sound_Markup_Iterator(object):
 
         self.markup_count = 0
 
+        '''
+        Cache initializing
+        '''
+        cache = PickleCache(self.storage, self.perspective_id)
+
         for index, row in enumerate(data_query.yield_per(100)):
 
             self.markup_count += 1
@@ -5742,10 +5772,7 @@ class Sound_Markup_Iterator(object):
                 f'{row.Markup.client_id}:'
                 f'{row.Markup.object_id}')
 
-            cache_get = cache_set = touch_pickle(
-                self.storage, self.perspective_id)
-
-            cache_result = cache_get(cache_key)
+            cache_result = cache.get(cache_key)
 
             if cache_result is not None:
 
@@ -5782,7 +5809,7 @@ class Sound_Markup_Iterator(object):
                                                     codec = chardet.detect(markup_bytes)['encoding'])
 
                 result = self.process_sound_markup(row_str, textgrid)
-                cache_set(cache_key, result)
+                cache.set(cache_key, result)
 
             # Markup processing error, we report it and go on.
 
@@ -5793,6 +5820,11 @@ class Sound_Markup_Iterator(object):
 
                 log.debug('{0}: exception'.format(row_str))
                 log.debug(traceback_string)
+
+        '''
+        Writing cache to file if there is any change
+        '''
+        cache.flush()
 
 
 class Tier_List_Iterator(Sound_Markup_Iterator):
@@ -7069,20 +7101,19 @@ def main_cache_delete_exceptions(args):
     storage_dir = path.join(storage['path'], 'phonology')
     makedirs(storage_dir, exist_ok=True)
 
-    cache_path_list = glob.iglob(path.join(storage_dir, '*_*.pkl'))
+    cache_path_list = glob.iglob(path.join(storage_dir, '*_*.pickle.gz'))
 
     count = 0
     for cache_path in cache_path_list:
-        with open(cache_path, 'rb') as cache_file:
-            try:
-                cache_object = pickle.load(cache_file)
-                cache_result = cache_object.get(cache_version)
+        try:
+            with gzip.open(cache_path, 'rb') as cache_file:
+                cache_result = pickle.load(cache_file)
 
                 if type(cache_result) is not dict:
                     continue
 
-            except (EOFError, ValueError):
-                continue
+        except (FileNotFoundError, OSError, EOFError, ValueError):
+            continue
 
         start_count = count
         for cache_key, cache_block in cache_result.items():
@@ -7095,7 +7126,7 @@ def main_cache_delete_exceptions(args):
                 print(cache_key)
 
         if count > start_count:
-            with open(cache_path, 'wb') as cache_file:
+            with gzip.open(cache_path, 'wb') as cache_file:
                 pickle.dump(cache_object, cache_file)
 
     print('{} cached exceptions removed'.format(count))
@@ -7445,46 +7476,50 @@ if __name__ == '__main__':
 
 # Read or write cache from/into pickle file
 
-def touch_pickle(storage, perspective_id, debug_flag=False):
+class PickleCache(object):
 
-    storage_dir = path.join(storage['path'], 'phonology')
-    makedirs(storage_dir, exist_ok=True)
+    def __init__(self, storage, perspective_id, debug_flag=False):
 
-    if debug_flag:
-        print(f"{storage_dir=}")
+        storage_dir = path.join(storage['path'], 'phonology')
+        pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle.gz')
 
-    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pkl')
-    init_cache_flag = not path.isfile(pickle_path)
+        if debug_flag:
+            print(f"{pickle_path=}")
 
-    if not init_cache_flag:
-        with open(pickle_path, 'rb') as pickle_file:
-            try:
+        makedirs(storage_dir, exist_ok=True)
+        init_flag = False
+
+        try:
+            with gzip.open(pickle_path, 'rb') as pickle_file:
                 cache_object = pickle.load(pickle_file)
                 if (type(cache_object) is not dict or
-                        cache_version not in cache_object):
-                    init_cache_flag = True
+                        '__version__' not in cache_object or
+                        cache_object['__version__'] < cache_version):
+                    init_flag = True
 
-            except (EOFError, ValueError):
-                init_cache_flag = True
+        except (FileNotFoundError, OSError, EOFError, ValueError):
+            init_flag = True
 
-    if init_cache_flag:
-        cache_object = {}
-        cache_object[cache_version] = {}
+        if init_flag:
+            cache_object = {'__version__': cache_version}
 
-    def io_process(cache_key, input_data=None):
+        self.pickle_path = pickle_path
+        self.cache_object = cache_object
+        self.init_flag = init_flag
+        self.dirty_flag = False
+        self.debug_flag = debug_flag
 
-        nonlocal cache_object, init_cache_flag
+    def get(self, cache_key):
+        return self.cache_object.get(cache_key)
 
-        if input_data:
-            cache_object[cache_version][cache_key] = input_data
+    def set(self, cache_key, input_data):
+        self.cache_object[cache_key] = input_data
+        self.dirty_flag = True
 
-        if init_cache_flag or input_data:
+    def flush(self):
+        if self.init_flag or self.dirty_flag:
+            with gzip.open(self.pickle_path, 'wb') as pickle_file:
+                pickle.dump(self.cache_object, pickle_file)
 
-            with open(pickle_path, 'wb') as pickle_file:
-                pickle.dump(cache_object, pickle_file)
-
-            init_cache_flag = False
-
-        return cache_object[cache_version].get(cache_key)
-
-    return io_process
+            self.init_flag = False
+            self.dirty_flag = False

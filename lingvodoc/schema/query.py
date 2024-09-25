@@ -345,7 +345,8 @@ import lingvodoc.version
 from lingvodoc.views.v2.phonology import (
     get_vowel_class,
     Phonology_Parameters,
-    process_sound_markup)
+    process_sound_markup,
+    PickleCache)
 
 from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
 
@@ -5475,6 +5476,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
         formant_data_list = []
         row_count = 0
+        perspective_cache_dict = {}
 
         x_min, x_max = None, None
         y_min, y_max = None, None
@@ -5486,6 +5488,13 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
             formant_list = []
             vowel_counter = collections.Counter()
+
+            '''
+            Cache initializing
+            '''
+            perspective_id = (perspective.client_id, perspective.object_id)
+            if not perspective_cache_dict.get(perspective_id):
+                perspective_cache_dict[perspective_id] = PickleCache(storage, perspective_id)
 
             for row_index, row in enumerate(query.yield_per(100)):
 
@@ -5510,12 +5519,12 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
                     process_sound_markup(
                         log_str,
-                        (perspective.client_id, perspective.object_id),
                         sound_id,
                         sound_url,
                         markup_id,
                         markup_url,
                         storage,
+                        perspective_cache_dict[perspective_id],
                         vowel_selection,
                         __debug_flag__))
 
@@ -5701,6 +5710,12 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 task_status.set(1,
                     int(math.floor(95.0 + 2.0 * (perspective_index + 1) / len(info_list))),
                     'Creating formant distribution models')
+
+        '''
+        Writing cache to file if there is any change
+        '''
+        for cache in perspective_cache_dict.values():
+            cache.flush()
 
         # Preparing for compilation of modelling results.
 
