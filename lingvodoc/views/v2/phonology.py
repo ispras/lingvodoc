@@ -7508,7 +7508,6 @@ class PickleCache(object):
         self.dirty_flag = False
         self.debug_flag = debug_flag
 
-    @staticmethod
     def get(self, cache_key):
         return self.cache_object.get(cache_key)
 

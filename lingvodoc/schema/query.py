@@ -345,7 +345,8 @@ import lingvodoc.version
 from lingvodoc.views.v2.phonology import (
     get_vowel_class,
     Phonology_Parameters,
-    process_sound_markup)
+    process_sound_markup,
+    PickleCache)
 
 from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
 
