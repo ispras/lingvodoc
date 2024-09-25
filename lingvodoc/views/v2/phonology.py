@@ -8,6 +8,7 @@ import configparser
 import csv
 import datetime
 from errno import EEXIST
+import gzip
 from hashlib import md5
 import io
 import itertools
@@ -7069,20 +7070,19 @@ def main_cache_delete_exceptions(args):
     storage_dir = path.join(storage['path'], 'phonology')
     makedirs(storage_dir, exist_ok=True)
 
-    cache_path_list = glob.iglob(path.join(storage_dir, '*_*.pkl'))
+    cache_path_list = glob.iglob(path.join(storage_dir, '*_*.pickle.gz'))
 
     count = 0
     for cache_path in cache_path_list:
-        with open(cache_path, 'rb') as cache_file:
-            try:
-                cache_object = pickle.load(cache_file)
-                cache_result = cache_object.get(cache_version)
+        try:
+            with gzip.open(cache_path, 'rb') as cache_file:
+                cache_result = pickle.load(cache_file)
 
                 if type(cache_result) is not dict:
                     continue
 
-            except (EOFError, ValueError):
-                continue
+        except (FileNotFoundError, OSError, EOFError, ValueError):
+            continue
 
         start_count = count
         for cache_key, cache_block in cache_result.items():
@@ -7095,7 +7095,7 @@ def main_cache_delete_exceptions(args):
                 print(cache_key)
 
         if count > start_count:
-            with open(cache_path, 'wb') as cache_file:
+            with gzip.open(cache_path, 'wb') as cache_file:
                 pickle.dump(cache_object, cache_file)
 
     print('{} cached exceptions removed'.format(count))
@@ -7453,30 +7453,30 @@ def touch_pickle(storage, perspective_id, debug_flag=False):
     if debug_flag:
         print(f"{storage_dir=}")
 
-    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pkl')
-    init_cache_flag = not path.isfile(pickle_path)
+    pickle_path = path.join(storage_dir, f'{perspective_id[0]}_{perspective_id[1]}.pickle.gz')
 
-    if not init_cache_flag:
-        with open(pickle_path, 'rb') as pickle_file:
-            try:
-                cache_object = pickle.load(pickle_file)
-                if (type(cache_object) is not dict or
-                        cache_version not in cache_object):
-                    init_cache_flag = True
+    init_cache_flag = False
 
-            except (EOFError, ValueError):
+    try:
+        with gzip.open(pickle_path, 'rb') as pickle_file:
+            cache_object = pickle.load(pickle_file)
+            if (type(cache_object) is not dict or
+                    '__version__' not in cache_object or
+                    cache_object['__version__'] < cache_version):
                 init_cache_flag = True
 
+    except (FileNotFoundError, OSError, EOFError, ValueError):
+        init_cache_flag = True
+
     if init_cache_flag:
-        cache_object = {}
-        cache_object[cache_version] = {}
+        cache_object = {'__version__': cache_version}
 
     def io_process(cache_key, input_data=None):
 
         nonlocal cache_object, init_cache_flag
 
         if input_data:
-            cache_object[cache_version][cache_key] = input_data
+            cache_object[cache_key] = input_data
 
         if init_cache_flag or input_data:
 
@@ -7485,6 +7485,6 @@ def touch_pickle(storage, perspective_id, debug_flag=False):
 
             init_cache_flag = False
 
-        return cache_object[cache_version].get(cache_key)
+        return cache_object.get(cache_key)
 
     return io_process
