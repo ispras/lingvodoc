@@ -2951,8 +2951,8 @@ class CognateAnalysis(graphene.Mutation):
             '''
             Cache initialization
             '''
-            if not perspective_cache_dict.get(perspective_id):
-                perspective_cache_dict[perspective_id] = PickleCache(storage, perspective_id)
+            if not perspective_cache_dict.get(tuple(perspective_id)):
+                perspective_cache_dict[tuple(perspective_id)] = PickleCache(storage, perspective_id)
 
             # Grouping transcriptions and translations by lexical entries.
 
@@ -3021,7 +3021,7 @@ class CognateAnalysis(graphene.Mutation):
                             tuple(row_list[0:2]), row_list[2],
                             tuple(row_list[3:5]), row_list[5],
                             storage,
-                            perspective_cache_dict[perspective_id],
+                            perspective_cache_dict[tuple(perspective_id)],
                             __debug_flag__))
 
                     # Updating task progress, if required.
