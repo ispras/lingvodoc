@@ -112,7 +112,7 @@ from lingvodoc.utils.search import (
     find_lexical_entries_by_tags)
 
 import lingvodoc.views.v2.phonology as phonology
-from lingvodoc.views.v2.phonology import process_sound_markup
+from lingvodoc.views.v2.phonology import process_sound_markup, PickleCache
 
 from lingvodoc.views.v2.utils import anonymous_userid
 from pdb import set_trace as A
@@ -1919,13 +1919,13 @@ class CognateAnalysis(graphene.Mutation):
 
     @staticmethod
     def acoustic_data(
-        perspective_id,
         base_language_id,
         sound_entity_id,
         sound_url,
         markup_entity_id,
         markup_url,
         storage,
+        cache,
         __debug_flag__ = False):
         """
         Extracts acoustic data from a pair of sound recording and its markup, using cache in a manner
@@ -1942,12 +1942,12 @@ class CognateAnalysis(graphene.Mutation):
 
             process_sound_markup(
                 log_str,
-                perspective_id,
                 sound_entity_id,
                 sound_url,
                 markup_entity_id,
                 markup_url,
                 storage,
+                cache,
                 False,
                 __debug_flag__))
 
@@ -2708,6 +2708,7 @@ class CognateAnalysis(graphene.Mutation):
 
         text_dict = {}
         entry_id_dict = {}
+        perspective_cache_dict = {}
 
         if not __debug_flag__:
 
@@ -2947,6 +2948,12 @@ class CognateAnalysis(graphene.Mutation):
                     perspective_id[0], perspective_id[1],
                     row_count))
 
+            '''
+            Cache initialization
+            '''
+            if not perspective_cache_dict.get(perspective_id):
+                perspective_cache_dict[perspective_id] = PickleCache(storage, perspective_id)
+
             # Grouping transcriptions and translations by lexical entries.
 
             for row_index, row in enumerate(data_query.all()):
@@ -3010,11 +3017,11 @@ class CognateAnalysis(graphene.Mutation):
 
                     result = (
                         CognateAnalysis.acoustic_data(
-                            perspective_id,
                             base_language_id,
                             tuple(row_list[0:2]), row_list[2],
                             tuple(row_list[3:5]), row_list[5],
                             storage,
+                            perspective_cache_dict[perspective_id],
                             __debug_flag__))
 
                     # Updating task progress, if required.
@@ -3046,6 +3053,12 @@ class CognateAnalysis(graphene.Mutation):
                         ' ʽ' + '|'.join(translation_list) + 'ʼ' if translation_list else ''))
 
                 entry_id_dict[entry_id_key] = entry_id
+
+        '''
+        Writing cache to file if there is any change
+        '''
+        for cache in perspective_cache_dict.values():
+            cache.flush()
 
         # Showing some info on non-grouped entries, if required.
 
