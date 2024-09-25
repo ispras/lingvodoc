@@ -336,7 +336,7 @@ def pitch_to_point(sound, pitch):
         return point
     except Exception as e:
         print(e)
-        raise ValueError(f"{sound} & {pitch}: not converted to PointProcess (cc).") from e
+        raise ValueError("Sound and pitch are not converted to PointProcess (cc).") from e
 
 
 def get_voiced_interval_after(pitch, after, edges):

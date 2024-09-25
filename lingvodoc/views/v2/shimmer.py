@@ -76,7 +76,8 @@ def point_to_amplitude_period(pulse, sound, tmin, tmax):
 
         return amplitude
     except Exception as e:
-        raise ValueError(f"{pulse} & {sound}: not converted to AmplitudeTier.") from e
+        raise ValueError(
+            f"Pulse and sound between {tmin} and {tmax} seconds are not converted to AmplitudeTier.") from e
 
 
 def get_shimmer_local(pulse, sound, tmin, tmax):
@@ -111,4 +112,4 @@ def get_shimmer_local(pulse, sound, tmin, tmax):
         if "Too few pulses between" in str(e):
             return None
         else:
-            raise Exception(f"{pulse} & {sound}: shimmer (local) not computed.")
+            raise Exception(f"Shimmer (local) between {tmin} and {tmax} seconds is not computed.")
