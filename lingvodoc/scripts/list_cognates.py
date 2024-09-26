@@ -7,7 +7,7 @@ import time
 import os
 import re
 
-from sqlalchemy import func, literal, tuple_, create_engine
+from sqlalchemy import func, literal, tuple_, create_engine, and_
 from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
@@ -140,7 +140,7 @@ def async_get_json_tree(
                 continue
 
             lang_slot = result_dict[id2str(language_id)] = {}
-            lang_slot['title'] = language_title
+            lang_slot['__language__'] = language_title
 
             # Logging processed languages
             language_list.append(language_title)
@@ -156,7 +156,7 @@ def async_get_json_tree(
         if dictionary_id != cur_dictionary_id:
 
             dict_slot = lang_slot[id2str(dictionary_id)] = {}
-            dict_slot['title'] = dictionary_title
+            dict_slot['__dictionary__'] = dictionary_title
 
             cur_dictionary_id = dictionary_id
 
@@ -166,11 +166,11 @@ def async_get_json_tree(
         if perspective_id != cur_perspective_id:
 
             pers_slot = dict_slot[id2str(perspective_id)] = {}
-            pers_slot['title'] = perspective_title
-            pers_slot['fields'] = [
+            pers_slot['__perspective__'] = perspective_title
+            pers_slot['__fields__'] = [
                 (xcript_fid, xcript_fname), (xlat_fid, xlat_fname)
             ]
-            pers_slot['entities'] = {}
+            pers_slot['__entities__'] = {}
 
             cur_perspective_id = perspective_id
 
@@ -185,7 +185,7 @@ def async_get_json_tree(
 
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
 
-            pers_slot['entities'][id2str(lex_id)] = (
+            pers_slot['__entities__'][id2str(lex_id)] = (
                 xcript_text, xlat_text, linked_group
             )
 
@@ -194,6 +194,8 @@ def async_get_json_tree(
                 print(f"{xlat_fname}: {xlat_text}")
                 print(f"Cognate_groups: {str(linked_group)}\n")
 
+    result = (i + 1) - j
+
     if task_status:
         task_status.set(3, 95, 'Writing result file...')
 
@@ -201,7 +203,7 @@ def async_get_json_tree(
         f'cognates'
         f'{"_" + group if group else ""}'
         f'{"_" + title if title else ""}'
-        f'_got{i+1-j}from'
+        f'_got{result}from'
         f'_{offset + 1}to{offset + limit}'
         f'{"_onlyInToc" if only_in_toc else ""}.json')
 
@@ -217,9 +219,10 @@ def async_get_json_tree(
         return False
 
     if task_status:
-        task_status.set(3, 100,
-                        f'Finished. Perspectives: {i+1-j}/{j}/{perspective_count} (result/waste/total)',
-                        result_link_list = url_list)
+        task_status.set(
+            3, 100,
+            f'Finished. Perspectives: {result}/{perspective_count - result}/{perspective_count} (result/waste/total)',
+            result_link_list = url_list)
 
     return True
 
@@ -284,7 +287,6 @@ def language_getter(language_cte, language_id):
 def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
 
     get_xlat_atoms = [
-        TranslationGist.marked_for_deletion == False,
         TranslationAtom.parent_id == TranslationGist.id,
         func.length(TranslationAtom.content) > 0,
         TranslationAtom.marked_for_deletion == False]
@@ -369,10 +371,12 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 language_step.c.object_id.label('language_oid'),
                 func.array_agg(TranslationAtom.content).label('language_title'))
 
-            .filter(
+            .join(TranslationGist, and_(
                 language_step.c.translation_gist_client_id == TranslationGist.client_id,
                 language_step.c.translation_gist_object_id == TranslationGist.object_id,
-                *get_xlat_atoms)
+                TranslationGist.marked_for_deletion == False))
+
+            .outerjoin(TranslationAtom, and_(*get_xlat_atoms))
 
             .group_by(
                 'language_cid',
@@ -396,10 +400,13 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 Dictionary.object_id.label('dictionary_oid'),
                 func.array_agg(TranslationAtom.content).label('dictionary_title'))
 
-            .filter(
-                *get_dicts_for_langs,
+            .filter(*get_dicts_for_langs)
+
+            .join(TranslationGist, and_(
                 Dictionary.translation_gist_id == TranslationGist.id,
-                *get_xlat_atoms)
+                TranslationGist.marked_for_deletion == False))
+
+            .outerjoin(TranslationAtom, and_(*get_xlat_atoms))
 
             .group_by(
                 'language_cid',
@@ -427,9 +434,13 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
 
             .filter(
                 *get_dicts_for_langs,
-                *get_pers_for_dicts,
+                *get_pers_for_dicts)
+
+            .join(TranslationGist, and_(
                 DictionaryPerspective.translation_gist_id == TranslationGist.id,
-                *get_xlat_atoms)
+                TranslationGist.marked_for_deletion == False))
+
+            .outerjoin(TranslationAtom, and_(*get_xlat_atoms))
 
             .group_by(
                 'dictionary_cid',
@@ -469,6 +480,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 DictionaryPerspectiveToField.field_id == Field.id,
                 Field.marked_for_deletion == False,
                 Field.translation_gist_id == TranslationGist.id,
+                TranslationGist.marked_for_deletion == False,
                 *get_xlat_atoms, TranslationAtom.locale_id <= 2)
 
             .group_by(
