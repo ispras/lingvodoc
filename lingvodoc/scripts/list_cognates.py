@@ -7,7 +7,7 @@ import time
 import os
 import re
 
-from sqlalchemy import func, literal, tuple_, create_engine
+from sqlalchemy import func, literal, tuple_, create_engine, and_
 from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
@@ -65,8 +65,10 @@ def async_get_json_tree(
     if cte_set := get_cte_set(only_in_toc, group, title, offset, limit, task_status):
         language_cte, dictionary_cte, perspective_count, perspective_cte, field_query = cte_set
     else:
+        '''
         if task_status:
             task_status.set(1, 100, "Finished (ERROR): it's something wrong with queries, please ask administrator")
+        '''
         return False
 
     def id2str(id):
@@ -255,7 +257,6 @@ def language_getter(language_cte, language_id):
 def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
 
     get_xlat_atoms = [
-        TranslationGist.marked_for_deletion == False,
         TranslationAtom.parent_id == TranslationGist.id,
         func.length(TranslationAtom.content) > 0,
         TranslationAtom.marked_for_deletion == False]
@@ -340,10 +341,14 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 func.array_agg(TranslationAtom.content).label('language_title'),
                 func.min(language_step.c.level).label('language_level'))
 
-            .filter(
+            .filter(*if_only_in_toc)
+
+            .join(TranslationGist, and_(
                 language_step.c.translation_gist_client_id == TranslationGist.client_id,
                 language_step.c.translation_gist_object_id == TranslationGist.object_id,
-                *get_xlat_atoms, *if_only_in_toc)
+                TranslationGist.marked_for_deletion == False))
+
+            .outerjoin(TranslationAtom, and_(*get_xlat_atoms))
 
             .group_by(
                 'language_cid',
@@ -368,10 +373,13 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 func.array_agg(TranslationAtom.content).label('dictionary_title'),
                 func.min(language_cte.c.language_level).label('language_level'))
 
-            .filter(
-                *get_dicts_for_langs,
+            .filter(*get_dicts_for_langs)
+
+            .join(TranslationGist, and_(
                 Dictionary.translation_gist_id == TranslationGist.id,
-                *get_xlat_atoms)
+                TranslationGist.marked_for_deletion == False))
+
+            .outerjoin(TranslationAtom, and_(*get_xlat_atoms))
 
             .group_by(
                 'language_cid',
@@ -410,13 +418,17 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 DictionaryPerspective.client_id.label('perspective_cid'),
                 DictionaryPerspective.object_id.label('perspective_oid'),
                 func.array_agg(TranslationAtom.content).label('perspective_title'),
-                func.min(dictionary_cte.c.language_level).label('language_level'))
+                func.min(language_cte.c.language_level).label('language_level'))
 
             .filter(
                 *get_dicts_for_langs,
-                *get_pers_for_dicts,
+                *get_pers_for_dicts)
+
+            .join(TranslationGist, and_(
                 DictionaryPerspective.translation_gist_id == TranslationGist.id,
-                *get_xlat_atoms)
+                TranslationGist.marked_for_deletion == False))
+
+            .outerjoin(TranslationAtom, and_(*get_xlat_atoms))
 
             .group_by(
                 'dictionary_cid',
@@ -454,6 +466,7 @@ def get_cte_set(only_in_toc, group, title, offset, limit, task_status):
                 DictionaryPerspectiveToField.field_id == Field.id,
                 Field.marked_for_deletion == False,
                 Field.translation_gist_id == TranslationGist.id,
+                TranslationGist.marked_for_deletion == False,
                 *get_xlat_atoms, TranslationAtom.locale_id <= 2)
 
             .group_by(
