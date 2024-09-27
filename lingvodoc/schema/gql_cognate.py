@@ -8,6 +8,7 @@ import gzip
 import hashlib
 import io
 import itertools
+import json
 import logging
 import math
 import os.path
@@ -643,6 +644,7 @@ class CognateAnalysis(graphene.Mutation):
 
     result = graphene.String()
     xlsx_url = graphene.String()
+    json_url = graphene.String()
     distance_list = graphene.Field(ObjectVal)
     figure_url = graphene.String()
 
@@ -4382,6 +4384,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
     result = graphene.String()
     xlsx_url = graphene.String()
+    json_url = graphene.String()
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
@@ -4462,16 +4465,17 @@ class SwadeshAnalysis(graphene.Mutation):
         }
 
     @staticmethod
-    def export_xlsx(
+    def export_xlsx_json(
             result,
+            distance_dict,
             base_language_name,
             storage
     ):
         # Exporting analysis results as an Excel file.
 
         current_datetime = datetime.datetime.now(datetime.timezone.utc)
-        xlsx_filename = pathvalidate.sanitize_filename(
-            '{0} {1} {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+        filename = pathvalidate.sanitize_filename(
+            '{0} {1} {2:04d}.{3:02d}.{4:02d}'.format(
                 base_language_name[:64],
                 'glottochronology',
                 current_datetime.year,
@@ -4479,12 +4483,19 @@ class SwadeshAnalysis(graphene.Mutation):
                 current_datetime.day))
 
         cur_time = time.time()
+
+        url_path = ''.join([
+            storage['prefix'], storage['static_route'],
+            'glottochronology', '/', str(cur_time)])
+
         storage_dir = os.path.join(storage['path'], 'glottochronology', str(cur_time))
 
-        # Storing Excel file with the results.
+        xlsx_path = os.path.join(storage_dir, f'{filename}.xlsx')
+        json_path = os.path.join(storage_dir, f'{filename}')
 
-        xlsx_path = os.path.join(storage_dir, xlsx_filename)
-        os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
+        os.makedirs(storage_dir, exist_ok=True)
+
+        # Storing Excel and Json file with the results.
 
         with pd.ExcelWriter(xlsx_path, engine='xlsxwriter') as writer:
             header_format = writer.book.add_format({'bold': True,
@@ -4520,11 +4531,10 @@ class SwadeshAnalysis(graphene.Mutation):
                         if coeff > 1:
                             worksheet.set_row(row_num + 1, 14 * coeff)
 
-        xlsx_url = ''.join([
-            storage['prefix'], storage['static_route'],
-            'glottochronology', '/', str(cur_time), '/', xlsx_filename])
+        with open(json_path, 'w') as json_file:
+            json.dump(distance_dict, json_file)
 
-        return xlsx_url
+        return f'{url_path}/{filename}.xlsx', f'{url_path}/{filename}'
 
     @staticmethod
     def export_html(result, tiny_dicts=None, huge_size=1048576):
@@ -4829,11 +4839,16 @@ class SwadeshAnalysis(graphene.Mutation):
         # So length of this intersection is the similarity of corresponding perspectives
         # means_total is amount of Swadesh's lexemes met in the both perspectives
         bundles = set()
+        distance_dict = {'__perspectives__': []}
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (perspective1, means1) in enumerate(means.items()):
+            pers_data = result_pool[perspective1]
+            distance_dict['__perspectives__'].append((perspective1, pers_data['name']))
+            id_key = f'{perspective1[0]},{perspective1[1]}'
+            distance_dict[id_key] = []
             # Numerate dictionaries
-            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
-            distance_header_array[n1] = result_pool[perspective1]['name']
+            pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
+            distance_header_array[n1] = pers_data['name']
             for n2, (perspective2, means2) in enumerate(means.items()):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
@@ -4863,13 +4878,14 @@ class SwadeshAnalysis(graphene.Mutation):
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
-
+                    distance_dict[id_key].append((c, distance))
         result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
 
         # GC
         del result_pool
 
-        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
+            result, distance_dict, base_language_name, storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
@@ -4896,6 +4912,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 result = html_result,
                 xlsx_url = xlsx_url,
+                json_url = json_url,
                 dictionary_count = len(perspective_info_list),
                 group_count = len(group_list),
                 not_enough_count = not_enough_count,
@@ -5056,6 +5073,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
     result = graphene.String()
     xlsx_url = graphene.String()
+    json_url = graphene.String()
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
@@ -5278,11 +5296,16 @@ class MorphCognateAnalysis(graphene.Mutation):
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
         bundles = set()
+        distance_dict = {'__perspectives__': []}
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (perspective1, meaning_to_links1) in enumerate(meaning_to_links.items()):
+            pers_data = result_pool[perspective1]
+            distance_dict['__perspectives__'].append((perspective1, pers_data['name']))
+            id_key = f'{perspective1[0]},{perspective1[1]}'
+            distance_dict[id_key] = []
             # Numerate dictionaries
-            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
-            distance_header_array[n1] = result_pool[perspective1]['name']
+            pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
+            distance_header_array[n1] = pers_data['name']
 
             to_canon_meaning1 = to_canon_meaning[perspective1]
             canon_meanings1_set = set(to_canon_meaning1.values())
@@ -5319,17 +5342,21 @@ class MorphCognateAnalysis(graphene.Mutation):
                     '''
 
                     # meanings_linked > 0 meanings that meanings_total > 0 even more so
-                    distance = math.log(meanings_linked / meanings_total) / -0.14 if meanings_linked > 0 else 50
+                    c = meanings_linked / meanings_total if meanings_total > 0 else 0
+                    distance = math.log(c) / -0.14 if c > 0 else 50
+                    #distance = math.sqrt(math.log(c) / -0.1 / math.sqrt(c)) if c > 0 else 25
                     percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
+                    distance_dict[id_key].append((c, distance))
 
         result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
 
         # GC
         del result_pool
 
-        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
+            result, distance_dict, base_language_name, storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
@@ -5356,6 +5383,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
                 result = html_result,
                 xlsx_url = xlsx_url,
+                json_url = json_url,
                 dictionary_count=len(perspective_info_list),
                 group_count=len(group_list),
                 not_enough_count = not_enough_count,
