@@ -3263,6 +3263,7 @@ class CognateAnalysis(graphene.Mutation):
                 translation_count = total_translation_count,
                 result = '',
                 xlsx_url = '',
+                json_url = '',
                 distance_list = [],
                 figure_url = '',
                 intermediate_url_list = None)
@@ -3851,8 +3852,8 @@ class CognateAnalysis(graphene.Mutation):
 
         current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
-        xlsx_filename = pathvalidate.sanitize_filename(
-            '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+        filename = pathvalidate.sanitize_filename(
+            '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}'.format(
                 base_language_name[:64],
                 ' ' + mode if mode else '',
                 current_datetime.year,
@@ -3860,23 +3861,27 @@ class CognateAnalysis(graphene.Mutation):
                 current_datetime.day))
 
         if storage_dir is None:
-
             cur_time = time.time()
             storage_dir = os.path.join(storage['path'], 'cognate', str(cur_time))
 
+        os.makedirs(storage_dir, exist_ok = True)
+
         # Storing Excel file with the results.
 
-        xlsx_path = os.path.join(storage_dir, xlsx_filename)
-        os.makedirs(os.path.dirname(xlsx_path), exist_ok = True)
+        xlsx_path = os.path.join(storage_dir, f'{filename}.xlsx')
+        json_path = os.path.join(storage_dir, f'{filename}')
+
+        url_path = ''.join([
+            storage['prefix'], storage['static_route'],
+            'cognate', '/', str(cur_time)])
+
+        xlsx_url = f'{url_path}/{filename}.xlsx'
+        json_url = f'{url_path}/{filename}'
 
         workbook_stream.seek(0)
 
         with open(xlsx_path, 'wb') as xlsx_file:
             shutil.copyfileobj(workbook_stream, xlsx_file)
-
-        xlsx_url = ''.join([
-            storage['prefix'], storage['static_route'],
-            'cognate', '/', str(cur_time), '/', xlsx_filename])
 
         # Selecting one of the distance matrices, if we have any.
 
@@ -3900,6 +3905,27 @@ class CognateAnalysis(graphene.Mutation):
                 distance_data_list,
                 distance_header_array,
                 distance_data_array) = distance_matrix
+
+        # Compute distance_dict to store it into json
+
+        max_diff = 500
+        distance_dict = {'__perspectives__': []}
+
+        for p_id, p_name, p_diffs in zip(
+                perspective_id_list, distance_header_list, distance_data_list):
+
+            distance_dict['__perspectives__'].append((p_id, p_name))
+
+            p_id_key = f'{p_id[0]},{p_id[1]}'
+            distance_dict[p_id_key] = []
+
+            for diff in p_diffs:
+
+                relation = round(1 - int(diff) / max_diff, 2)
+                distance_dict[p_id_key].append((relation, None))
+
+        with open(json_path, 'w') as json_file:
+            json.dump(distance_dict, json_file)
 
         # Generating list of etymological distances to the reference perspective, if required.
 
@@ -3976,7 +4002,7 @@ class CognateAnalysis(graphene.Mutation):
         if task_status is not None:
 
             result_link_list = (
-                [xlsx_url] +
+                [xlsx_url, json_url] +
                 ([] if figure_url is None else [figure_url]) +
                 (intermediate_url_list if __intermediate_flag__ else []))
 
@@ -3997,6 +4023,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 result = wrapped_output,
                 xlsx_url = xlsx_url,
+                json_url = json_url,
                 distance_list = distance_list,
                 figure_url = figure_url,
 
