@@ -828,7 +828,7 @@ class CognateAnalysis(graphene.Mutation):
 
         # All tags for tagged lexical entries in specified perspectives.
 
-        for perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
+        for _, perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
 
             tag_query = (
 
@@ -1138,7 +1138,7 @@ class CognateAnalysis(graphene.Mutation):
 
         perspective_id_list = [
             perspective_id
-            for perspective_id, _, _, _ in perspective_info_list]
+            for _, perspective_id, _, _, _ in perspective_info_list]
 
         if not perspective_id_list:
 
@@ -2676,7 +2676,7 @@ class CognateAnalysis(graphene.Mutation):
                 hashlib.md5(
 
                     repr(list(group_field_id) +
-                        [perspective_info[0] for perspective_info in perspective_info_list])
+                         [perspective_info[1] for perspective_info in perspective_info_list])
 
                     .encode('utf-8'))
 
@@ -2780,7 +2780,7 @@ class CognateAnalysis(graphene.Mutation):
         sg_both_count = 0
 
         source_perspective_index = None
-        for index, (perspective_id, transcription_field_id, translation_field_id, _) in \
+        for index, (_, perspective_id, transcription_field_id, translation_field_id, _) in \
             enumerate(perspective_info_list):
 
             if perspective_id == source_perspective_id:
@@ -3097,7 +3097,7 @@ class CognateAnalysis(graphene.Mutation):
         perspective_id_list = []
         perspective_name_list = []
 
-        for perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
+        for _, perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
 
             perspective_id_list.append(perspective_id)
             perspective_data = perspective_dict[perspective_id]
@@ -4109,7 +4109,7 @@ class CognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _, _ in perspective_info_list))
+                for _, (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -4264,12 +4264,13 @@ class CognateAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (tuple(perspective_id),
-                    tuple(transcription_field_id),
-                    tuple(translation_field_id),
-                    None)
+                (None,
+                 tuple(perspective_id),
+                 tuple(transcription_field_id),
+                 tuple(translation_field_id),
+                 None)
 
-                for perspective_id,
+                for _, perspective_id,
                     transcription_field_id,
                     translation_field_id,
                     _ in perspective_info_list]
@@ -4651,7 +4652,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 hashlib.md5(
 
                     repr(list(group_field_id) +
-                        [perspective_info[0] for perspective_info in perspective_info_list])
+                         [perspective_info[1] for perspective_info in perspective_info_list])
 
                     .encode('utf-8'))
 
@@ -4687,7 +4688,7 @@ class SwadeshAnalysis(graphene.Mutation):
         swadesh_total = {}
         result_pool = {}
         tiny_dicts = set()
-        for index, (perspective_id, transcription_field_id, translation_field_id, lexeme_field_id) in \
+        for index, (_, perspective_id, transcription_field_id, translation_field_id, lexeme_field_id) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -4990,7 +4991,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _, _ in perspective_info_list))
+                for _, (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -5049,12 +5050,13 @@ class SwadeshAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (tuple(perspective_id),
-                    tuple(transcription_field_id),
-                    tuple(translation_field_id),
-                    tuple(lexeme_field_id))
+                (None,
+                 tuple(perspective_id),
+                 tuple(transcription_field_id),
+                 tuple(translation_field_id),
+                 tuple(lexeme_field_id))
 
-                for perspective_id,
+                for _, perspective_id,
                     transcription_field_id,
                     translation_field_id,
                     lexeme_field_id in perspective_info_list]
@@ -5141,7 +5143,7 @@ class MorphCognateAnalysis(graphene.Mutation):
             tag_data_digest = (
                 hashlib.md5(
                     repr(list(group_field_id) +
-                        [perspective_info[0] for perspective_info in perspective_info_list])
+                         [perspective_info[1] for perspective_info in perspective_info_list])
                     .encode('utf-8'))
                 .hexdigest())
 
@@ -5175,7 +5177,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         meaning_re = re.compile('[.\dA-Z<>]+')
         meaning_with_comment_re = re.compile('[.\dA-Z<>]+ *\([.,:;\d\w ]+\)')
 
-        for index, (perspective_id, affix_field_id, meaning_field_id, _) in \
+        for index, (_, perspective_id, affix_field_id, meaning_field_id, _) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -5461,7 +5463,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _, _ in perspective_info_list))
+                for _, (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -5520,12 +5522,13 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (tuple(perspective_id),
-                    tuple(affix_field_id),
-                    tuple(meaning_field_id),
-                    None)
+                (None,
+                 tuple(perspective_id),
+                 tuple(affix_field_id),
+                 tuple(meaning_field_id),
+                 None)
 
-                for perspective_id,
+                for _, perspective_id,
                     affix_field_id,
                     meaning_field_id,
                     _ in perspective_info_list]
