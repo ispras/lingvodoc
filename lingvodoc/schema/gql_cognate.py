@@ -3094,11 +3094,13 @@ class CognateAnalysis(graphene.Mutation):
 
         result_list = [[]]
 
+        language_id_list = []
         perspective_id_list = []
         perspective_name_list = []
 
-        for _, perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
+        for language_id, perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
 
+            language_id_list.append(language_id)
             perspective_id_list.append(perspective_id)
             perspective_data = perspective_dict[perspective_id]
 
@@ -3886,6 +3888,7 @@ class CognateAnalysis(graphene.Mutation):
         # Selecting one of the distance matrices, if we have any.
 
         distance_header_array = None
+        distance_dict = {'__perspectives__': []}
 
         if distance_matrix_list is not None:
 
@@ -3906,23 +3909,30 @@ class CognateAnalysis(graphene.Mutation):
                 distance_header_array,
                 distance_data_array) = distance_matrix
 
-        # Compute distance_dict to store it into json
+            # Compute distance_dict to store it into json
 
-        max_diff = 500
-        distance_dict = {'__perspectives__': []}
+            max_diff = 500
 
-        for p_id, p_name, p_diffs in zip(
-                perspective_id_list, distance_header_list, distance_data_list):
+            for (
+                l_id,
+                p_id,
+                p_name,
+                p_diffs
+            ) in zip(
+                language_id_list,
+                perspective_id_list,
+                distance_header_list,
+                distance_data_list):
 
-            distance_dict['__perspectives__'].append((p_id, p_name))
+                distance_dict['__perspectives__'].append((l_id, p_id, p_name))
 
-            p_id_key = f'{p_id[0]},{p_id[1]}'
-            distance_dict[p_id_key] = []
+                p_id_key = f'{p_id[0]},{p_id[1]}'
+                distance_dict[p_id_key] = []
 
-            for diff in p_diffs:
+                for diff in p_diffs:
 
-                relation = round(1 - int(diff) / max_diff, 2)
-                distance_dict[p_id_key].append((relation, None))
+                    relation = round(1 - int(diff) / max_diff, 2)
+                    distance_dict[p_id_key].append((relation, None))
 
         with open(json_path, 'w') as json_file:
             json.dump(distance_dict, json_file)
@@ -4688,7 +4698,7 @@ class SwadeshAnalysis(graphene.Mutation):
         swadesh_total = {}
         result_pool = {}
         tiny_dicts = set()
-        for index, (_, perspective_id, transcription_field_id, translation_field_id, lexeme_field_id) in \
+        for index, (language_id, perspective_id, transcription_field_id, translation_field_id, lexeme_field_id) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -4786,7 +4796,7 @@ class SwadeshAnalysis(graphene.Mutation):
             # Grouping translations by lexical entries.
             entries_set[perspective_id] = set()
             swadesh_total[perspective_id] = set()
-            result_pool[perspective_id] = {'name': dictionary_name}
+            result_pool[perspective_id] = {'name': dictionary_name, 'lang_id': language_id}
             for row_index, row in enumerate(data_query):
                 entry_id = tuple(row[:2])
                 transcription_list, translation_list, lexeme_list = row[2:5]
@@ -4869,15 +4879,15 @@ class SwadeshAnalysis(graphene.Mutation):
         bundles = set()
         distance_dict = {'__perspectives__': []}
         # Calculate each-to-each distances, exclude self-to-self
-        for n1, (perspective1, means1) in enumerate(means.items()):
-            pers_data = result_pool[perspective1]
-            distance_dict['__perspectives__'].append((perspective1, pers_data['name']))
-            id_key = f'{perspective1[0]},{perspective1[1]}'
+        for n1, (pers1, means1) in enumerate(means.items()):
+            pers_data = result_pool[pers1]
+            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1, pers_data['name']))
+            id_key = f'{pers1[0]},{pers1[1]}'
             distance_dict[id_key] = []
             # Numerate dictionaries
             pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
             distance_header_array[n1] = pers_data['name']
-            for n2, (perspective2, means2) in enumerate(means.items()):
+            for n2, (pers2, means2) in enumerate(means.items()):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
@@ -4894,7 +4904,7 @@ class SwadeshAnalysis(graphene.Mutation):
                             bundles.update(links_common)
                             means_linked += 1
 
-                    means_total = len(swadesh_total[perspective1] & swadesh_total[perspective2])
+                    means_total = len(swadesh_total[pers1] & swadesh_total[pers2])
 
                     if n2 > n1 and means_linked >= means_total:
                         log.debug(f"{n1+1},{n2+1} : "
@@ -5177,7 +5187,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         meaning_re = re.compile('[.\dA-Z<>]+')
         meaning_with_comment_re = re.compile('[.\dA-Z<>]+ *\([.,:;\d\w ]+\)')
 
-        for index, (_, perspective_id, affix_field_id, meaning_field_id, _) in \
+        for index, (language_id, perspective_id, affix_field_id, meaning_field_id, _) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -5255,7 +5265,7 @@ class MorphCognateAnalysis(graphene.Mutation):
             del meaning_query
 
             meaning_to_links[perspective_id] = {}
-            result_pool[perspective_id] = {'name': dictionary_name}
+            result_pool[perspective_id] = {'name': dictionary_name, 'lang_id': language_id}
 
             for row in data_query:
                 entry_id = tuple(row[:2])
@@ -5327,19 +5337,19 @@ class MorphCognateAnalysis(graphene.Mutation):
         bundles = set()
         distance_dict = {'__perspectives__': []}
         # Calculate each-to-each distances, exclude self-to-self
-        for n1, (perspective1, meaning_to_links1) in enumerate(meaning_to_links.items()):
-            pers_data = result_pool[perspective1]
-            distance_dict['__perspectives__'].append((perspective1, pers_data['name']))
-            id_key = f'{perspective1[0]},{perspective1[1]}'
+        for n1, (pers1, meaning_to_links1) in enumerate(meaning_to_links.items()):
+            pers_data = result_pool[pers1]
+            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1, pers_data['name']))
+            id_key = f'{pers1[0]},{pers1[1]}'
             distance_dict[id_key] = []
             # Numerate dictionaries
             pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
             distance_header_array[n1] = pers_data['name']
 
-            to_canon_meaning1 = to_canon_meaning[perspective1]
+            to_canon_meaning1 = to_canon_meaning[pers1]
             canon_meanings1_set = set(to_canon_meaning1.values())
 
-            for n2, (perspective2, meaning_to_links2) in enumerate(meaning_to_links.items()):
+            for n2, (pers2, meaning_to_links2) in enumerate(meaning_to_links.items()):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
