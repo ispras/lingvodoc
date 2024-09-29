@@ -4274,13 +4274,14 @@ class CognateAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (None,
+                (tuple(language_id),
                  tuple(perspective_id),
                  tuple(transcription_field_id),
                  tuple(translation_field_id),
                  None)
 
-                for _, perspective_id,
+                for language_id,
+                    perspective_id,
                     transcription_field_id,
                     translation_field_id,
                     _ in perspective_info_list]
@@ -4891,6 +4892,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
+                    distance_dict[id_key].append((1, 0))
                 else:
                     # Common meanings of entries which have etymological links
                     # but this links may be not mutual
@@ -5060,13 +5062,14 @@ class SwadeshAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (None,
+                (tuple(language_id),
                  tuple(perspective_id),
                  tuple(transcription_field_id),
                  tuple(translation_field_id),
                  tuple(lexeme_field_id))
 
-                for _, perspective_id,
+                for language_id,
+                    perspective_id,
                     transcription_field_id,
                     translation_field_id,
                     lexeme_field_id in perspective_info_list]
@@ -5353,6 +5356,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
+                    distance_dict[id_key].append((1, 0))
                 else:
                     # Compile new meaning_to_links2 using canon_meanings instead of sub_meanings
                     canon_meaning_to_links2 = collections.defaultdict(set)
@@ -5532,13 +5536,14 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (None,
+                (tuple(language_id),
                  tuple(perspective_id),
                  tuple(affix_field_id),
                  tuple(meaning_field_id),
                  None)
 
-                for _, perspective_id,
+                for language_id,
+                    perspective_id,
                     affix_field_id,
                     meaning_field_id,
                     _ in perspective_info_list]
