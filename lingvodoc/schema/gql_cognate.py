@@ -5615,13 +5615,11 @@ class BalancedReport(graphene.Mutation):
 
         try:
 
-            languages_frame = []
+            pers_by_lang = collections.defaultdict(list)
+            relation_result = {}
 
             # Reduce array size if there are languages duplicates
             for analysis in result_pool:
-
-                pers_by_lang = collections.defaultdict(list)
-                languages_frame.append(pers_by_lang)
 
                 perspectives = numpy.array(analysis.get('__perspectives__', []))
                 relation_array = numpy.array(analysis.get('__relation_array__'))
@@ -5644,10 +5642,28 @@ class BalancedReport(graphene.Mutation):
                             nums_to_delete.append(j)
 
                 # Delete duplicates of languages from perspectives list and from data matrix
-                numpy.delete(perspectives, nums_to_delete)
-                numpy.delete(numpy.delete(relation_array, nums_to_delete, 0), nums_to_delete, 1)
+                relation_array = (
+                    numpy.delete(numpy.delete(relation_array, nums_to_delete, 0), nums_to_delete, 1))
 
+                languages = perspectives[:, 0]
+                languages = numpy.delete(languages, nums_to_delete)
+                l_num = len(languages)
 
+                # Collect languages pairs with their relation
+                relation_dict = {}
+                for i, l1_id in enumerate(languages):
+                    for j in range((i + 1), l_num):
+                        l2_id = languages[j]
+                        relation_dict[(tuple(l1_id), tuple(l2_id))] = relation_array[i, j]
+
+                union = set(relation_result) | set(relation_dict)
+                intersection = set(relation_result) & set(relation_dict)
+
+                for pair in union:
+                    if pair in intersection:
+                        relation_result[pair] = (relation_result[pair] + relation_dict[pair]) / 2
+                    elif pair in relation_dict:
+                        relation_result[pair] = relation_dict[pair]
 
 
 
