@@ -3888,7 +3888,9 @@ class CognateAnalysis(graphene.Mutation):
         # Selecting one of the distance matrices, if we have any.
 
         distance_header_array = None
-        distance_dict = {'__perspectives__': []}
+        n1 = n2 = len(perspective_info_list)
+        relation_data_array = numpy.full((n1, n2), 1, dtype='float')
+        distance_dict = {'__perspectives__': [], '__relation_array__': relation_data_array}
 
         if distance_matrix_list is not None:
 
@@ -3913,26 +3915,22 @@ class CognateAnalysis(graphene.Mutation):
 
             max_diff = 500
 
-            for (
+            for n1, (
                 l_id,
                 p_id,
-                p_name,
                 p_diffs
-            ) in zip(
-                language_id_list,
-                perspective_id_list,
-                distance_header_list,
-                distance_data_list):
+            ) in enumerate(
+                    zip(
+                        language_id_list,
+                        perspective_id_list,
+                        distance_data_list)):
 
-                distance_dict['__perspectives__'].append((l_id, p_id, p_name))
+                distance_dict['__perspectives__'].append((l_id, p_id))
 
-                p_id_key = f'{p_id[0]},{p_id[1]}'
-                distance_dict[p_id_key] = []
-
-                for diff in p_diffs:
+                for n2, diff in enumerate(p_diffs):
 
                     relation = round(1 - int(diff) / max_diff, 2)
-                    distance_dict[p_id_key].append((relation, None))
+                    distance_dict['__relation_array__'][n1][n2] = relation
 
         with open(json_path, 'w') as json_file:
             json.dump(distance_dict, json_file)
@@ -4508,6 +4506,7 @@ class SwadeshAnalysis(graphene.Mutation):
             result,
             distance_dict,
             base_language_name,
+            analysis_str,
             storage
     ):
         # Exporting analysis results as an Excel file.
@@ -4516,7 +4515,7 @@ class SwadeshAnalysis(graphene.Mutation):
         filename = pathvalidate.sanitize_filename(
             '{0} {1} {2:04d}.{3:02d}.{4:02d}'.format(
                 base_language_name[:64],
-                'glottochronology',
+                analysis_str,
                 current_datetime.year,
                 current_datetime.month,
                 current_datetime.day))
@@ -4871,6 +4870,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
         dictionary_count = len(means)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        relation_data_array = numpy.full((dictionary_count, dictionary_count), 1, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
@@ -4878,13 +4878,11 @@ class SwadeshAnalysis(graphene.Mutation):
         # So length of this intersection is the similarity of corresponding perspectives
         # means_total is amount of Swadesh's lexemes met in the both perspectives
         bundles = set()
-        distance_dict = {'__perspectives__': []}
+        distance_dict = {'__perspectives__': [], '__relation_array__': relation_data_array}
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (pers1, means1) in enumerate(means.items()):
             pers_data = result_pool[pers1]
-            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1, pers_data['name']))
-            id_key = f'{pers1[0]},{pers1[1]}'
-            distance_dict[id_key] = []
+            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1))
             # Numerate dictionaries
             pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
             distance_header_array[n1] = pers_data['name']
@@ -4892,7 +4890,6 @@ class SwadeshAnalysis(graphene.Mutation):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
-                    distance_dict[id_key].append((1, 0))
                 else:
                     # Common meanings of entries which have etymological links
                     # but this links may be not mutual
@@ -4918,14 +4915,16 @@ class SwadeshAnalysis(graphene.Mutation):
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
-                    distance_dict[id_key].append((c, distance))
-        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
+                    distance_dict['__relation_array__'][n1][n2] = c
+
+        result = SwadeshAnalysis.export_dataframe(
+            result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
 
         # GC
         del result_pool
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
-            result, distance_dict, base_language_name, storage)
+            result, distance_dict, base_language_name, 'glottochronology', storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
@@ -4990,7 +4989,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # Administrator / perspective author / editing permission check.
         error_str = (
             'Only administrator, perspective author and users with perspective editing permissions '
-            'can perform Swadesh analysis.')
+            'can perform glottochronological analysis.')
 
         client_id = info.context.client_id
 
@@ -5338,13 +5337,13 @@ class MorphCognateAnalysis(graphene.Mutation):
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
         bundles = set()
-        distance_dict = {'__perspectives__': []}
+        n1 = n2 = len(perspective_info_list)
+        relation_data_array = numpy.full((n1, n2), 1, dtype='float')
+        distance_dict = {'__perspectives__': [], '__relation_array__': relation_data_array}
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (pers1, meaning_to_links1) in enumerate(meaning_to_links.items()):
             pers_data = result_pool[pers1]
-            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1, pers_data['name']))
-            id_key = f'{pers1[0]},{pers1[1]}'
-            distance_dict[id_key] = []
+            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1))
             # Numerate dictionaries
             pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
             distance_header_array[n1] = pers_data['name']
@@ -5356,7 +5355,6 @@ class MorphCognateAnalysis(graphene.Mutation):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
-                    distance_dict[id_key].append((1, 0))
                 else:
                     # Compile new meaning_to_links2 using canon_meanings instead of sub_meanings
                     canon_meaning_to_links2 = collections.defaultdict(set)
@@ -5391,15 +5389,16 @@ class MorphCognateAnalysis(graphene.Mutation):
                     percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
-                    distance_dict[id_key].append((c, distance))
+                    distance_dict['__relation_array__'][n1][n2] = c
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
+        result = SwadeshAnalysis.export_dataframe(
+            result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
 
         # GC
         del result_pool
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
-            result, distance_dict, base_language_name, storage)
+            result, distance_dict, base_language_name, 'morphology', storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
@@ -5464,7 +5463,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         # Administrator / perspective author / editing permission check.
         error_str = (
             'Only administrator, perspective author and users with perspective editing permissions '
-            'can perform Swadesh analysis.')
+            'can perform morphological analysis.')
 
         client_id = info.context.client_id
 
@@ -5572,6 +5571,138 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             return ResponseError(message =
                 'Exception:\n' + traceback_string)
+
+
+class BalancedReport(graphene.Mutation):
+    class Arguments:
+
+        base_language_id = LingvodocID(required = True)
+        result_pool = graphene.List(ObjectVal, required = True)
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    result = graphene.String()
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+    language_name_list = graphene.List(graphene.String)
+
+    @staticmethod
+    def export_html(distances, tree_path_list):
+        html_result = build_table(distances, 'orange_light', width="300px", index=True)
+        return html_result
+
+    @staticmethod
+    def mutate(
+        self,
+        info,
+        base_language_id,
+        result_pool,
+        debug_flag = False):
+
+        # Registered user check.
+        client_id = info.context.client_id
+
+        if not client_id:
+            return ResponseError('Only registered users can get balanced report.')
+
+        user = Client.get_user_by_client_id(client_id)
+
+        # Debug mode check.
+        if debug_flag and user.id != 1:
+            return ResponseError('Only administrator can use debug mode.')
+
+        try:
+
+            languages_frame = []
+
+            # Reduce array size if there are languages duplicates
+            for analysis in result_pool:
+
+                pers_by_lang = collections.defaultdict(list)
+                languages_frame.append(pers_by_lang)
+
+                perspectives = numpy.array(analysis.get('__perspectives__', []))
+                relation_array = numpy.array(analysis.get('__relation_array__'))
+                p_num = len(perspectives)
+                nums_to_delete = []
+
+                for i, (l1_id, p1_id) in enumerate(perspectives):
+                    pers_by_lang[tuple(l1_id)].append(tuple(p1_id))
+
+                    for j in range((i + 1), p_num):
+                        l2_id, _ = perspectives[j]
+
+                        if l2_id == l1_id:
+                            for k in range(p_num):
+                                # Get maximum values for found similar languages
+                                # and assign to first found row and column (the matrix is triangular)
+                                relation_array[i][k] = max(relation_array[[i, j], k])
+                                relation_array[k][i] = max(relation_array[k, [i, j]])
+
+                            nums_to_delete.append(j)
+
+                # Delete duplicates of languages from perspectives list and from data matrix
+                numpy.delete(perspectives, nums_to_delete)
+                numpy.delete(numpy.delete(relation_array, nums_to_delete, 0), nums_to_delete, 1)
+
+
+
+
+
+
+
+
+            locale_id = info.context.locale_id
+
+            base_language = DBSession.query(dbLanguage).filter_by(
+                client_id = base_language_id[0], object_id = base_language_id[1]).first()
+
+            base_language_name = base_language.get_translation(locale_id)
+
+            request = info.context.request
+            storage = request.registry.settings['storage']
+
+            # Transforming client/object pair ids from lists to 2-tuples.
+
+            source_perspective_id = tuple(source_perspective_id)
+            base_language_id = tuple(base_language_id)
+            group_field_id = tuple(group_field_id)
+
+            perspective_info_list = [
+
+                (tuple(language_id),
+                 tuple(perspective_id),
+                 tuple(affix_field_id),
+                 tuple(meaning_field_id),
+                 None)
+
+                for language_id,
+                    perspective_id,
+                    affix_field_id,
+                    meaning_field_id,
+                    _ in perspective_info_list]
+
+            result_dict = dict(
+                triumph=True,
+                result=build_table(distances, 'orange_light', width="300px", index=True)
+            )
+
+            return BalancedReport(**result_dict)
+
+        # Exception occured while we tried to perform swadesh analysis.
+        except Exception as exception:
+
+            traceback_string = ''.join(
+                traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1]
+
+            log.warning(f'balanced_report {base_language_id}: exception')
+            log.warning(traceback_string)
+
+            return ResponseError(
+                message='Exception:\n' + traceback_string)
 
 
 class XlsxBulkDisconnect(graphene.Mutation):
