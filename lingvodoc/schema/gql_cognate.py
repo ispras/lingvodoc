@@ -3890,7 +3890,7 @@ class CognateAnalysis(graphene.Mutation):
         distance_header_array = None
         n1 = n2 = len(perspective_info_list)
         relation_data_array = numpy.full((n1, n2), 1, dtype='float')
-        distance_dict = {'__perspectives__': [], '__relation_matrix__': relation_data_array}
+        perspectives = []
 
         if distance_matrix_list is not None:
 
@@ -3925,12 +3925,14 @@ class CognateAnalysis(graphene.Mutation):
                         perspective_id_list,
                         distance_data_list)):
 
-                distance_dict['__perspectives__'].append((l_id, p_id))
+                perspectives.append((l_id, p_id))
 
                 for n2, diff in enumerate(p_diffs):
 
                     relation = round(1 - int(diff) / max_diff, 2)
-                    distance_dict['__relation_matrix__'][n1][n2] = relation
+                    relation_data_array[n1, n2] = relation
+
+        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': list(relation_data_array)}
 
         with open(json_path, 'w') as json_file:
             json.dump(distance_dict, json_file)
@@ -4873,23 +4875,23 @@ class SwadeshAnalysis(graphene.Mutation):
         relation_data_array = numpy.full((dictionary_count, dictionary_count), 1, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
+        perspectives = []
 
         # Calculate intersection between lists of linked meanings (Swadesh matching)
         # So length of this intersection is the similarity of corresponding perspectives
         # means_total is amount of Swadesh's lexemes met in the both perspectives
         bundles = set()
-        distance_dict = {'__perspectives__': [], '__relation_matrix__': relation_data_array}
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (pers1, means1) in enumerate(means.items()):
             pers_data = result_pool[pers1]
-            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1))
+            perspectives.append((pers_data['lang_id'], pers1))
             # Numerate dictionaries
             pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
             distance_header_array[n1] = pers_data['name']
             for n2, (pers2, means2) in enumerate(means.items()):
                 if n1 == n2:
-                    distance_data_array[n1][n2] = 0
-                    complex_data_array[n1][n2] = "n/a"
+                    distance_data_array[n1, n2] = 0
+                    complex_data_array[n1, n2] = "n/a"
                 else:
                     # Common meanings of entries which have etymological links
                     # but this links may be not mutual
@@ -4913,15 +4915,17 @@ class SwadeshAnalysis(graphene.Mutation):
                     c = means_linked / means_total if means_total > 0 else 0
                     distance = math.sqrt( math.log(c) / -0.1 / math.sqrt(c) ) if c > 0 else 25
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
-                    distance_data_array[n1][n2] = round(distance, 2)
-                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
-                    distance_dict['__relation_matrix__'][n1][n2] = c
+                    distance_data_array[n1, n2] = round(distance, 2)
+                    complex_data_array[n1, n2] = f"{distance_data_array[n1, n2]:.2f} ({percent}%)"
+                    relation_data_array[n1, n2] = c
 
         result = SwadeshAnalysis.export_dataframe(
             result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
 
         # GC
         del result_pool
+
+        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': list(relation_data_array)}
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
             result, distance_dict, base_language_name, 'glottochronology', storage)
@@ -5339,11 +5343,11 @@ class MorphCognateAnalysis(graphene.Mutation):
         bundles = set()
         n1 = n2 = len(perspective_info_list)
         relation_data_array = numpy.full((n1, n2), 1, dtype='float')
-        distance_dict = {'__perspectives__': [], '__relation_matrix__': relation_data_array}
+        perspectives = []
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (pers1, meaning_to_links1) in enumerate(meaning_to_links.items()):
             pers_data = result_pool[pers1]
-            distance_dict['__perspectives__'].append((pers_data['lang_id'], pers1))
+            perspectives.append((pers_data['lang_id'], pers1))
             # Numerate dictionaries
             pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
             distance_header_array[n1] = pers_data['name']
@@ -5353,8 +5357,8 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             for n2, (pers2, meaning_to_links2) in enumerate(meaning_to_links.items()):
                 if n1 == n2:
-                    distance_data_array[n1][n2] = 0
-                    complex_data_array[n1][n2] = "n/a"
+                    distance_data_array[n1, n2] = 0
+                    complex_data_array[n1, n2] = "n/a"
                 else:
                     # Compile new meaning_to_links2 using canon_meanings instead of sub_meanings
                     canon_meaning_to_links2 = collections.defaultdict(set)
@@ -5387,15 +5391,19 @@ class MorphCognateAnalysis(graphene.Mutation):
                     #distance = math.log(c) / -0.14 if c > 0 else 50
                     distance = math.sqrt(math.log(c) / -0.1 / math.sqrt(c)) if c > 0 else 25
                     percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
-                    distance_data_array[n1][n2] = round(distance, 2)
-                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
-                    distance_dict['__relation_matrix__'][n1][n2] = c
+                    distance_data_array[n1, n2] = round(distance, 2)
+                    complex_data_array[n1, n2] = f"{distance_data_array[n1, n2]:.2f} ({percent}%)"
+                    relation_data_array[n1, n2] = c
+
+
 
         result = SwadeshAnalysis.export_dataframe(
             result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
 
         # GC
         del result_pool
+
+        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': list(relation_data_array)}
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
             result, distance_dict, base_language_name, 'morphology', storage)
