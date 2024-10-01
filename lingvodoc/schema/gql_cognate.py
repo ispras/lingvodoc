@@ -5589,6 +5589,76 @@ class BalancedReport(graphene.Mutation):
     language_name_list = graphene.List(graphene.String)
 
     @staticmethod
+    def get_balanced_matrix(result_pool):
+
+        pers_by_lang = collections.defaultdict(list)
+        relation_result = {}
+
+        # Reducing array size if there are languages duplicates
+        for analysis in result_pool:
+
+            perspectives = numpy.array(analysis.get('__perspectives__', []))
+            relation_array = numpy.array(analysis.get('__relation_array__'))
+            p_num = len(perspectives)
+            nums_to_delete = []
+
+            for i, (l1_id, p1_id) in enumerate(perspectives):
+                pers_by_lang[tuple(l1_id)].append(tuple(p1_id))
+
+                for j in range((i + 1), p_num):
+                    l2_id, _ = perspectives[j]
+
+                    if l2_id == l1_id:
+                        for k in range(p_num):
+                            # Get maximum values for found similar languages
+                            # and assign to first found row and column (the matrix is triangular)
+                            relation_array[i][k] = max(relation_array[[i, j], k])
+                            relation_array[k][i] = max(relation_array[k, [i, j]])
+
+                        nums_to_delete.append(j)
+
+            # Delete duplicates of languages from perspectives list and from data matrix
+
+            relation_array = (
+                numpy.delete(numpy.delete(relation_array, nums_to_delete, 0), nums_to_delete, 1))
+
+            languages = perspectives[:, 0]
+            languages = numpy.delete(languages, nums_to_delete)
+            l_num = len(languages)
+
+            # Collecting languages pairs with their relation
+
+            relation_dict = {}
+            for i, l1_id in enumerate(languages):
+                for j in range((i + 1), l_num):
+                    l2_id = languages[j]
+                    relation_dict[(tuple(l1_id), tuple(l2_id))] = relation_array[i, j]
+
+            # Getting balanced list
+
+            union = set(relation_result) | set(relation_dict)
+            intersection = set(relation_result) & set(relation_dict)
+
+            for pair in union:
+                if pair in intersection:
+                    relation_result[pair] = (relation_result[pair] + relation_dict[pair]) / 2
+                elif pair in relation_dict:
+                    relation_result[pair] = relation_dict[pair]
+
+        # Getting result balanced matrix
+
+        language_result = [pair[0] for pair in relation_result]
+        l_num = len(language_result)
+        relation_result_matrix = numpy.full((l_num, l_num), 1, dtype='float')
+
+        for (l1_id, l2_id), relation in relation_result.items():
+            i = language_result.index(l1_id)
+            j = language_result.index(l2_id)
+            relation_result_matrix[i, j] = relation_result_matrix[j, i] = relation
+
+        return relation_result_matrix, pers_by_lang
+
+    @staticmethod
     def export_html(distances, tree_path_list):
         html_result = build_table(distances, 'orange_light', width="300px", index=True)
         return html_result
@@ -5601,7 +5671,7 @@ class BalancedReport(graphene.Mutation):
         result_pool,
         debug_flag = False):
 
-        # Registered user check.
+        # Registered user check
         client_id = info.context.client_id
 
         if not client_id:
@@ -5609,66 +5679,11 @@ class BalancedReport(graphene.Mutation):
 
         user = Client.get_user_by_client_id(client_id)
 
-        # Debug mode check.
+        # Debug mode check
         if debug_flag and user.id != 1:
             return ResponseError('Only administrator can use debug mode.')
 
         try:
-
-            pers_by_lang = collections.defaultdict(list)
-            relation_result = {}
-
-            # Reduce array size if there are languages duplicates
-            for analysis in result_pool:
-
-                perspectives = numpy.array(analysis.get('__perspectives__', []))
-                relation_array = numpy.array(analysis.get('__relation_array__'))
-                p_num = len(perspectives)
-                nums_to_delete = []
-
-                for i, (l1_id, p1_id) in enumerate(perspectives):
-                    pers_by_lang[tuple(l1_id)].append(tuple(p1_id))
-
-                    for j in range((i + 1), p_num):
-                        l2_id, _ = perspectives[j]
-
-                        if l2_id == l1_id:
-                            for k in range(p_num):
-                                # Get maximum values for found similar languages
-                                # and assign to first found row and column (the matrix is triangular)
-                                relation_array[i][k] = max(relation_array[[i, j], k])
-                                relation_array[k][i] = max(relation_array[k, [i, j]])
-
-                            nums_to_delete.append(j)
-
-                # Delete duplicates of languages from perspectives list and from data matrix
-                relation_array = (
-                    numpy.delete(numpy.delete(relation_array, nums_to_delete, 0), nums_to_delete, 1))
-
-                languages = perspectives[:, 0]
-                languages = numpy.delete(languages, nums_to_delete)
-                l_num = len(languages)
-
-                # Collect languages pairs with their relation
-                relation_dict = {}
-                for i, l1_id in enumerate(languages):
-                    for j in range((i + 1), l_num):
-                        l2_id = languages[j]
-                        relation_dict[(tuple(l1_id), tuple(l2_id))] = relation_array[i, j]
-
-                union = set(relation_result) | set(relation_dict)
-                intersection = set(relation_result) & set(relation_dict)
-
-                for pair in union:
-                    if pair in intersection:
-                        relation_result[pair] = (relation_result[pair] + relation_dict[pair]) / 2
-                    elif pair in relation_dict:
-                        relation_result[pair] = relation_dict[pair]
-
-
-
-
-
 
             locale_id = info.context.locale_id
 
