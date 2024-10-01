@@ -5647,22 +5647,17 @@ class BalancedReport(graphene.Mutation):
 
         # Getting result balanced matrix
 
-        language_result = [pair[0] for pair in relation_result]
-        l_num = len(language_result)
+        language_list = [pair[0] for pair in relation_result]
+        l_num = len(language_list)
         distance_matrix = numpy.full((l_num, l_num), 1, dtype='float')
 
         for (l1_id, l2_id), relation in relation_result.items():
-            i = language_result.index(l1_id)
-            j = language_result.index(l2_id)
+            i = language_list.index(l1_id)
+            j = language_list.index(l2_id)
             distance_matrix[i, j] = distance_matrix[j, i] = (
                 math.sqrt(math.log(relation) / -0.1 / math.sqrt(relation)) if relation > 0 else 25)
 
-        return distance_matrix, pers_by_lang
-
-    @staticmethod
-    def export_html(distances, tree_path_list):
-        html_result = build_table(distances, 'orange_light', width="300px", index=True)
-        return html_result
+        return distance_matrix, language_list, pers_by_lang
 
     @staticmethod
     def mutate(
@@ -5684,46 +5679,72 @@ class BalancedReport(graphene.Mutation):
         if debug_flag and user.id != 1:
             return ResponseError('Only administrator can use debug mode.')
 
+        locale_id = info.context.locale_id
+
+        def get_language_str(language_id):
+            language_obj = DBSession.query(dbLanguage).filter_by(
+                client_id=language_id[0], object_id=language_id[1]).one()
+
+            return language_obj.get_translation(locale_id)
+
+        def get_perspective_str(perspective_id):
+            perspective_obj = DBSession.query(dbPerspective).filter_by(
+                client_id=perspective_id[0], object_id=perspective_id[1]).one()
+
+            perspective_name = perspective_obj.get_translation(locale_id)
+            dictionary_name = perspective_obj.parent.get_translation(locale_id)
+
+            return f'{dictionary_name} - {perspective_name}'
+
         try:
+            distance_matrix, language_list, pers_by_lang = (
+                BalancedReport.get_balanced_matrix(result_pool))
 
-            locale_id = info.context.locale_id
+            language_header = [get_language_str(lang_id) for lang_id in language_list]
 
-            base_language = DBSession.query(dbLanguage).filter_by(
-                client_id = base_language_id[0], object_id = base_language_id[1]).first()
+            def export_html():
 
-            base_language_name = base_language.get_translation(locale_id)
+                distance_frame = pd.DataFrame(distance_matrix, columns=language_header)
+                html_result = build_table(distance_frame, 'yellow_dark', width="300px", index=True)
 
-            request = info.context.request
-            storage = request.registry.settings['storage']
+                for index1, lang, pers in enumerate(pers_by_lang.items()):
+                    html_result += (
+                        f"<p/><p key='{index1}'> * The language {get_language_str(lang)} "
+                        f"is presented by perspective(s):</p><p/>")
+                    for index2, per in enumerate(pers):
+                        html_result += f"<p key='{index1},{index2}'> ** {index2 + 1}. {get_perspective_str(per)}</p>"
 
-            # Transforming client/object pair ids from lists to 2-tuples.
+                return html_result
 
-            source_perspective_id = tuple(source_perspective_id)
-            base_language_id = tuple(base_language_id)
-            group_field_id = tuple(group_field_id)
+            language_str = f'language {base_language_id[0]}/{base_language_id[1]}'
+            base_language_name = get_language_str(base_language_id)
 
-            perspective_info_list = [
-
-                (tuple(language_id),
-                 tuple(perspective_id),
-                 tuple(affix_field_id),
-                 tuple(meaning_field_id),
-                 None)
-
-                for language_id,
-                    perspective_id,
-                    affix_field_id,
-                    meaning_field_id,
-                    _ in perspective_info_list]
+            _, mst_list, embedding_2d_pca, embedding_3d_pca = \
+                CognateAnalysis.distance_graph(
+                    language_str,
+                    base_language_name,
+                    distance_matrix,
+                    language_header,
+                    None,
+                    None,
+                    None,
+                    analysis_str='balanced_report',
+                    __debug_flag__=debug_flag,
+                    __plot_flag__=False
+                )
 
             result_dict = dict(
-                triumph=True,
-                result=build_table(distances, 'orange_light', width="300px", index=True)
+                triumph = True,
+                result = export_html(),
+                minimum_spanning_tree = mst_list,
+                embedding_2d = embedding_2d_pca,
+                embedding_3d = embedding_3d_pca,
+                language_name_list = language_header
             )
 
             return BalancedReport(**result_dict)
 
-        # Exception occured while we tried to perform swadesh analysis.
+        # Exception occured while we tried to get balanced report
         except Exception as exception:
 
             traceback_string = ''.join(
