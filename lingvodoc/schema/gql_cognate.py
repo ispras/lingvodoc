@@ -3890,7 +3890,7 @@ class CognateAnalysis(graphene.Mutation):
         distance_header_array = None
         n1 = n2 = len(perspective_info_list)
         relation_data_array = numpy.full((n1, n2), 1, dtype='float')
-        distance_dict = {'__perspectives__': [], '__relation_array__': relation_data_array}
+        distance_dict = {'__perspectives__': [], '__relation_matrix__': relation_data_array}
 
         if distance_matrix_list is not None:
 
@@ -3930,7 +3930,7 @@ class CognateAnalysis(graphene.Mutation):
                 for n2, diff in enumerate(p_diffs):
 
                     relation = round(1 - int(diff) / max_diff, 2)
-                    distance_dict['__relation_array__'][n1][n2] = relation
+                    distance_dict['__relation_matrix__'][n1][n2] = relation
 
         with open(json_path, 'w') as json_file:
             json.dump(distance_dict, json_file)
@@ -4878,7 +4878,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # So length of this intersection is the similarity of corresponding perspectives
         # means_total is amount of Swadesh's lexemes met in the both perspectives
         bundles = set()
-        distance_dict = {'__perspectives__': [], '__relation_array__': relation_data_array}
+        distance_dict = {'__perspectives__': [], '__relation_matrix__': relation_data_array}
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (pers1, means1) in enumerate(means.items()):
             pers_data = result_pool[pers1]
@@ -4915,7 +4915,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
-                    distance_dict['__relation_array__'][n1][n2] = c
+                    distance_dict['__relation_matrix__'][n1][n2] = c
 
         result = SwadeshAnalysis.export_dataframe(
             result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
@@ -5339,7 +5339,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         bundles = set()
         n1 = n2 = len(perspective_info_list)
         relation_data_array = numpy.full((n1, n2), 1, dtype='float')
-        distance_dict = {'__perspectives__': [], '__relation_array__': relation_data_array}
+        distance_dict = {'__perspectives__': [], '__relation_matrix__': relation_data_array}
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (pers1, meaning_to_links1) in enumerate(meaning_to_links.items()):
             pers_data = result_pool[pers1]
@@ -5384,12 +5384,12 @@ class MorphCognateAnalysis(graphene.Mutation):
 
                     # meanings_linked > 0 meanings that meanings_total > 0 even more so
                     c = meanings_linked / meanings_total if meanings_total > 0 else 0
-                    distance = math.log(c) / -0.14 if c > 0 else 50
-                    #distance = math.sqrt(math.log(c) / -0.1 / math.sqrt(c)) if c > 0 else 25
+                    #distance = math.log(c) / -0.14 if c > 0 else 50
+                    distance = math.sqrt(math.log(c) / -0.1 / math.sqrt(c)) if c > 0 else 25
                     percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
-                    distance_dict['__relation_array__'][n1][n2] = c
+                    distance_dict['__relation_matrix__'][n1][n2] = c
 
         result = SwadeshAnalysis.export_dataframe(
             result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
@@ -5591,19 +5591,19 @@ class BalancedReport(graphene.Mutation):
     @staticmethod
     def get_balanced_matrix(result_pool):
 
-        pers_by_lang = collections.defaultdict(list)
+        pers_by_lang = collections.defaultdict(set)
         relation_result = {}
 
         # Reducing array size if there are languages duplicates
         for analysis in result_pool:
 
             perspectives = numpy.array(analysis.get('__perspectives__', []))
-            relation_array = numpy.array(analysis.get('__relation_array__'))
+            relation_matrix = numpy.array(analysis.get('__relation_matrix__'))
             p_num = len(perspectives)
             nums_to_delete = []
 
             for i, (l1_id, p1_id) in enumerate(perspectives):
-                pers_by_lang[tuple(l1_id)].append(tuple(p1_id))
+                pers_by_lang[tuple(l1_id)].add(tuple(p1_id))
 
                 for j in range((i + 1), p_num):
                     l2_id, _ = perspectives[j]
@@ -5612,51 +5612,52 @@ class BalancedReport(graphene.Mutation):
                         for k in range(p_num):
                             # Get maximum values for found similar languages
                             # and assign to first found row and column (the matrix is triangular)
-                            relation_array[i][k] = max(relation_array[[i, j], k])
-                            relation_array[k][i] = max(relation_array[k, [i, j]])
+                            relation_matrix[i][k] = max(relation_matrix[[i, j], k])
+                            relation_matrix[k][i] = max(relation_matrix[k, [i, j]])
 
                         nums_to_delete.append(j)
 
             # Delete duplicates of languages from perspectives list and from data matrix
 
-            relation_array = (
-                numpy.delete(numpy.delete(relation_array, nums_to_delete, 0), nums_to_delete, 1))
+            relation_matrix = (
+                numpy.delete(numpy.delete(relation_matrix, nums_to_delete, 0), nums_to_delete, 1))
 
             languages = perspectives[:, 0]
             languages = numpy.delete(languages, nums_to_delete)
             l_num = len(languages)
 
-            # Collecting languages pairs with their relation
+            # Collecting languages pairs with their relations
 
-            relation_dict = {}
+            relation_by_pair = {}
             for i, l1_id in enumerate(languages):
                 for j in range((i + 1), l_num):
                     l2_id = languages[j]
-                    relation_dict[(tuple(l1_id), tuple(l2_id))] = relation_array[i, j]
+                    relation_by_pair[(tuple(l1_id), tuple(l2_id))] = relation_matrix[i, j]
 
             # Getting balanced list
 
-            union = set(relation_result) | set(relation_dict)
-            intersection = set(relation_result) & set(relation_dict)
+            union = set(relation_result) | set(relation_by_pair)
+            intersection = set(relation_result) & set(relation_by_pair)
 
             for pair in union:
                 if pair in intersection:
-                    relation_result[pair] = (relation_result[pair] + relation_dict[pair]) / 2
-                elif pair in relation_dict:
-                    relation_result[pair] = relation_dict[pair]
+                    relation_result[pair] = (relation_result[pair] + relation_by_pair[pair]) / 2
+                elif pair in relation_by_pair:
+                    relation_result[pair] = relation_by_pair[pair]
 
         # Getting result balanced matrix
 
         language_result = [pair[0] for pair in relation_result]
         l_num = len(language_result)
-        relation_result_matrix = numpy.full((l_num, l_num), 1, dtype='float')
+        distance_matrix = numpy.full((l_num, l_num), 1, dtype='float')
 
         for (l1_id, l2_id), relation in relation_result.items():
             i = language_result.index(l1_id)
             j = language_result.index(l2_id)
-            relation_result_matrix[i, j] = relation_result_matrix[j, i] = relation
+            distance_matrix[i, j] = distance_matrix[j, i] = (
+                math.sqrt(math.log(relation) / -0.1 / math.sqrt(relation)) if relation > 0 else 25)
 
-        return relation_result_matrix, pers_by_lang
+        return distance_matrix, pers_by_lang
 
     @staticmethod
     def export_html(distances, tree_path_list):
