@@ -3932,7 +3932,7 @@ class CognateAnalysis(graphene.Mutation):
                     relation = round(1 - int(diff) / max_diff, 2)
                     relation_data_array[n1, n2] = relation
 
-        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': list(relation_data_array)}
+        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': relation_data_array.tolist()}
 
         with open(json_path, 'w') as json_file:
             json.dump(distance_dict, json_file)
@@ -4925,7 +4925,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # GC
         del result_pool
 
-        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': list(relation_data_array)}
+        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': relation_data_array.tolist()}
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
             result, distance_dict, base_language_name, 'glottochronology', storage)
@@ -5396,14 +5396,13 @@ class MorphCognateAnalysis(graphene.Mutation):
                     relation_data_array[n1, n2] = c
 
 
-
         result = SwadeshAnalysis.export_dataframe(
             result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
 
         # GC
         del result_pool
 
-        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': list(relation_data_array)}
+        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': relation_data_array.tolist()}
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
             result, distance_dict, base_language_name, 'morphology', storage)
@@ -5581,7 +5580,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                 'Exception:\n' + traceback_string)
 
 
-class BalancedReport(graphene.Mutation):
+class ComplexDistance(graphene.Mutation):
     class Arguments:
 
         base_language_id = LingvodocID(required = True)
@@ -5597,7 +5596,7 @@ class BalancedReport(graphene.Mutation):
     language_name_list = graphene.List(graphene.String)
 
     @staticmethod
-    def get_balanced_matrix(result_pool):
+    def get_complex_matrix(result_pool):
 
         pers_by_lang = collections.defaultdict(set)
         relation_result = {}
@@ -5642,7 +5641,7 @@ class BalancedReport(graphene.Mutation):
                     l2_id = languages[j]
                     relation_by_pair[(tuple(l1_id), tuple(l2_id))] = relation_matrix[i, j]
 
-            # Getting balanced list
+            # Getting complex list
 
             union = set(relation_result) | set(relation_by_pair)
             intersection = set(relation_result) & set(relation_by_pair)
@@ -5653,7 +5652,7 @@ class BalancedReport(graphene.Mutation):
                 elif pair in relation_by_pair:
                     relation_result[pair] = relation_by_pair[pair]
 
-        # Getting result balanced matrix
+        # Getting result complex matrix
 
         language_list = [pair[0] for pair in relation_result]
         l_num = len(language_list)
@@ -5679,7 +5678,7 @@ class BalancedReport(graphene.Mutation):
         client_id = info.context.client_id
 
         if not client_id:
-            return ResponseError('Only registered users can get balanced report.')
+            return ResponseError('Only registered users can get complex report.')
 
         user = Client.get_user_by_client_id(client_id)
 
@@ -5706,7 +5705,7 @@ class BalancedReport(graphene.Mutation):
 
         try:
             distance_matrix, language_list, pers_by_lang = (
-                BalancedReport.get_balanced_matrix(result_pool))
+                ComplexDistance.get_complex_matrix(result_pool))
 
             language_header = [get_language_str(lang_id) for lang_id in language_list]
 
@@ -5736,7 +5735,7 @@ class BalancedReport(graphene.Mutation):
                     None,
                     None,
                     None,
-                    analysis_str='balanced_report',
+                    analysis_str='complex_report',
                     __debug_flag__=debug_flag,
                     __plot_flag__=False
                 )
@@ -5750,16 +5749,16 @@ class BalancedReport(graphene.Mutation):
                 language_name_list = language_header
             )
 
-            return BalancedReport(**result_dict)
+            return ComplexDistance(**result_dict)
 
-        # Exception occured while we tried to get balanced report
+        # Exception occured while we tried to get complex report
         except Exception as exception:
 
             traceback_string = ''.join(
                 traceback.format_exception(
                     exception, exception, exception.__traceback__))[:-1]
 
-            log.warning(f'balanced_report {base_language_id}: exception')
+            log.warning(f'complex_report {base_language_id}: exception')
             log.warning(traceback_string)
 
             return ResponseError(
