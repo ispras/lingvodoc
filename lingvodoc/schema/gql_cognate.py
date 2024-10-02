@@ -3932,7 +3932,9 @@ class CognateAnalysis(graphene.Mutation):
                     relation = round(1 - int(diff) / max_diff, 2)
                     relation_data_array[n1, n2] = relation
 
-        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': relation_data_array.tolist()}
+        distance_dict = {'__base_language_id__': base_language_id,
+                         '__perspectives__': perspectives,
+                         '__relation_matrix__': relation_data_array.tolist()}
 
         with open(json_path, 'w') as json_file:
             json.dump(distance_dict, json_file)
@@ -4925,7 +4927,9 @@ class SwadeshAnalysis(graphene.Mutation):
         # GC
         del result_pool
 
-        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': relation_data_array.tolist()}
+        distance_dict = {'__base_language_id__': base_language_id,
+                         '__perspectives__': perspectives,
+                         '__relation_matrix__': relation_data_array.tolist()}
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
             result, distance_dict, base_language_name, 'glottochronology', storage)
@@ -5402,7 +5406,9 @@ class MorphCognateAnalysis(graphene.Mutation):
         # GC
         del result_pool
 
-        distance_dict = {'__perspectives__': perspectives, '__relation_matrix__': relation_data_array.tolist()}
+        distance_dict = {'__base_language_id__': base_language_id,
+                         '__perspectives__': perspectives,
+                         '__relation_matrix__': relation_data_array.tolist()}
 
         (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
             result, distance_dict, base_language_name, 'morphology', storage)
@@ -5583,13 +5589,13 @@ class MorphCognateAnalysis(graphene.Mutation):
 class ComplexDistance(graphene.Mutation):
     class Arguments:
 
-        base_language_id = LingvodocID(required = True)
         result_pool = graphene.List(ObjectVal, required = True)
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
     result = graphene.String()
+    message = graphene.String()
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
@@ -5670,7 +5676,6 @@ class ComplexDistance(graphene.Mutation):
     def mutate(
         self,
         info,
-        base_language_id,
         result_pool,
         debug_flag = False):
 
@@ -5687,6 +5692,7 @@ class ComplexDistance(graphene.Mutation):
             return ResponseError('Only administrator can use debug mode.')
 
         locale_id = info.context.locale_id
+        base_language_id = result_pool[0].get('__base_language_id__')
 
         def get_language_str(language_id):
             language_obj = DBSession.query(dbLanguage).filter_by(
