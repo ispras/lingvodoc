@@ -5726,7 +5726,7 @@ class ComplexDistance(graphene.Mutation):
                 # Start index for distances from 1 to match with dictionaries numbers
                 distance_frame.index += 1
 
-                html_result = build_table(distance_frame, 'yellow_dark', width="300px", index=True)
+                html_result = build_table(distance_frame, 'orange_light', width="300px", index=True)
 
                 for i1, (lang, pers) in enumerate(pers_by_lang.items()):
                     html_result += (
