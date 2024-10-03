@@ -4873,7 +4873,7 @@ class SwadeshAnalysis(graphene.Mutation):
             not_enough_count += (count < 2)
 
         dictionary_count = len(means)
-        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 25, dtype='float')
         relation_data_array = numpy.full((dictionary_count, dictionary_count), 1, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
@@ -5340,7 +5340,7 @@ class MorphCognateAnalysis(graphene.Mutation):
             not_enough_count += (count < 2)
 
         dictionary_count = len(result_pool)
-        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 25, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
@@ -5665,15 +5665,17 @@ class ComplexDistance(graphene.Mutation):
                     relation_result[pair] = relation_by_pair[pair]
 
         # Getting result complex matrix
+        max_distance = 25
         language_list = list(pers_by_lang.keys())
         l_num = len(language_list)
-        distance_matrix = numpy.full((l_num, l_num), 1, dtype='float')
+        distance_matrix = numpy.full((l_num, l_num), max_distance, dtype='float')
 
         for (l1_id, l2_id), relation in relation_result.items():
             i = language_list.index(l1_id)
             j = language_list.index(l2_id)
             distance_matrix[i, j] = distance_matrix[j, i] = (
-                math.sqrt(math.log(relation) / -0.1 / math.sqrt(relation)) if relation > 0 else 25)
+                math.sqrt(math.log(relation) / -0.1 / math.sqrt(relation)) if relation > 0 else max_distance)
+            distance_matrix[i, i] = distance_matrix[j, j] = 0
 
         return distance_matrix, pers_by_lang
 
