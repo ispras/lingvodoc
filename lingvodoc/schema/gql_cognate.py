@@ -5610,23 +5610,30 @@ class ComplexDistance(graphene.Mutation):
         # Reducing array size if there are languages duplicates
         for analysis in result_pool:
 
-            perspectives = numpy.array(analysis.get('__perspectives__', []))
-            relation_matrix = numpy.array(analysis.get('__relation_matrix__'))
+            perspectives = analysis.get('__perspectives__', [])
             p_num = len(perspectives)
+
+            relation_matrix = numpy.array(analysis.get('__relation_matrix__', []))
+
+            if not p_num or len(relation_matrix) != p_num:
+                continue
+
+            languages = []
             nums_to_delete = []
 
             for i, (l1_id, p1_id) in enumerate(perspectives):
                 pers_by_lang[tuple(l1_id)].add(tuple(p1_id))
+                languages.append(tuple(l1_id))
 
                 for j in range((i + 1), p_num):
                     l2_id, _ = perspectives[j]
 
-                    if l2_id == l1_id:
+                    if tuple(l2_id) == tuple(l1_id) and j not in nums_to_delete:
                         for k in range(p_num):
                             # Get maximum values for found similar languages
                             # and assign to first found row and column (the matrix is triangular)
-                            relation_matrix[i][k] = max(relation_matrix[[i, j], k])
-                            relation_matrix[k][i] = max(relation_matrix[k, [i, j]])
+                            relation_matrix[i, k] = max(relation_matrix[[i, j], k])
+                            relation_matrix[k, i] = max(relation_matrix[k, [i, j]])
 
                         nums_to_delete.append(j)
 
@@ -5635,8 +5642,7 @@ class ComplexDistance(graphene.Mutation):
             relation_matrix = (
                 numpy.delete(numpy.delete(relation_matrix, nums_to_delete, 0), nums_to_delete, 1))
 
-            languages = perspectives[:, 0]
-            languages = numpy.delete(languages, nums_to_delete)
+            languages = [lang for i, lang in enumerate(languages) if i not in nums_to_delete]
             l_num = len(languages)
 
             # Collecting languages pairs with their relations
@@ -5659,8 +5665,7 @@ class ComplexDistance(graphene.Mutation):
                     relation_result[pair] = relation_by_pair[pair]
 
         # Getting result complex matrix
-
-        language_list = [pair[0] for pair in relation_result]
+        language_list = list(pers_by_lang.keys())
         l_num = len(language_list)
         distance_matrix = numpy.full((l_num, l_num), 1, dtype='float')
 
@@ -5714,7 +5719,7 @@ class ComplexDistance(graphene.Mutation):
                 ComplexDistance.get_complex_matrix(result_pool))
 
             language_header = [get_language_str(lang_id) for lang_id in language_list]
-
+            A()
             def export_html():
 
                 distance_frame = pd.DataFrame(distance_matrix, columns=language_header)
