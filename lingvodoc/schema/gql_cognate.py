@@ -5675,7 +5675,7 @@ class ComplexDistance(graphene.Mutation):
             distance_matrix[i, j] = distance_matrix[j, i] = (
                 math.sqrt(math.log(relation) / -0.1 / math.sqrt(relation)) if relation > 0 else 25)
 
-        return distance_matrix, language_list, pers_by_lang
+        return distance_matrix, pers_by_lang
 
     @staticmethod
     def mutate(
@@ -5715,27 +5715,30 @@ class ComplexDistance(graphene.Mutation):
             return f'{dictionary_name} - {perspective_name}'
 
         try:
-            distance_matrix, language_list, pers_by_lang = (
+            distance_matrix, pers_by_lang = (
                 ComplexDistance.get_complex_matrix(result_pool))
 
-            language_header = [get_language_str(lang_id) for lang_id in language_list]
-            A()
+            language_header = [f' {i+1}. {get_language_str(lang_id)}' for i, lang_id in enumerate(pers_by_lang)]
+
             def export_html():
 
                 distance_frame = pd.DataFrame(distance_matrix, columns=language_header)
+                # Start index for distances from 1 to match with dictionaries numbers
+                distance_frame.index += 1
+
                 html_result = build_table(distance_frame, 'yellow_dark', width="300px", index=True)
 
-                for index1, lang, pers in enumerate(pers_by_lang.items()):
+                for i1, (lang, pers) in enumerate(pers_by_lang.items()):
                     html_result += (
-                        f"<p/><p key='{index1}'> * The language {get_language_str(lang)} "
-                        f"is presented by perspective(s):</p><p/>")
-                    for index2, per in enumerate(pers):
-                        html_result += f"<p key='{index1},{index2}'> ** {index2 + 1}. {get_perspective_str(per)}</p>"
+                        f"<pre key='{i1}'>\n{' ' * 2}{i1 + 1}. {get_language_str(lang)}</pre>")
+                    for i2, per in enumerate(pers):
+                        html_result += (
+                            f"<pre key='{i1}.{i2}'>{' ' * 6}{i1 + 1}.{i2 + 1} {get_perspective_str(per)}</pre>")
 
                 return html_result
 
-            language_str = f'language {base_language_id[0]}/{base_language_id[1]}'
-            base_language_name = get_language_str(base_language_id)
+            language_str = f'language {base_language_id[0]}/{base_language_id[1]}' if base_language_id else ""
+            base_language_name = get_language_str(base_language_id) if base_language_id else ""
 
             _, mst_list, embedding_2d_pca, embedding_3d_pca = \
                 CognateAnalysis.distance_graph(
