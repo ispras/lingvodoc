@@ -137,6 +137,7 @@ from lingvodoc.schema.gql_basegroup import (
 
 from lingvodoc.schema.gql_cognate import (
     CognateAnalysis,
+    ComplexDistance,
     MorphCognateAnalysis,
     PhonemicAnalysis,
     SwadeshAnalysis,
@@ -7737,6 +7738,7 @@ class MyMutations(graphene.ObjectType):
     set_valency_annotation = SetValencyAnnotation.Field()
     bidirectional_links = BidirectionalLinks.Field()
     cognates_summary = CognatesSummary.Field()
+    complex_distance = ComplexDistance.Field()
 
 
 schema = graphene.Schema(

@@ -8,6 +8,7 @@ import gzip
 import hashlib
 import io
 import itertools
+import json
 import logging
 import math
 import os.path
@@ -643,6 +644,7 @@ class CognateAnalysis(graphene.Mutation):
 
     result = graphene.String()
     xlsx_url = graphene.String()
+    json_url = graphene.String()
     distance_list = graphene.Field(ObjectVal)
     figure_url = graphene.String()
 
@@ -826,7 +828,7 @@ class CognateAnalysis(graphene.Mutation):
 
         # All tags for tagged lexical entries in specified perspectives.
 
-        for perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
+        for _, perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
 
             tag_query = (
 
@@ -1136,7 +1138,7 @@ class CognateAnalysis(graphene.Mutation):
 
         perspective_id_list = [
             perspective_id
-            for perspective_id, _, _, _ in perspective_info_list]
+            for _, perspective_id, _, _, _ in perspective_info_list]
 
         if not perspective_id_list:
 
@@ -2674,7 +2676,7 @@ class CognateAnalysis(graphene.Mutation):
                 hashlib.md5(
 
                     repr(list(group_field_id) +
-                        [perspective_info[0] for perspective_info in perspective_info_list])
+                         [perspective_info[1] for perspective_info in perspective_info_list])
 
                     .encode('utf-8'))
 
@@ -2778,7 +2780,7 @@ class CognateAnalysis(graphene.Mutation):
         sg_both_count = 0
 
         source_perspective_index = None
-        for index, (perspective_id, transcription_field_id, translation_field_id, _) in \
+        for index, (_, perspective_id, transcription_field_id, translation_field_id, _) in \
             enumerate(perspective_info_list):
 
             if perspective_id == source_perspective_id:
@@ -3092,11 +3094,13 @@ class CognateAnalysis(graphene.Mutation):
 
         result_list = [[]]
 
+        language_id_list = []
         perspective_id_list = []
         perspective_name_list = []
 
-        for perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
+        for language_id, perspective_id, transcription_field_id, translation_field_id, _ in perspective_info_list:
 
+            language_id_list.append(language_id)
             perspective_id_list.append(perspective_id)
             perspective_data = perspective_dict[perspective_id]
 
@@ -3261,6 +3265,7 @@ class CognateAnalysis(graphene.Mutation):
                 translation_count = total_translation_count,
                 result = '',
                 xlsx_url = '',
+                json_url = '',
                 distance_list = [],
                 figure_url = '',
                 intermediate_url_list = None)
@@ -3849,8 +3854,8 @@ class CognateAnalysis(graphene.Mutation):
 
         current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
-        xlsx_filename = pathvalidate.sanitize_filename(
-            '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+        filename = pathvalidate.sanitize_filename(
+            '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}'.format(
                 base_language_name[:64],
                 ' ' + mode if mode else '',
                 current_datetime.year,
@@ -3858,27 +3863,34 @@ class CognateAnalysis(graphene.Mutation):
                 current_datetime.day))
 
         if storage_dir is None:
-
             cur_time = time.time()
             storage_dir = os.path.join(storage['path'], 'cognate', str(cur_time))
 
+        os.makedirs(storage_dir, exist_ok = True)
+
         # Storing Excel file with the results.
 
-        xlsx_path = os.path.join(storage_dir, xlsx_filename)
-        os.makedirs(os.path.dirname(xlsx_path), exist_ok = True)
+        xlsx_path = os.path.join(storage_dir, f'{filename}.xlsx')
+        json_path = os.path.join(storage_dir, f'{filename}')
+
+        url_path = ''.join([
+            storage['prefix'], storage['static_route'],
+            'cognate', '/', str(cur_time)])
+
+        xlsx_url = f'{url_path}/{filename}.xlsx'
+        json_url = f'{url_path}/{filename}'
 
         workbook_stream.seek(0)
 
         with open(xlsx_path, 'wb') as xlsx_file:
             shutil.copyfileobj(workbook_stream, xlsx_file)
 
-        xlsx_url = ''.join([
-            storage['prefix'], storage['static_route'],
-            'cognate', '/', str(cur_time), '/', xlsx_filename])
-
         # Selecting one of the distance matrices, if we have any.
 
         distance_header_array = None
+        n1 = n2 = len(perspective_info_list)
+        relation_data_array = numpy.full((n1, n2), 1, dtype='float')
+        perspectives = []
 
         if distance_matrix_list is not None:
 
@@ -3898,6 +3910,34 @@ class CognateAnalysis(graphene.Mutation):
                 distance_data_list,
                 distance_header_array,
                 distance_data_array) = distance_matrix
+
+            # Compute distance_dict to store it into json
+
+            max_diff = 500
+
+            for n1, (
+                l_id,
+                p_id,
+                p_diffs
+            ) in enumerate(
+                    zip(
+                        language_id_list,
+                        perspective_id_list,
+                        distance_data_list)):
+
+                perspectives.append((l_id, p_id))
+
+                for n2, diff in enumerate(p_diffs):
+
+                    relation = round(1 - int(diff) / max_diff, 2)
+                    relation_data_array[n1, n2] = relation
+
+        distance_dict = {'__base_language_id__': base_language_id,
+                         '__perspectives__': perspectives,
+                         '__relation_matrix__': relation_data_array.tolist()}
+
+        with open(json_path, 'w') as json_file:
+            json.dump(distance_dict, json_file)
 
         # Generating list of etymological distances to the reference perspective, if required.
 
@@ -3974,7 +4014,7 @@ class CognateAnalysis(graphene.Mutation):
         if task_status is not None:
 
             result_link_list = (
-                [xlsx_url] +
+                [xlsx_url, json_url] +
                 ([] if figure_url is None else [figure_url]) +
                 (intermediate_url_list if __intermediate_flag__ else []))
 
@@ -3995,6 +4035,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 result = wrapped_output,
                 xlsx_url = xlsx_url,
+                json_url = json_url,
                 distance_list = distance_list,
                 figure_url = figure_url,
 
@@ -4080,7 +4121,7 @@ class CognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _, _ in perspective_info_list))
+                for _, (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -4235,12 +4276,14 @@ class CognateAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (tuple(perspective_id),
-                    tuple(transcription_field_id),
-                    tuple(translation_field_id),
-                    None)
+                (tuple(language_id),
+                 tuple(perspective_id),
+                 tuple(transcription_field_id),
+                 tuple(translation_field_id),
+                 None)
 
-                for perspective_id,
+                for language_id,
+                    perspective_id,
                     transcription_field_id,
                     translation_field_id,
                     _ in perspective_info_list]
@@ -4382,6 +4425,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
     result = graphene.String()
     xlsx_url = graphene.String()
+    json_url = graphene.String()
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
@@ -4462,29 +4506,38 @@ class SwadeshAnalysis(graphene.Mutation):
         }
 
     @staticmethod
-    def export_xlsx(
+    def export_xlsx_json(
             result,
+            distance_dict,
             base_language_name,
+            analysis_str,
             storage
     ):
         # Exporting analysis results as an Excel file.
 
         current_datetime = datetime.datetime.now(datetime.timezone.utc)
-        xlsx_filename = pathvalidate.sanitize_filename(
-            '{0} {1} {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+        filename = pathvalidate.sanitize_filename(
+            '{0} {1} {2:04d}.{3:02d}.{4:02d}'.format(
                 base_language_name[:64],
-                'glottochronology',
+                analysis_str,
                 current_datetime.year,
                 current_datetime.month,
                 current_datetime.day))
 
         cur_time = time.time()
+
+        url_path = ''.join([
+            storage['prefix'], storage['static_route'],
+            'glottochronology', '/', str(cur_time)])
+
         storage_dir = os.path.join(storage['path'], 'glottochronology', str(cur_time))
 
-        # Storing Excel file with the results.
+        xlsx_path = os.path.join(storage_dir, f'{filename}.xlsx')
+        json_path = os.path.join(storage_dir, f'{filename}')
 
-        xlsx_path = os.path.join(storage_dir, xlsx_filename)
-        os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
+        os.makedirs(storage_dir, exist_ok=True)
+
+        # Storing Excel and Json file with the results.
 
         with pd.ExcelWriter(xlsx_path, engine='xlsxwriter') as writer:
             header_format = writer.book.add_format({'bold': True,
@@ -4520,11 +4573,10 @@ class SwadeshAnalysis(graphene.Mutation):
                         if coeff > 1:
                             worksheet.set_row(row_num + 1, 14 * coeff)
 
-        xlsx_url = ''.join([
-            storage['prefix'], storage['static_route'],
-            'glottochronology', '/', str(cur_time), '/', xlsx_filename])
+        with open(json_path, 'w') as json_file:
+            json.dump(distance_dict, json_file)
 
-        return xlsx_url
+        return f'{url_path}/{filename}.xlsx', f'{url_path}/{filename}'
 
     @staticmethod
     def export_html(result, tiny_dicts=None, huge_size=1048576):
@@ -4614,7 +4666,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 hashlib.md5(
 
                     repr(list(group_field_id) +
-                        [perspective_info[0] for perspective_info in perspective_info_list])
+                         [perspective_info[1] for perspective_info in perspective_info_list])
 
                     .encode('utf-8'))
 
@@ -4650,7 +4702,7 @@ class SwadeshAnalysis(graphene.Mutation):
         swadesh_total = {}
         result_pool = {}
         tiny_dicts = set()
-        for index, (perspective_id, transcription_field_id, translation_field_id, lexeme_field_id) in \
+        for index, (language_id, perspective_id, transcription_field_id, translation_field_id, lexeme_field_id) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -4748,7 +4800,7 @@ class SwadeshAnalysis(graphene.Mutation):
             # Grouping translations by lexical entries.
             entries_set[perspective_id] = set()
             swadesh_total[perspective_id] = set()
-            result_pool[perspective_id] = {'name': dictionary_name}
+            result_pool[perspective_id] = {'name': dictionary_name, 'lang_id': language_id}
             for row_index, row in enumerate(data_query):
                 entry_id = tuple(row[:2])
                 transcription_list, translation_list, lexeme_list = row[2:5]
@@ -4821,23 +4873,27 @@ class SwadeshAnalysis(graphene.Mutation):
             not_enough_count += (count < 2)
 
         dictionary_count = len(means)
-        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 25, dtype='float')
+        relation_data_array = numpy.full((dictionary_count, dictionary_count), 1, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
+        perspectives = []
 
         # Calculate intersection between lists of linked meanings (Swadesh matching)
         # So length of this intersection is the similarity of corresponding perspectives
         # means_total is amount of Swadesh's lexemes met in the both perspectives
         bundles = set()
         # Calculate each-to-each distances, exclude self-to-self
-        for n1, (perspective1, means1) in enumerate(means.items()):
+        for n1, (pers1, means1) in enumerate(means.items()):
+            pers_data = result_pool[pers1]
+            perspectives.append((pers_data['lang_id'], pers1))
             # Numerate dictionaries
-            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
-            distance_header_array[n1] = result_pool[perspective1]['name']
-            for n2, (perspective2, means2) in enumerate(means.items()):
+            pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
+            distance_header_array[n1] = pers_data['name']
+            for n2, (pers2, means2) in enumerate(means.items()):
                 if n1 == n2:
-                    distance_data_array[n1][n2] = 0
-                    complex_data_array[n1][n2] = "n/a"
+                    distance_data_array[n1, n2] = 0
+                    complex_data_array[n1, n2] = "n/a"
                 else:
                     # Common meanings of entries which have etymological links
                     # but this links may be not mutual
@@ -4851,7 +4907,7 @@ class SwadeshAnalysis(graphene.Mutation):
                             bundles.update(links_common)
                             means_linked += 1
 
-                    means_total = len(swadesh_total[perspective1] & swadesh_total[perspective2])
+                    means_total = len(swadesh_total[pers1] & swadesh_total[pers2])
 
                     if n2 > n1 and means_linked >= means_total:
                         log.debug(f"{n1+1},{n2+1} : "
@@ -4861,15 +4917,22 @@ class SwadeshAnalysis(graphene.Mutation):
                     c = means_linked / means_total if means_total > 0 else 0
                     distance = math.sqrt( math.log(c) / -0.1 / math.sqrt(c) ) if c > 0 else 25
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
-                    distance_data_array[n1][n2] = round(distance, 2)
-                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
+                    distance_data_array[n1, n2] = round(distance, 2)
+                    complex_data_array[n1, n2] = f"{distance_data_array[n1, n2]:.2f} ({percent}%)"
+                    relation_data_array[n1, n2] = c
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
+        result = SwadeshAnalysis.export_dataframe(
+            result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
 
         # GC
         del result_pool
 
-        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        distance_dict = {'__base_language_id__': base_language_id,
+                         '__perspectives__': perspectives,
+                         '__relation_matrix__': relation_data_array.tolist()}
+
+        (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
+            result, distance_dict, base_language_name, 'glottochronology', storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
@@ -4896,6 +4959,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 result = html_result,
                 xlsx_url = xlsx_url,
+                json_url = json_url,
                 dictionary_count = len(perspective_info_list),
                 group_count = len(group_list),
                 not_enough_count = not_enough_count,
@@ -4933,7 +4997,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # Administrator / perspective author / editing permission check.
         error_str = (
             'Only administrator, perspective author and users with perspective editing permissions '
-            'can perform Swadesh analysis.')
+            'can perform glottochronological analysis.')
 
         client_id = info.context.client_id
 
@@ -4946,7 +5010,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _, _ in perspective_info_list))
+                for _, (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -5005,12 +5069,14 @@ class SwadeshAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (tuple(perspective_id),
-                    tuple(transcription_field_id),
-                    tuple(translation_field_id),
-                    tuple(lexeme_field_id))
+                (tuple(language_id),
+                 tuple(perspective_id),
+                 tuple(transcription_field_id),
+                 tuple(translation_field_id),
+                 tuple(lexeme_field_id))
 
-                for perspective_id,
+                for language_id,
+                    perspective_id,
                     transcription_field_id,
                     translation_field_id,
                     lexeme_field_id in perspective_info_list]
@@ -5056,6 +5122,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
     result = graphene.String()
     xlsx_url = graphene.String()
+    json_url = graphene.String()
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
@@ -5096,7 +5163,7 @@ class MorphCognateAnalysis(graphene.Mutation):
             tag_data_digest = (
                 hashlib.md5(
                     repr(list(group_field_id) +
-                        [perspective_info[0] for perspective_info in perspective_info_list])
+                         [perspective_info[1] for perspective_info in perspective_info_list])
                     .encode('utf-8'))
                 .hexdigest())
 
@@ -5130,7 +5197,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         meaning_re = re.compile('[.\dA-Z<>]+')
         meaning_with_comment_re = re.compile('[.\dA-Z<>]+ *\([.,:;\d\w ]+\)')
 
-        for index, (perspective_id, affix_field_id, meaning_field_id, _) in \
+        for index, (language_id, perspective_id, affix_field_id, meaning_field_id, _) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -5208,7 +5275,7 @@ class MorphCognateAnalysis(graphene.Mutation):
             del meaning_query
 
             meaning_to_links[perspective_id] = {}
-            result_pool[perspective_id] = {'name': dictionary_name}
+            result_pool[perspective_id] = {'name': dictionary_name, 'lang_id': language_id}
 
             for row in data_query:
                 entry_id = tuple(row[:2])
@@ -5273,24 +5340,29 @@ class MorphCognateAnalysis(graphene.Mutation):
             not_enough_count += (count < 2)
 
         dictionary_count = len(result_pool)
-        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 25, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
         bundles = set()
+        n1 = n2 = len(perspective_info_list)
+        relation_data_array = numpy.full((n1, n2), 1, dtype='float')
+        perspectives = []
         # Calculate each-to-each distances, exclude self-to-self
-        for n1, (perspective1, meaning_to_links1) in enumerate(meaning_to_links.items()):
+        for n1, (pers1, meaning_to_links1) in enumerate(meaning_to_links.items()):
+            pers_data = result_pool[pers1]
+            perspectives.append((pers_data['lang_id'], pers1))
             # Numerate dictionaries
-            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
-            distance_header_array[n1] = result_pool[perspective1]['name']
+            pers_data['name'] = f"{n1 + 1}. {pers_data['name']}"
+            distance_header_array[n1] = pers_data['name']
 
-            to_canon_meaning1 = to_canon_meaning[perspective1]
+            to_canon_meaning1 = to_canon_meaning[pers1]
             canon_meanings1_set = set(to_canon_meaning1.values())
 
-            for n2, (perspective2, meaning_to_links2) in enumerate(meaning_to_links.items()):
+            for n2, (pers2, meaning_to_links2) in enumerate(meaning_to_links.items()):
                 if n1 == n2:
-                    distance_data_array[n1][n2] = 0
-                    complex_data_array[n1][n2] = "n/a"
+                    distance_data_array[n1, n2] = 0
+                    complex_data_array[n1, n2] = "n/a"
                 else:
                     # Compile new meaning_to_links2 using canon_meanings instead of sub_meanings
                     canon_meaning_to_links2 = collections.defaultdict(set)
@@ -5319,17 +5391,27 @@ class MorphCognateAnalysis(graphene.Mutation):
                     '''
 
                     # meanings_linked > 0 meanings that meanings_total > 0 even more so
-                    distance = math.log(meanings_linked / meanings_total) / -0.14 if meanings_linked > 0 else 50
+                    c = meanings_linked / meanings_total if meanings_total > 0 else 0
+                    #distance = math.log(c) / -0.14 if c > 0 else 50
+                    distance = math.sqrt(math.log(c) / -0.1 / math.sqrt(c)) if c > 0 else 25
                     percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
-                    distance_data_array[n1][n2] = round(distance, 2)
-                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
+                    distance_data_array[n1, n2] = round(distance, 2)
+                    complex_data_array[n1, n2] = f"{distance_data_array[n1, n2]:.2f} ({percent}%)"
+                    relation_data_array[n1, n2] = c
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
+
+        result = SwadeshAnalysis.export_dataframe(
+            result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
 
         # GC
         del result_pool
 
-        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        distance_dict = {'__base_language_id__': base_language_id,
+                         '__perspectives__': perspectives,
+                         '__relation_matrix__': relation_data_array.tolist()}
+
+        (xlsx_url, json_url) = SwadeshAnalysis.export_xlsx_json(
+            result, distance_dict, base_language_name, 'morphology', storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
@@ -5356,6 +5438,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
                 result = html_result,
                 xlsx_url = xlsx_url,
+                json_url = json_url,
                 dictionary_count=len(perspective_info_list),
                 group_count=len(group_list),
                 not_enough_count = not_enough_count,
@@ -5393,7 +5476,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         # Administrator / perspective author / editing permission check.
         error_str = (
             'Only administrator, perspective author and users with perspective editing permissions '
-            'can perform Swadesh analysis.')
+            'can perform morphological analysis.')
 
         client_id = info.context.client_id
 
@@ -5406,7 +5489,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _, _ in perspective_info_list))
+                for _, (client_id, _), _, _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -5465,12 +5548,14 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (tuple(perspective_id),
-                    tuple(affix_field_id),
-                    tuple(meaning_field_id),
-                    None)
+                (tuple(language_id),
+                 tuple(perspective_id),
+                 tuple(affix_field_id),
+                 tuple(meaning_field_id),
+                 None)
 
-                for perspective_id,
+                for language_id,
+                    perspective_id,
                     affix_field_id,
                     meaning_field_id,
                     _ in perspective_info_list]
@@ -5499,6 +5584,201 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             return ResponseError(message =
                 'Exception:\n' + traceback_string)
+
+
+class ComplexDistance(graphene.Mutation):
+    class Arguments:
+
+        result_pool = graphene.List(ObjectVal, required = True)
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    result = graphene.String()
+    message = graphene.String()
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+    language_name_list = graphene.List(graphene.String)
+
+    @staticmethod
+    def get_complex_matrix(result_pool):
+
+        pers_by_lang = collections.defaultdict(set)
+        relation_result = {}
+
+        # Reducing array size if there are languages duplicates
+        for analysis in result_pool:
+
+            perspectives = analysis.get('__perspectives__', [])
+            p_num = len(perspectives)
+
+            relation_matrix = numpy.array(analysis.get('__relation_matrix__', []))
+
+            if not p_num or len(relation_matrix) != p_num:
+                continue
+
+            languages = []
+            nums_to_delete = []
+
+            for i, (l1_id, p1_id) in enumerate(perspectives):
+                pers_by_lang[tuple(l1_id)].add(tuple(p1_id))
+                languages.append(tuple(l1_id))
+
+                for j in range((i + 1), p_num):
+                    l2_id, _ = perspectives[j]
+
+                    if tuple(l2_id) == tuple(l1_id) and j not in nums_to_delete:
+                        for k in range(p_num):
+                            # Get maximum values for found similar languages
+                            # and assign to first found row and column (the matrix is triangular)
+                            relation_matrix[i, k] = max(relation_matrix[[i, j], k])
+                            relation_matrix[k, i] = max(relation_matrix[k, [i, j]])
+
+                        nums_to_delete.append(j)
+
+            # Delete duplicates of languages from perspectives list and from data matrix
+
+            relation_matrix = (
+                numpy.delete(numpy.delete(relation_matrix, nums_to_delete, 0), nums_to_delete, 1))
+
+            languages = [lang for i, lang in enumerate(languages) if i not in nums_to_delete]
+            l_num = len(languages)
+
+            # Collecting languages pairs with their relations
+
+            relation_by_pair = {}
+            for i, l1_id in enumerate(languages):
+                for j in range((i + 1), l_num):
+                    l2_id = languages[j]
+                    relation_by_pair[(tuple(l1_id), tuple(l2_id))] = relation_matrix[i, j]
+
+            # Getting complex list
+
+            union = set(relation_result) | set(relation_by_pair)
+            intersection = set(relation_result) & set(relation_by_pair)
+
+            for pair in union:
+                if pair in intersection:
+                    relation_result[pair] = (relation_result[pair] + relation_by_pair[pair]) / 2
+                elif pair in relation_by_pair:
+                    relation_result[pair] = relation_by_pair[pair]
+
+        # Getting result complex matrix
+        max_distance = 25
+        language_list = list(pers_by_lang.keys())
+        l_num = len(language_list)
+        distance_matrix = numpy.full((l_num, l_num), max_distance, dtype='float')
+
+        for (l1_id, l2_id), relation in relation_result.items():
+            i = language_list.index(l1_id)
+            j = language_list.index(l2_id)
+            distance_matrix[i, j] = distance_matrix[j, i] = (
+                math.sqrt(math.log(relation) / -0.1 / math.sqrt(relation)) if relation > 0 else max_distance)
+            distance_matrix[i, i] = distance_matrix[j, j] = 0
+
+        return distance_matrix, pers_by_lang
+
+    @staticmethod
+    def mutate(
+        self,
+        info,
+        result_pool,
+        debug_flag = False):
+
+        # Registered user check
+        client_id = info.context.client_id
+
+        if not client_id:
+            return ResponseError('Only registered users can get complex report.')
+
+        user = Client.get_user_by_client_id(client_id)
+
+        # Debug mode check
+        if debug_flag and user.id != 1:
+            return ResponseError('Only administrator can use debug mode.')
+
+        locale_id = info.context.locale_id
+        base_language_id = result_pool[0].get('__base_language_id__')
+
+        def get_language_str(language_id):
+            language_obj = DBSession.query(dbLanguage).filter_by(
+                client_id=language_id[0], object_id=language_id[1]).one()
+
+            return language_obj.get_translation(locale_id)
+
+        def get_perspective_str(perspective_id):
+            perspective_obj = DBSession.query(dbPerspective).filter_by(
+                client_id=perspective_id[0], object_id=perspective_id[1]).one()
+
+            perspective_name = perspective_obj.get_translation(locale_id)
+            dictionary_name = perspective_obj.parent.get_translation(locale_id)
+
+            return f'{dictionary_name} - {perspective_name}'
+
+        try:
+            distance_matrix, pers_by_lang = (
+                ComplexDistance.get_complex_matrix(result_pool))
+
+            language_header = [f' {i+1}. {get_language_str(lang_id)}' for i, lang_id in enumerate(pers_by_lang)]
+
+            def export_html():
+
+                distance_frame = pd.DataFrame(distance_matrix, columns=language_header)
+                # Start index for distances from 1 to match with dictionaries numbers
+                distance_frame.index += 1
+
+                html_result = build_table(distance_frame, 'orange_light', width="300px", index=True)
+
+                for i1, (lang, pers) in enumerate(pers_by_lang.items()):
+                    html_result += (
+                        f"<pre key='{i1}'>\n{' ' * 2}{i1 + 1}. {get_language_str(lang)}</pre>")
+                    for i2, per in enumerate(pers):
+                        html_result += (
+                            f"<pre key='{i1}.{i2}'>{' ' * 6}{i1 + 1}.{i2 + 1} {get_perspective_str(per)}</pre>")
+
+                return html_result
+
+            language_str = f'language {base_language_id[0]}/{base_language_id[1]}' if base_language_id else ""
+            base_language_name = get_language_str(base_language_id) if base_language_id else ""
+
+            _, mst_list, embedding_2d_pca, embedding_3d_pca = \
+                CognateAnalysis.distance_graph(
+                    language_str,
+                    base_language_name,
+                    distance_matrix,
+                    language_header,
+                    None,
+                    None,
+                    None,
+                    analysis_str='complex_report',
+                    __debug_flag__=debug_flag,
+                    __plot_flag__=False
+                )
+
+            result_dict = dict(
+                triumph = True,
+                result = export_html(),
+                minimum_spanning_tree = mst_list,
+                embedding_2d = embedding_2d_pca,
+                embedding_3d = embedding_3d_pca,
+                language_name_list = language_header
+            )
+
+            return ComplexDistance(**result_dict)
+
+        # Exception occured while we tried to get complex report
+        except Exception as exception:
+
+            traceback_string = ''.join(
+                traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1]
+
+            log.warning(f'complex_report {base_language_id}: exception')
+            log.warning(traceback_string)
+
+            return ResponseError(
+                message='Exception:\n' + traceback_string)
 
 
 class XlsxBulkDisconnect(graphene.Mutation):
