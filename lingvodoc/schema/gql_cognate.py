@@ -5732,7 +5732,7 @@ class ComplexDistance(graphene.Mutation):
 
                 for i1, (lang, pers) in enumerate(pers_by_lang.items()):
                     html_result += (
-                        f"<pre key='{i1}'>\n{' ' * 2}{i1 + 1}. {get_language_str(lang)}</pre>")
+                        f"<pre key='{i1}'>\n\n{' ' * 2}{i1 + 1}. {get_language_str(lang)}</pre>")
                     for i2, per in enumerate(pers):
                         html_result += (
                             f"<pre key='{i1}.{i2}'>{' ' * 6}{i1 + 1}.{i2 + 1} {get_perspective_str(per)}</pre>")
