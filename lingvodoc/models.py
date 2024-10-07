@@ -2070,11 +2070,13 @@ class LexicalEntry(
             DBSession
                 .query(
                     Entity,
-                    PublishingEntity)
+                    PublishingEntity,
+                    LexicalEntry.created_at)
 
                 .filter(
                     PublishingEntity.client_id == Entity.client_id,
-                    PublishingEntity.object_id == Entity.object_id))
+                    PublishingEntity.object_id == Entity.object_id,
+                    LexicalEntry.id == Entity.parent_id))
 
         # Get new entities from entities_before_custom_filtering
 
@@ -2126,10 +2128,8 @@ class LexicalEntry(
         # Default sorting
 
         old_entities_result = old_entities_result.order_by(
-            desc(Entity.parent_client_id),
-            desc(Entity.parent_object_id),
-            Entity.client_id,
-            Entity.object_id)
+            desc(LexicalEntry.created_at),
+            Entity.created_at)
 
         return (
             new_entities_result,
