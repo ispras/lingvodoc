@@ -2017,6 +2017,16 @@ class CognateAnalysis(graphene.Mutation):
 
         N = numpy.size(d_ij, 0)
 
+        min_non_zero_d_ij = (
+
+            min(
+                d_ij[i,j]
+                for i in range(1, N)
+                for j in range(i)
+                if d_ij[i,j] > 0))
+
+        zero_d_ij_scale = 1. / min(1, min_non_zero_d_ij)
+
         def f(xy):
             """
             Computes stress given xy-coordinates.
@@ -2033,7 +2043,7 @@ class CognateAnalysis(graphene.Mutation):
                     dr2 = (x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2
 
                     if d_ij[i,j] <= 0:
-                        result += 4 * dr2
+                        result += 4 * dr2 * zero_d_ij_scale
 
                     else:
                         d2_ij = d_ij[i,j] ** 2
@@ -2062,11 +2072,11 @@ class CognateAnalysis(graphene.Mutation):
 
                     if d_ij[i,j] <= 0:
 
-                        df_x[i] += 4 * dx
-                        df_x[j] -= 4 * dx
+                        df_x[i] += 4 * dx * zero_d_ij_scale
+                        df_x[j] -= 4 * dx * zero_d_ij_scale
 
-                        df_y[i] += 4 * dy
-                        df_y[j] -= 4 * dy
+                        df_y[i] += 4 * dy * zero_d_ij_scale
+                        df_y[j] -= 4 * dy * zero_d_ij_scale
 
                     else:
 
@@ -2134,6 +2144,16 @@ class CognateAnalysis(graphene.Mutation):
         N = numpy.size(d_ij, 0)
         N2 = N * 2
 
+        min_non_zero_d_ij = (
+
+            min(
+                d_ij[i,j]
+                for i in range(1, N)
+                for j in range(i)
+                if d_ij[i,j] > 0))
+
+        zero_d_ij_scale = 1. / min(1, min_non_zero_d_ij)
+
         def f(xyz):
             """
             Computes stress given xyz-coordinates.
@@ -2151,7 +2171,7 @@ class CognateAnalysis(graphene.Mutation):
                     dr2 = (x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2 + (z[i] - z[j]) ** 2
 
                     if d_ij[i,j] <= 0:
-                        result += 4 * dr2
+                        result += 4 * dr2 * zero_d_ij_scale
 
                     else:
                         d2_ij = d_ij[i,j] ** 2
@@ -2183,14 +2203,14 @@ class CognateAnalysis(graphene.Mutation):
 
                     if d_ij[i,j] <= 0:
 
-                        df_x[i] += 4 * dx
-                        df_x[j] -= 4 * dx
+                        df_x[i] += 4 * dx * zero_d_ij_scale
+                        df_x[j] -= 4 * dx * zero_d_ij_scale
 
-                        df_y[i] += 4 * dy
-                        df_y[j] -= 4 * dy
+                        df_y[i] += 4 * dy * zero_d_ij_scale
+                        df_y[j] -= 4 * dy * zero_d_ij_scale
 
-                        df_z[i] += 4 * dz
-                        df_z[j] -= 4 * dz
+                        df_z[i] += 4 * dz * zero_d_ij_scale
+                        df_z[j] -= 4 * dz * zero_d_ij_scale
 
                     else:
 
