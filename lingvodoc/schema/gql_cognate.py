@@ -5669,15 +5669,20 @@ class ComplexDistance(graphene.Mutation):
         language_list = list(pers_by_lang.keys())
         l_num = len(language_list)
         distance_matrix = numpy.full((l_num, l_num), max_distance, dtype='float')
+        percent_matrix = numpy.full((l_num, l_num), "n/a", dtype='object')
 
         for (l1_id, l2_id), relation in relation_result.items():
+
             i = language_list.index(l1_id)
             j = language_list.index(l2_id)
+
             distance_matrix[i, j] = distance_matrix[j, i] = (
                 math.sqrt(math.log(relation) / -0.1 / math.sqrt(relation)) if relation > 0 else max_distance)
             distance_matrix[i, i] = distance_matrix[j, j] = 0
 
-        return distance_matrix, pers_by_lang
+            percent_matrix[i, j] = percent_matrix[j, i] = f"{round(distance_matrix[i, j], 2)} ({int(relation * 100)}%)"
+
+        return distance_matrix, percent_matrix, pers_by_lang
 
     @staticmethod
     def mutate(
@@ -5717,22 +5722,22 @@ class ComplexDistance(graphene.Mutation):
             return f'{dictionary_name} - {perspective_name}'
 
         try:
-            distance_matrix, pers_by_lang = (
+            distance_matrix, percent_matrix, pers_by_lang = (
                 ComplexDistance.get_complex_matrix(result_pool))
 
             language_header = [f' {i+1}. {get_language_str(lang_id)}' for i, lang_id in enumerate(pers_by_lang)]
 
             def export_html():
 
-                distance_frame = pd.DataFrame(distance_matrix, columns=language_header)
+                percent_frame = pd.DataFrame(percent_matrix, columns=language_header)
                 # Start index for distances from 1 to match with dictionaries numbers
-                distance_frame.index += 1
+                percent_frame.index += 1
 
-                html_result = build_table(distance_frame, 'orange_light', width="300px", index=True)
+                html_result = build_table(percent_frame, 'orange_light', width="300px", index=True)
 
                 for i1, (lang, pers) in enumerate(pers_by_lang.items()):
                     html_result += (
-                        f"<pre key='{i1}'>\n{' ' * 2}{i1 + 1}. {get_language_str(lang)}</pre>")
+                        f"<pre key='{i1}'>\n\n{' ' * 2}{i1 + 1}. {get_language_str(lang)}</pre>")
                     for i2, per in enumerate(pers):
                         html_result += (
                             f"<pre key='{i1}.{i2}'>{' ' * 6}{i1 + 1}.{i2 + 1} {get_perspective_str(per)}</pre>")
