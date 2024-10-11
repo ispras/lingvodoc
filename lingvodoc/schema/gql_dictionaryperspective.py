@@ -113,23 +113,39 @@ def graphene_track_multiple(
     created_entries = [],
     check_perspective = True):
 
-    deleted_per = []
-    alive_lexes = set()
+    deleted_per = dbPerspective.get_deleted() if check_perspective else []
 
-    if check_perspective:
-        deleted_per = dbPerspective.get_deleted()
+    if isinstance(lexes, list):
 
-    for x in lexes:
+        alive_lexes = set(
+             (lex_obj.client_id, lex_obj.object_id)
 
-        if len(x) >= 4 and (x[2], x[3]) in deleted_per:
-            continue
+            for lex_obj in lexes
+            if (lex_obj.parent_client_id, lex_obj.parent_object_id) not in deleted_per)
 
-        alive_lexes.add((x[0], x[1]))
+        if not len(alive_lexes):
+            return [], [], []
+
+        get_alive_lexes = [tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                           .in_(ids_to_id_query(alive_lexes))]
+
+    else:
+
+        alive_lexes = (
+            lexes
+                .filter(
+                    tuple_(dbLexicalEntry.parent_client_id, dbLexicalEntry.parent_object_id)
+                        .notin_(ids_to_id_query(deleted_per) if len(deleted_per) else [])))
+
+        if not alive_lexes.count():
+            return [], [], []
+
+        alive_lexes = alive_lexes.cte()
+
+        get_alive_lexes = [dbEntity.parent_client_id == alive_lexes.c.client_id,
+                           dbEntity.parent_object_id == alive_lexes.c.object_id]
 
     # We need just lexical entry and entity id and entity's content for sorting and filtering
-
-    if not len(alive_lexes):
-        return [], [], []
 
     entities_query = (
         DBSession
@@ -140,18 +156,50 @@ def graphene_track_multiple(
                 dbEntity.parent_object_id,
                 dbEntity.content)
 
-            .filter(
-                tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                    .in_(ids_to_id_query(alive_lexes)))
+            .filter(*get_alive_lexes)
 
             .filter(
                 dbPublishingEntity.client_id == dbEntity.client_id,
                 dbPublishingEntity.object_id == dbEntity.object_id))
 
     # Collect all empty lexes including created ones
-    entities = entities_query.yield_per(100)
-    filed_lexes = set((ent[2], ent[3]) for ent in entities)
-    empty_lexes = builtins.filter(lambda lex: lex not in filed_lexes, alive_lexes)
+
+    if isinstance(alive_lexes, set):
+
+        entities = entities_query.yield_per(100)
+        filed_lexes = set((ent[2], ent[3]) for ent in entities)
+        empty_lexes = builtins.filter(lambda lex: lex not in filed_lexes, alive_lexes)
+
+    else:
+
+        entities = entities_query.cte()
+
+        lexes_content = (
+            DBSession
+                .query(
+                    alive_lexes.c.client_id.label('lex_cid'),
+                    alive_lexes.c.object_id.label('lex_oid'),
+                    func.min(entities.c.content).label('text'))
+
+                .outerjoin(
+                    entities, and_(
+                        entities.c.parent_client_id == alive_lexes.c.client_id,
+                        entities.c.parent_object_id == alive_lexes.c.object_id))
+
+                .group_by('lex_cid', 'lex_oid')
+
+                .cte())
+
+        empty_lexes = (
+            DBSession
+                .query(
+                    lexes_content.c.lex_cid,
+                    lexes_content.c.lex_oid)
+
+                .filter(
+                    lexes_content.c.text == None)
+
+                .all())
 
     # Pre-filtering
     # This should be processed firstly because we don't want to sort by deleted or unpublished entities
@@ -273,11 +321,16 @@ def graphene_track_multiple(
     old_entities_result = (
         entities_result
             .filter(
-                tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                    .notin_(ids_to_id_query(created_entries) if len(created_entries) else []),
-
                 dbEntity.client_id == entities_cte.c.client_id,
                 dbEntity.object_id == entities_cte.c.object_id))
+
+    # optimized
+    if len(created_entries):
+        old_entities_result = (
+            old_entities_result
+                .filter(
+                    tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                    .notin_(ids_to_id_query(created_entries))))
 
     # Custom sorting
 
@@ -348,14 +401,10 @@ def entries_with_entities(lexes, mode,
         return [gql_lexicalentry(lex, None) for lex in lexes]
 
     lex_id_to_obj = dict()
-    lexes_composite_list = list()
 
     for lex_obj in (
         lexes if isinstance(lexes, list) else
         lexes.yield_per(100).all()):
-
-        lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
-                                     lex_obj.parent_client_id, lex_obj.parent_object_id))
 
         lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
 
@@ -365,7 +414,7 @@ def entries_with_entities(lexes, mode,
 
     new_entities, old_entities, empty_lexes = (
         graphene_track_multiple(
-            lexes_composite_list,
+            lexes,
             created_entries=created_entries,
             **query_args))
 
