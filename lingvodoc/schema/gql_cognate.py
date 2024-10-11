@@ -2020,10 +2020,12 @@ class CognateAnalysis(graphene.Mutation):
         min_non_zero_d_ij = (
 
             min(
-                d_ij[i,j]
-                for i in range(1, N)
-                for j in range(i)
-                if d_ij[i,j] > 0))
+                (d_ij[i,j]
+                    for i in range(1, N)
+                    for j in range(i)
+                    if d_ij[i,j] > 0),
+
+                default = 1))
 
         zero_d_ij_scale = 1. / min(1, min_non_zero_d_ij)
 
@@ -2147,10 +2149,12 @@ class CognateAnalysis(graphene.Mutation):
         min_non_zero_d_ij = (
 
             min(
-                d_ij[i,j]
-                for i in range(1, N)
-                for j in range(i)
-                if d_ij[i,j] > 0))
+                (d_ij[i,j]
+                    for i in range(1, N)
+                    for j in range(i)
+                    if d_ij[i,j] > 0),
+
+                default = 1))
 
         zero_d_ij_scale = 1. / min(1, min_non_zero_d_ij)
 
