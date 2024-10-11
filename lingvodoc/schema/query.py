@@ -177,7 +177,8 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     UndeleteDictionaryPerspective,
     UpdateDictionaryPerspective,
     UpdatePerspectiveAtom,
-    UpdatePerspectiveStatus)
+    UpdatePerspectiveStatus,
+    graphene_track_multiple)
 
 from lingvodoc.schema.gql_entity import (
     ApproveAllForUser,
@@ -3749,7 +3750,7 @@ class Query(graphene.ObjectType):
 
         (_,entities, _) = (
 
-            dbLexicalEntry.graphene_track_multiple(
+            graphene_track_multiple(
                 lexes_composite_list,
                 publish = search_in_published,
                 accept = True,
@@ -4746,8 +4747,8 @@ class Query(graphene.ObjectType):
             (entry.client_id, entry.object_id, entry.parent_client_id, entry.parent_object_id)
             for entry in lexes]
 
-        (_, entities, _) = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                               publish=publish, accept=accept)
+        (_, entities, _) = graphene_track_multiple(lexes_composite_list,
+                                                   publish=publish, accept=accept)
 
         def graphene_entity(cur_entity, cur_publishing):
             ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))

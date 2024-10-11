@@ -1,7 +1,8 @@
 
 # Standard library imports.
 
-from collections import  defaultdict
+import builtins
+from collections import defaultdict
 import datetime
 import itertools
 import logging
@@ -17,6 +18,7 @@ from sqlalchemy import (
     and_,
     cast,
     column,
+    desc,
     extract,
     func,
     literal,
@@ -24,7 +26,9 @@ from sqlalchemy import (
     tuple_,
     union)
 
-from sqlalchemy.sql.expression import Grouping
+from sqlalchemy.orm import joinedload
+
+from sqlalchemy.sql.expression import Grouping, nullsfirst, nullslast
 
 # Lingvodoc imports.
 
@@ -78,7 +82,7 @@ from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_user import User
 
-from lingvodoc.utils import statistics
+from lingvodoc.utils import ids_to_id_query, statistics
 
 from lingvodoc.utils.creation import (
     create_dictionary_persp_to_field,
@@ -96,6 +100,224 @@ from pdb import set_trace as A
 log = logging.getLogger(__name__)
 
 
+def graphene_track_multiple(
+    lexes,
+    publish = None,
+    accept = None,
+    delete = False,
+    filter = None,
+    sort_by_field = None,
+    is_ascending = None,
+    is_case_sens = True,
+    is_regexp = False,
+    created_entries = [],
+    check_perspective = True):
+
+    deleted_per = []
+    alive_lexes = set()
+
+    if check_perspective:
+        deleted_per = dbPerspective.get_deleted()
+
+    for x in lexes:
+
+        if len(x) >= 4 and (x[2], x[3]) in deleted_per:
+            continue
+
+        alive_lexes.add((x[0], x[1]))
+
+    # We need just lexical entry and entity id and entity's content for sorting and filtering
+
+    if not len(alive_lexes):
+        return [], [], []
+
+    entities_query = (
+        DBSession
+            .query(
+                dbEntity.client_id,
+                dbEntity.object_id,
+                dbEntity.parent_client_id,
+                dbEntity.parent_object_id,
+                dbEntity.content)
+
+            .filter(
+                tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                    .in_(ids_to_id_query(alive_lexes)))
+
+            .filter(
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id))
+
+    # Collect all empty lexes including created ones
+    entities = entities_query.yield_per(100)
+    filed_lexes = set((ent[2], ent[3]) for ent in entities)
+    empty_lexes = builtins.filter(lambda lex: lex not in filed_lexes, alive_lexes)
+
+    # Pre-filtering
+    # This should be processed firstly because we don't want to sort by deleted or unpublished entities
+
+    if accept is not None:
+        entities_query = entities_query.filter(dbPublishingEntity.accepted == accept)
+    if publish is not None:
+        entities_query = entities_query.filter(dbPublishingEntity.published == publish)
+    if delete is not None:
+        entities_query = entities_query.filter(dbEntity.marked_for_deletion == delete)
+
+    pre_filtered_lexes = entities_query.cte()
+
+    # Apply user's custom filter
+
+    if filter:
+
+        # Filter from special fields
+        filtered_entities = entities_query.filter(
+            dbEntity.field_id != (66, 25))
+
+        if is_regexp:
+            if is_case_sens:
+                filtered_entities = filtered_entities.filter(
+                    dbEntity.content.op('~')(filter)).cte()
+            else:
+                filtered_entities = filtered_entities.filter(
+                    dbEntity.content.op('~*')(filter)).cte()
+        else:
+            if is_case_sens:
+                filtered_entities = filtered_entities.filter(
+                    dbEntity.content.like(f"%{filter}%")).cte()
+            else:
+                filtered_entities = filtered_entities.filter(
+                    dbEntity.content.ilike(f"%{filter}%")).cte()
+
+        entities_query = entities_query.filter(
+            dbEntity.parent_client_id == filtered_entities.c.parent_client_id,
+            dbEntity.parent_object_id == filtered_entities.c.parent_object_id)
+
+    entities_cte = entities_query.cte()
+
+    # Create sorting_cte to order by it
+
+    sorting_cte = None
+
+    if sort_by_field:
+
+        field_entities = entities_query.filter(dbEntity.field_id == sort_by_field).cte()
+
+        alpha_entities = (
+            DBSession
+                .query(
+                    field_entities.c.parent_client_id.label('lex_client_id'),
+                    field_entities.c.parent_object_id.label('lex_object_id'),
+                    func.min(func.lower(field_entities.c.content)).label('first_entity'),
+                    func.max(func.lower(field_entities.c.content)).label('last_entity'),
+                    func.count().label('count_entity'))
+
+                .group_by('lex_client_id', 'lex_object_id')
+
+                .cte()
+            )
+
+        sorting_cte = (
+            DBSession
+                .query(
+                    entities_cte.c.parent_client_id,
+                    entities_cte.c.parent_object_id,
+                    entities_cte.c.client_id,
+                    entities_cte.c.object_id,
+                    alpha_entities.c.first_entity,
+                    alpha_entities.c.last_entity,
+                    alpha_entities.c.count_entity,
+                    field_entities.c.content.label('order_content'))
+
+                .outerjoin(
+                    alpha_entities, and_(
+                        alpha_entities.c.lex_client_id == entities_cte.c.parent_client_id,
+                        alpha_entities.c.lex_object_id == entities_cte.c.parent_object_id))
+
+                .outerjoin(
+                    field_entities, and_(
+                        field_entities.c.client_id == entities_cte.c.client_id,
+                        field_entities.c.object_id == entities_cte.c.object_id))
+
+                .cte())
+
+        entities_cte = sorting_cte
+
+    # Finally, filter and sort dbEntity and dbPublishingEntity objects
+
+    entities_result = (
+        DBSession
+            .query(
+                dbEntity,
+                dbPublishingEntity,
+                dbLexicalEntry.created_at)
+
+            .filter(
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbLexicalEntry.id == dbEntity.parent_id))
+
+    # Get new entities from entities_before_custom_filtering
+
+    new_entities_result = (
+        entities_result
+            .filter(
+                tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                    .in_(ids_to_id_query(created_entries)),
+
+                dbEntity.parent_client_id == pre_filtered_lexes.c.parent_client_id,
+                dbEntity.parent_object_id == pre_filtered_lexes.c.parent_object_id)
+    ) if len(created_entries) else []
+
+    # Filter and join at once to get and sort old entities
+
+    old_entities_result = (
+        entities_result
+            .filter(
+                tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                    .notin_(ids_to_id_query(created_entries) if len(created_entries) else []),
+
+                dbEntity.client_id == entities_cte.c.client_id,
+                dbEntity.object_id == entities_cte.c.object_id))
+
+    # Custom sorting
+
+    if sorting_cte is not None:
+
+        if is_ascending:
+
+            old_entities_result = old_entities_result.order_by(
+                entities_cte.c.first_entity,
+                nullsfirst(entities_cte.c.count_entity),  # for 'Paradigm and contexts' field
+                desc(entities_cte.c.parent_client_id),
+                desc(entities_cte.c.parent_object_id),
+                func.lower(entities_cte.c.order_content)
+            )
+
+        else:
+
+            old_entities_result = old_entities_result.order_by(
+                desc(entities_cte.c.last_entity),
+                nullslast(entities_cte.c.count_entity.desc()),  # for 'Paradigm and contexts' field
+                desc(entities_cte.c.parent_client_id),
+                desc(entities_cte.c.parent_object_id),
+                desc(func.lower(entities_cte.c.order_content))
+            )
+
+    # Default sorting
+
+    old_entities_result = old_entities_result.order_by(
+        desc(dbLexicalEntry.created_at),
+        dbEntity.created_at)
+
+    return (
+        new_entities_result,
+        old_entities_result
+            .options(
+                joinedload('publishingentity'))
+            .yield_per(100),
+        empty_lexes)
+
+
 def group_by_lex(entity_with_published):
     entity = entity_with_published[0]
     return (entity.parent_client_id, entity.parent_object_id)
@@ -107,11 +329,13 @@ def gql_entity_with_published(cur_entity, cur_publishing):
     ent.publishingentity = cur_publishing
     return ent
 
+
 def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
     lex.gql_Entities = cur_entities
     lex.dbObject = cur_lexical_entry
     return lex
+
 
 def entries_with_entities(lexes, mode,
                           is_edit_mode=True,
@@ -140,7 +364,7 @@ def entries_with_entities(lexes, mode,
         query_args['delete'] = False
 
     new_entities, old_entities, empty_lexes = (
-        dbLexicalEntry.graphene_track_multiple(
+        graphene_track_multiple(
             lexes_composite_list,
             created_entries=created_entries,
             **query_args))
