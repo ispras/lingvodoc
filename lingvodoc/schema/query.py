@@ -178,7 +178,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     UpdateDictionaryPerspective,
     UpdatePerspectiveAtom,
     UpdatePerspectiveStatus,
-    graphene_track_multiple)
+    entries_with_entities)
 
 from lingvodoc.schema.gql_entity import (
     ApproveAllForUser,
@@ -3742,34 +3742,24 @@ class Query(graphene.ObjectType):
             results_cursor = results_cursor.join(dbPerspective.dictionaryperspectivetofield).filter(
                 dbColumn.field == field)
 
-        lexes = results_cursor.distinct().all()
+        entry_list, _ = (
 
-        lexes_composite_list = [
-            (lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
-            for lex in lexes]
-
-        (_,entities, _) = (
-
-            graphene_track_multiple(
-                lexes_composite_list,
+            entries_with_entities(
+                results_cursor.distinct().from_self(),
                 publish = search_in_published,
                 accept = True,
                 check_perspective = False))
 
-        def graphene_entity(cur_entity, cur_publishing):
-            ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
-            ent.dbObject = cur_entity
-            ent.publishingentity = cur_publishing
-            return ent
+        entity_list = []
 
-        def graphene_obj(dbobj, cur_cls):
-            obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-            obj.dbObject = dbobj
-            return obj
+        for entry in entry_list:
+            if entry.gql_Entities:
+                entity_list.extend(entry.gql_Entities)
 
-        entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
-        lexical_entries = [graphene_obj(lex, LexicalEntry) for lex in lexes]
-        return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
+        return (
+            LexicalEntriesAndEntities(
+                entities = entity_list,
+                lexical_entries = entry_list))
 
     def resolve_advanced_lexicalentries(self, info, searchstrings, perspectives=None, adopted=None,
                                         adopted_type=None, with_etimology=None): #advanced_search() function
@@ -4741,29 +4731,24 @@ class Query(graphene.ObjectType):
                     'publish': publish,
                     'accept': accept}))
 
-        lexes = entry_query.all()
+        entry_list, _ = (
 
-        lexes_composite_list = [
-            (entry.client_id, entry.object_id, entry.parent_client_id, entry.parent_object_id)
-            for entry in lexes]
+            entries_with_entities(
+                entry_query,
+                publish = search_in_published,
+                accept = True,
+                check_perspective = False))
 
-        (_, entities, _) = graphene_track_multiple(lexes_composite_list,
-                                                   publish=publish, accept=accept)
+        entity_list = []
 
-        def graphene_entity(cur_entity, cur_publishing):
-            ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
-            ent.dbObject = cur_entity
-            ent.publishingentity = cur_publishing
-            return ent
+        for entry in entry_list:
+            if entry.gql_Entities:
+                entity_list.extend(entry.gql_Entities)
 
-        def graphene_obj(dbobj, cur_cls):
-            obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-            obj.dbObject = dbobj
-            return obj
-
-        entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
-        lexical_entries = [graphene_obj(lex, LexicalEntry) for lex in lexes]
-        return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
+        return (
+            LexicalEntriesAndEntities(
+                entities = entity_list,
+                lexical_entries = entry_list))
 
     def resolve_convert_markup(self, info, id):
 

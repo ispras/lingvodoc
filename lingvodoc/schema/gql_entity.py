@@ -141,10 +141,6 @@ class Entity(LingvodocObjectType):
     publishingentity = None
     is_subject_for_parsing = graphene.Boolean()
 
-    @fetch_object('is_subject_for_parsing')
-    def resolve_is_subject_for_parsing(self, info):
-        return is_subject_for_parsing(self.dbObject.content)
-
     class Meta:
         interfaces = (CompositeIdHolder,
                       AdditionalMetadata,
@@ -161,6 +157,21 @@ class Entity(LingvodocObjectType):
                       Published,
                       Accepted
                       )
+
+    def __init__(
+        self,
+        *args,
+        publishingentity = None,
+        **kwargs):
+
+        if publishingentity is not None:
+            self.publishingentity = publishingentity
+
+        super().__init__(*args, **kwargs)
+
+    @fetch_object('is_subject_for_parsing')
+    def resolve_is_subject_for_parsing(self, info):
+        return is_subject_for_parsing(self.dbObject.content)
 
     @fetch_object('data_type')
     def resolve_data_type(self, info):

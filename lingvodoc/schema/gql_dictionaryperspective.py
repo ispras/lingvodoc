@@ -15,6 +15,7 @@ import graphene
 import sqlalchemy
 
 from sqlalchemy import (
+    asc,
     and_,
     cast,
     column,
@@ -26,7 +27,7 @@ from sqlalchemy import (
     tuple_,
     union)
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import aliased, joinedload
 
 from sqlalchemy.sql.expression import Grouping, nullsfirst, nullslast
 
@@ -41,12 +42,13 @@ from lingvodoc.models import (
     Dictionary as dbDictionary,
     DictionaryPerspective as dbPerspective,
     DictionaryPerspectiveToField as dbColumn,
+    ENGLISH_LOCALE,
     Entity as dbEntity,
+    Field as dbField,
     Group as dbGroup,
     JSONB,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
-    PerspectivePage as dbPerspectivePage,
     ObjectTOC,
     ParserResult as dbParserResult,
     PublishingEntity as dbPublishingEntity,
@@ -101,410 +103,607 @@ log = logging.getLogger(__name__)
 
 
 def graphene_track_multiple(
-    lexes,
+    lexes, # Can be either an entry id list or an entry query.
     publish = None,
     accept = None,
     delete = False,
     filter = None,
     sort_by_field = None,
-    is_ascending = None,
+    is_ascending = True,
     is_case_sens = True,
     is_regexp = False,
+    have_empty = False,
     created_entries = [],
-    check_perspective = True):
+    offset = None,
+    limit = None,
+    check_perspective = True,
+    debug_flag = False):
 
-    deleted_per = dbPerspective.get_deleted() if check_perspective else []
+    # Using aliased representation in case lexes is a query which references dbEntity.
 
-    if isinstance(lexes, list):
+    global dbEntity
+    global dbPublishingEntity
 
-        alive_lexes = set(
-             (lex_obj.client_id, lex_obj.object_id)
+    dbEntity = (
+        aliased(dbEntity, name = 't_entity'))
 
-            for lex_obj in lexes
-            if (lex_obj.parent_client_id, lex_obj.parent_object_id) not in deleted_per)
+    dbPublishingEntity = (
+        aliased(dbPublishingEntity, name = 't_publishingentity'))
 
-        if not len(alive_lexes):
-            return [], [], []
+    filter_list = []
 
-        get_alive_lexes = [tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                           .in_(ids_to_id_query(alive_lexes))]
+    if accept is not None:
+        filter_list.append(dbPublishingEntity.accepted == accept)
 
-    else:
+    if publish is not None:
+        filter_list.append(dbPublishingEntity.published == publish)
 
-        alive_lexes = (
-            lexes
-                .filter(
-                    tuple_(dbLexicalEntry.parent_client_id, dbLexicalEntry.parent_object_id)
-                        .notin_(ids_to_id_query(deleted_per) if len(deleted_per) else [])))
+    if delete is not None:
+        filter_list.append(dbEntity.marked_for_deletion == delete)
 
-        if not alive_lexes.count():
-            return [], [], []
+    # First, created entries.
+    #
+    # We assume that our caller knows exactly what they need when supplying a list of created entry ids, so
+    # we simply get all required entities.
 
-        alive_lexes = alive_lexes.cte()
+    new_entities_result = []
+    entry_total_count = 0
 
-        get_alive_lexes = [dbEntity.parent_client_id == alive_lexes.c.client_id,
-                           dbEntity.parent_object_id == alive_lexes.c.object_id]
+    if created_entries:
 
-    # We need just lexical entry and entity id and entity's content for sorting and filtering
+        new_entities_result = (
 
-    entities_query = (
-        DBSession
-            .query(
-                dbEntity.client_id,
-                dbEntity.object_id,
-                dbEntity.parent_client_id,
-                dbEntity.parent_object_id,
-                dbEntity.content)
-
-            .filter(*get_alive_lexes)
-
-            .filter(
-                dbPublishingEntity.client_id == dbEntity.client_id,
-                dbPublishingEntity.object_id == dbEntity.object_id))
-
-    # Collect all empty lexes including created ones
-
-    if isinstance(alive_lexes, set):
-
-        entities = entities_query.yield_per(100)
-        filed_lexes = set((ent[2], ent[3]) for ent in entities)
-        empty_lexes = builtins.filter(lambda lex: lex not in filed_lexes, alive_lexes)
-
-    else:
-
-        entities = entities_query.cte()
-
-        lexes_content = (
             DBSession
+
                 .query(
-                    alive_lexes.c.client_id.label('lex_cid'),
-                    alive_lexes.c.object_id.label('lex_oid'),
-                    func.min(entities.c.content).label('text'))
+                    dbLexicalEntry)
 
                 .outerjoin(
-                    entities, and_(
-                        entities.c.parent_client_id == alive_lexes.c.client_id,
-                        entities.c.parent_object_id == alive_lexes.c.object_id))
+                    dbEntity,
+                    dbEntity.parent_id == dbLexicalEntry.id)
 
-                .group_by('lex_cid', 'lex_oid')
+                .outerjoin(
+                    dbPublishingEntity,
+                    dbPublishingEntity.id == dbEntity.id)
 
-                .cte())
+                .with_entities(
+                    dbLexicalEntry,
+                    dbEntity,
+                    dbPublishingEntity)
 
-        empty_lexes = (
-            DBSession
-                .query(
-                    lexes_content.c.lex_cid,
-                    lexes_content.c.lex_oid)
+                .with_labels()
 
                 .filter(
-                    lexes_content.c.text == None)
+                    dbLexicalEntry.id.in_(
+                        ids_to_id_query(created_entries)),
+
+                    *filter_list)
 
                 .all())
 
-    # Pre-filtering
-    # This should be processed firstly because we don't want to sort by deleted or unpublished entities
+        entry_total_count += (
+            len(new_entities_result))
 
-    if accept is not None:
-        entities_query = entities_query.filter(dbPublishingEntity.accepted == accept)
-    if publish is not None:
-        entities_query = entities_query.filter(dbPublishingEntity.published == publish)
-    if delete is not None:
-        entities_query = entities_query.filter(dbEntity.marked_for_deletion == delete)
+    # If we have any filter, we can be sure that there will be no empty entries.
 
-    pre_filtered_lexes = entities_query.cte()
+    if filter:
+        have_empty = False
 
-    # Apply user's custom filter
+    # Getting our base data query.
+
+    data_query = lexes
+
+    if isinstance(lexes, list):
+
+        data_query = (
+
+            DBSession
+
+                .query(
+                    dbLexicalEntry)
+
+                .filter(
+                    dbLexicalEntry.id.in_(
+                        ids_to_id_query(lexes))))
+
+    # If required, checking for perspective deletion.
+
+    if check_perspective:
+
+        global dbPerspective
+        global dbDictionary
+
+        dbPerspective = aliased(dbPerspective)
+        dbDictionary = aliased(dbDictionary)
+
+        data_query = (
+
+            data_query.filter(
+                dbLexicalEntry.parent_id == dbPerspective.id,
+                dbPerspective.marked_for_deletion == False,
+                dbPerspective.parent_id == dbDictionary.id,
+                dbDictionary.marked_for_deletion == False))
+
+    # Skipping already retrieved entities if we have some.
+
+    if created_entries:
+
+        data_query = (
+
+            data_query.filter(
+                dbLexicalEntry.id.not_in(
+                    ids_to_id_query(created_entries))))
+
+    # We'll either get total entry count now or after filtering.
+
+    if not filter:
+
+        entry_total_count += (
+            data_query.count())
+
+        log.debug(
+            f'\n entry_total_count: {entry_total_count}')
+
+    # NOTE:
+    #
+    # We assume that if lexes come in a form of a query, it's prepared by the caller for whatever we'll need
+    # to do, joins, limits/offsets etc.
+
+    # Simple case, we just need to slice the entries.
+
+    if not (sort_by_field or have_empty or filter):
+
+        if offset:
+
+            data_query = (
+                data_query.offset(offset))
+
+            offset = None
+
+        if limit:
+
+            data_query = (
+                data_query.limit(limit))
+
+            limit = None
+
+    # If we are going to have empty entities and we need to sort, we'll need an emptiness check.
+
+    data_query_list = [
+        dbLexicalEntry,
+        dbEntity,
+        dbPublishingEntity]
+
+    if have_empty or sort_by_field:
+
+        data_query_list.append(
+            (dbEntity.client_id != None).label('is_not_empty'))
+
+    data_query = (
+
+        data_query
+
+            .with_entities(*data_query_list)
+            .with_labels()
+
+            .join(
+                dbEntity,
+                dbEntity.parent_id == dbLexicalEntry.id,
+                isouter = have_empty)
+
+            .join(
+                dbPublishingEntity,
+                dbPublishingEntity.id == dbEntity.id,
+                isouter = have_empty)
+
+            .filter(
+                *filter_list))
+
+    log.debug(
+        '\n data_query:\n ' +
+        str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+    data_cte = None
+
+    # Filtering if required.
 
     if filter:
 
-        # Filter from special fields
-        filtered_entities = entities_query.filter(
-            dbEntity.field_id != (66, 25))
+        if data_cte is None:
+            data_cte = data_query.cte()
+
+        dbTextField = aliased(dbField)
+        dbTextAtom = aliased(dbTranslationAtom)
+
+        dbUrlField = aliased(dbField)
+        dbUrlAtom = aliased(dbTranslationAtom)
+
+        # Filtering by text context as it is, by URL content by first extracting URL's last part.
 
         if is_regexp:
-            if is_case_sens:
-                filtered_entities = filtered_entities.filter(
-                    dbEntity.content.op('~')(filter)).cte()
-            else:
-                filtered_entities = filtered_entities.filter(
-                    dbEntity.content.op('~*')(filter)).cte()
+
+            op_str = '~' if is_case_sens else '~*'
+            filter_str = filter
+
         else:
-            if is_case_sens:
-                filtered_entities = filtered_entities.filter(
-                    dbEntity.content.like(f"%{filter}%")).cte()
-            else:
-                filtered_entities = filtered_entities.filter(
-                    dbEntity.content.ilike(f"%{filter}%")).cte()
 
-        entities_query = entities_query.filter(
-            dbEntity.parent_client_id == filtered_entities.c.parent_client_id,
-            dbEntity.parent_object_id == filtered_entities.c.parent_object_id)
+            op_str = '~~' if is_case_sens else '~~*'
+            filter_str = f'%{filter}%'
 
-    entities_cte = entities_query.cte()
+        text_filter_condition = (
+            data_cte.c.t_entity_content
+                .op(op_str)(filter_str))
 
-    # Create sorting_cte to order by it
+        url_filter_condition = (
+            func.substring(data_cte.c.t_entity_content, '.*/([^/]*)$')
+                .op(op_str)(filter_str))
 
-    sorting_cte = None
+        text_filter_query = (
+
+            DBSession
+
+                .query(
+                    data_cte.c.lexicalentry_client_id.label('entry_cid_f'),
+                    data_cte.c.lexicalentry_object_id.label('entry_oid_f'))
+
+                .filter(
+                    dbTextField.client_id == data_cte.c.t_entity_field_client_id,
+                    dbTextField.object_id == data_cte.c.t_entity_field_object_id,
+                    dbTextAtom.parent_client_id == dbTextField.data_type_translation_gist_client_id,
+                    dbTextAtom.parent_object_id == dbTextField.data_type_translation_gist_object_id,
+                    dbTextAtom.locale_id == ENGLISH_LOCALE,
+                    dbTextAtom.content == 'Text',
+                    text_filter_condition)
+
+                .group_by(
+                    'entry_cid_f',
+                    'entry_oid_f'))
+
+        url_filter_query = (
+
+            DBSession
+
+                .query(
+                    data_cte.c.lexicalentry_client_id.label('entry_cid_f'),
+                    data_cte.c.lexicalentry_object_id.label('entry_oid_f'))
+
+                .filter(
+                    dbUrlField.client_id == data_cte.c.t_entity_field_client_id,
+                    dbUrlField.object_id == data_cte.c.t_entity_field_object_id,
+                    dbUrlAtom.parent_client_id == dbUrlField.data_type_translation_gist_client_id,
+                    dbUrlAtom.parent_object_id == dbUrlField.data_type_translation_gist_object_id,
+                    dbUrlAtom.locale_id == ENGLISH_LOCALE,
+                    or_(
+                        dbUrlAtom.content == 'Image',
+                        dbUrlAtom.content == 'Sound',
+                        dbUrlAtom.content == 'Markup'),
+                    url_filter_condition)
+
+                .group_by(
+                    'entry_cid_f',
+                    'entry_oid_f'))
+
+        filter_cte = (
+
+            text_filter_query
+                .union(url_filter_query)
+                .cte())
+
+        data_query = (
+
+            DBSession
+
+                .query(
+                    data_cte)
+
+                .filter(
+                    data_cte.c.lexicalentry_client_id == filter_cte.c.entry_cid_f,
+                    data_cte.c.lexicalentry_object_id == filter_cte.c.entry_oid_f))
+
+        log.debug(
+            '\n data_query:\n ' +
+            str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+        # Getting total entry count after filtering.
+
+        entry_total_count += (
+
+            data_query
+
+                .with_entities(
+                    literal(1))
+
+                .group_by(
+                    data_cte.c.lexicalentry_client_id,
+                    data_cte.c.lexicalentry_object_id)
+
+                .count())
+
+        log.debug(
+            f'\n entry_total_count: {entry_total_count}')
+
+        data_cte = (
+            data_query.cte())
+
+    # General sorting things.
+
+    if is_ascending:
+
+        agg_f = func.min
+        bool_f = func.bool_and
+        order_f = asc
+        null_f = nullsfirst
+
+    else:
+
+        agg_f = func.max
+        bool_f = func.bool_or
+        order_f = desc
+        null_f = nullslast
+
+    # We get entry sorting data if we need to sort by field.
 
     if sort_by_field:
 
-        field_entities = entities_query.filter(dbEntity.field_id == sort_by_field).cte()
+        if data_cte is None:
+            data_cte = data_query.cte()
 
-        alpha_entities = (
+        sort_cte = (
+
             DBSession
+
                 .query(
-                    field_entities.c.parent_client_id.label('lex_client_id'),
-                    field_entities.c.parent_object_id.label('lex_object_id'),
-                    func.min(func.lower(field_entities.c.content)).label('first_entity'),
-                    func.max(func.lower(field_entities.c.content)).label('last_entity'),
-                    func.count().label('count_entity'))
+                    data_cte.c.lexicalentry_client_id.label('entry_cid_s'),
+                    data_cte.c.lexicalentry_object_id.label('entry_oid_s'),
+                    agg_f(func.lower(data_cte.c.t_entity_content)).label('sort_content'),
+                    func.count().label('sort_count'))
 
-                .group_by('lex_client_id', 'lex_object_id')
+                .filter(
+                    data_cte.c.t_entity_field_client_id == sort_by_field[0],
+                    data_cte.c.t_entity_field_object_id == sort_by_field[1])
 
-                .cte()
-            )
-
-        sorting_cte = (
-            DBSession
-                .query(
-                    entities_cte.c.parent_client_id,
-                    entities_cte.c.parent_object_id,
-                    entities_cte.c.client_id,
-                    entities_cte.c.object_id,
-                    alpha_entities.c.first_entity,
-                    alpha_entities.c.last_entity,
-                    alpha_entities.c.count_entity,
-                    field_entities.c.content.label('order_content'))
-
-                .outerjoin(
-                    alpha_entities, and_(
-                        alpha_entities.c.lex_client_id == entities_cte.c.parent_client_id,
-                        alpha_entities.c.lex_object_id == entities_cte.c.parent_object_id))
-
-                .outerjoin(
-                    field_entities, and_(
-                        field_entities.c.client_id == entities_cte.c.client_id,
-                        field_entities.c.object_id == entities_cte.c.object_id))
+                .group_by(
+                    'entry_cid_s',
+                    'entry_oid_s')
 
                 .cte())
 
-        entities_cte = sorting_cte
+    # If we need to also offset and/or limit, we'll need an additional grouping step.
 
-    # Finally, filter and sort dbEntity and dbPublishingEntity objects
+    if offset or limit:
 
-    entities_result = (
-        DBSession
-            .query(
-                dbEntity,
-                dbPublishingEntity,
-                dbLexicalEntry.created_at)
+        if data_cte is None:
+            data_cte = data_query.cte()
 
-            .filter(
-                dbPublishingEntity.client_id == dbEntity.client_id,
-                dbPublishingEntity.object_id == dbEntity.object_id,
-                dbLexicalEntry.id == dbEntity.parent_id))
+        query_list = [
+            data_cte.c.lexicalentry_client_id.label('entry_cid_ol'),
+            data_cte.c.lexicalentry_object_id.label('entry_oid_ol'),
+            agg_f(data_cte.c.lexicalentry_created_at).label('created_at')]
 
-    # Get new entities from entities_before_custom_filtering
+        ol_order_by_list = []
+        d_order_by_list = []
 
-    new_entities_result = (
-        entities_result
-            .filter(
-                tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                    .in_(ids_to_id_query(created_entries)),
+        if have_empty:
 
-                dbEntity.parent_client_id == pre_filtered_lexes.c.parent_client_id,
-                dbEntity.parent_object_id == pre_filtered_lexes.c.parent_object_id)
-    ) if len(created_entries) else []
+            query_list.append(
+                bool_f(data_cte.c.is_not_empty).label('is_not_empty'))
 
-    # Filter and join at once to get and sort old entities
+            ol_order_by_list.append(
+                'is_not_empty')
 
-    old_entities_result = (
-        entities_result
-            .filter(
-                dbEntity.client_id == entities_cte.c.client_id,
-                dbEntity.object_id == entities_cte.c.object_id))
+            d_order_by_list.append(
+                data_cte.c.is_not_empty)
 
-    # optimized
-    if len(created_entries):
-        old_entities_result = (
-            old_entities_result
+        if sort_by_field:
+
+            query_list.extend([
+                agg_f(sort_cte.c.sort_content).label('sort_content'),
+                agg_f(sort_cte.c.sort_count).label('sort_count')])
+
+            ol_order_by_list.extend([
+                null_f(order_f('sort_content')),
+                null_f(order_f('sort_count'))])
+
+        ol_order_by_list.extend([
+            'created_at',
+            'entry_cid_ol',
+            'entry_oid_ol'])
+
+        offset_limit_query = (
+
+            DBSession
+                .query(
+                    *query_list))
+
+        if sort_by_field:
+
+            offset_limit_query = (
+
+                offset_limit_query
+
+                    .outerjoin(
+                        sort_cte,
+                        and_(
+                            data_cte.c.lexicalentry_client_id == sort_cte.c.entry_cid_s,
+                            data_cte.c.lexicalentry_object_id == sort_cte.c.entry_oid_s)))
+
+        offset_limit_query = (
+
+            offset_limit_query
+
+                .group_by(
+                    'entry_cid_ol',
+                    'entry_oid_ol')
+
+                .order_by(
+                    *ol_order_by_list))
+
+        if offset:
+
+            offset_limit_query = (
+                offset_limit_query.offset(offset))
+
+        if limit:
+
+            offset_limit_query = (
+                offset_limit_query.limit(limit))
+
+        # Checking out ordering if required.
+
+        if debug_flag:
+
+            log.debug(
+                '\n offset_limit_query.all(): ')
+
+            offset_limit_query.all()
+
+        offset_limit_cte = (
+            offset_limit_query.cte())
+
+        if sort_by_field:
+
+            d_order_by_list.extend([
+                null_f(order_f(offset_limit_cte.c.sort_content)),
+                null_f(order_f(offset_limit_cte.c.sort_count))])
+
+        d_order_by_list.extend([
+            order_f(data_cte.c.lexicalentry_created_at),
+            order_f(data_cte.c.lexicalentry_client_id),
+            order_f(data_cte.c.lexicalentry_object_id)])
+
+        data_query = (
+
+            DBSession
+
+                .query(
+                    aliased(dbLexicalEntry, data_cte),
+                    aliased(dbEntity, data_cte),
+                    aliased(dbPublishingEntity, data_cte))
+
                 .filter(
-                    tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                    .notin_(ids_to_id_query(created_entries))))
+                    data_cte.c.lexicalentry_client_id == offset_limit_cte.c.entry_cid_ol,
+                    data_cte.c.lexicalentry_object_id == offset_limit_cte.c.entry_oid_ol)
 
-    # Custom sorting
+                .order_by(
+                    *d_order_by_list))
 
-    if sorting_cte is not None:
+    # Nah, just sorting and we're done.
 
-        if is_ascending:
+    else:
 
-            old_entities_result = old_entities_result.order_by(
-                entities_cte.c.first_entity,
-                nullsfirst(entities_cte.c.count_entity),  # for 'Paradigm and contexts' field
-                desc(entities_cte.c.parent_client_id),
-                desc(entities_cte.c.parent_object_id),
-                func.lower(entities_cte.c.order_content)
-            )
+        if data_cte is None:
+            data_cte = data_query.cte()
 
-        else:
+        data_query = (
 
-            old_entities_result = old_entities_result.order_by(
-                desc(entities_cte.c.last_entity),
-                nullslast(entities_cte.c.count_entity.desc()),  # for 'Paradigm and contexts' field
-                desc(entities_cte.c.parent_client_id),
-                desc(entities_cte.c.parent_object_id),
-                desc(func.lower(entities_cte.c.order_content))
-            )
+            DBSession
 
-    # Default sorting
+                .query(
+                    aliased(dbLexicalEntry, data_cte),
+                    aliased(dbEntity, data_cte),
+                    aliased(dbPublishingEntity, data_cte)))
 
-    old_entities_result = old_entities_result.order_by(
-        desc(dbLexicalEntry.created_at),
-        dbEntity.created_at)
+        d_order_by_list = []
+
+        if have_empty:
+
+            d_order_by_list.append(
+                data_cte.c.is_not_empty)
+
+        if sort_by_field:
+
+            data_query = (
+
+                data_query
+
+                    .outerjoin(
+                        sort_cte,
+                        and_(
+                            data_cte.c.lexicalentry_client_id == sort_cte.c.entry_cid_s,
+                            data_cte.c.lexicalentry_object_id == sort_cte.c.entry_oid_s)))
+
+            d_order_by_list.extend([
+                null_f(order_f(sort_cte.c.sort_content)),
+                null_f(order_f(sort_cte.c.sort_count))])
+
+        d_order_by_list.extend([
+            order_f(data_cte.c.lexicalentry_created_at),
+            order_f(data_cte.c.lexicalentry_client_id),
+            order_f(data_cte.c.lexicalentry_object_id)])
+
+        data_query = (
+
+            data_query
+                .order_by(
+                    *d_order_by_list))
+
+    log.debug(
+        '\n data_query:\n ' +
+        str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
 
     return (
         new_entities_result,
-        old_entities_result
-            .options(
-                joinedload('publishingentity'))
-            .yield_per(100),
-        empty_lexes)
+        data_query,
+        entry_total_count)
 
 
-def group_by_lex(entity_with_published):
-    entity = entity_with_published[0]
-    return (entity.parent_client_id, entity.parent_object_id)
-
-
-def gql_entity_with_published(cur_entity, cur_publishing):
-    ent = Entity(id=(cur_entity.client_id, cur_entity.object_id))
-    ent.dbObject = cur_entity
-    ent.publishingentity = cur_publishing
-    return ent
-
-
-def gql_lexicalentry(cur_lexical_entry, cur_entities):
-    lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
-    lex.gql_Entities = cur_entities
-    lex.dbObject = cur_lexical_entry
-    return lex
-
-
-def entries_with_entities(lexes, mode,
-                          is_edit_mode=True,
-                          created_entries=[],
-                          limit=0,
-                          offset=0,
-                          **query_args):
+def entries_with_entities(
+    lexes,
+    mode,
+    is_edit_mode=True,
+    created_entries=[],
+    limit = None,
+    offset = None,
+    **query_args):
 
     if mode == 'debug':
-        return [gql_lexicalentry(lex, None) for lex in lexes]
-
-    lex_id_to_obj = dict()
-
-    for lex_obj in (
-        lexes if isinstance(lexes, list) else
-        lexes.yield_per(100).all()):
-
-        lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
+        return [LexicalEntry(lex for lex in lexes]
 
     if mode == 'not_accepted':
         query_args['accept'] = False
         query_args['delete'] = False
 
-    new_entities, old_entities, empty_lexes = (
+    new_entities, old_entities, total_count = (
+
         graphene_track_multiple(
             lexes,
-            created_entries=created_entries,
+            have_empty = is_edit_mode,
+            created_entries = created_entries,
+            offset = offset,
+            limit = limit,
             **query_args))
 
-    # Getting sets of hashable items
-    empty_lexes_set = set([tuple(lex) for lex in empty_lexes])
-    added_lexes_set = set([tuple(lex) for lex in created_entries])
+    result_list = []
 
-    # Calculating lists of old and newly added empty lexes
-    old_empty_lexes = empty_lexes_set - added_lexes_set if is_edit_mode else []
-    new_empty_lexes = empty_lexes_set & added_lexes_set
+    for entry_id, lep_iter in (
+        itertools.groupby(
+            itertools.chain(new_entities, old_entities),
+            lambda lep: lep[0].id)):
 
-    """
-    Finally we start to combine summary list of lexes in following sequence:
-    -- (non-empty) new_entities in any amount
-    -- new_empty_lexes in any amount and mode
-    -- old_empty_lexes sliced by 'limit' in edit mode
-    -- old_entities sliced by [offset : offset + limit]
-    """
+        lep_list = list(lep_iter)
+        db_entry = lep_list[0][0]
 
-    lexical_entries = []
-    total_entries = len(list(empty_lexes))
+        gql_entity_list = [
 
-    # We have empty lexes only if is_edit_mode
-    for lex_ids in old_empty_lexes:
+            Entity(
+                db_entity,
+                publishingentity = db_p_entity)
 
-        lexical_entries.append(
-            gql_lexicalentry(
-                cur_lexical_entry = lex_id_to_obj[lex_ids],
-                cur_entities = []))
+            for _, db_entity, db_p_entity in lep_list]
 
-    # Edges of pagination
-    left_edge = offset - len(old_empty_lexes)
-    right_edge = offset + limit - len(old_empty_lexes)
+        result_list.append(
 
-    i = 0
-    for lex_ids, entity_with_published in itertools.groupby(old_entities, key = group_by_lex):
+            LexicalEntry(
+                db_entry,
+                gql_Entities = gql_entity_list))
 
-        # Pagination
-        if not limit or (left_edge if left_edge > 0 else 0) <= i < right_edge:
-            gql_entities_list = [
-                gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
-                for x in entity_with_published]
-
-            lexical_entries.append(
-                gql_lexicalentry(
-                    cur_lexical_entry = lex_id_to_obj[lex_ids],
-                    cur_entities = gql_entities_list))
-        i += 1
-
-    total_entries += i
-
-    # Add lexes with new_entities at the beginning of list
-    i = 0
-    for lex_ids, entity_with_published in itertools.groupby(new_entities, key = group_by_lex):
-
-        gql_entities_list = [
-            gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
-            for x in entity_with_published]
-
-        #if lex_ids in lex_id_to_obj:
-        lexical_entries.insert(0,
-            gql_lexicalentry(
-                cur_lexical_entry = lex_id_to_obj[lex_ids],
-                cur_entities = gql_entities_list))
-        i += 1
-
-    total_entries += i
-
-    # In any mode we show empty new lexes if any
-    # Adding them at the beginning of list
-
-    for lex_ids in new_empty_lexes:
-
-        lexical_entries.insert(0,
-            gql_lexicalentry(
-                cur_lexical_entry = lex_id_to_obj[lex_ids],
-                cur_entities = []))
-
-    return lexical_entries, total_entries
+    return result_list, total_count
 
 
 class PerspectivePage(graphene.ObjectType):
 
     lexical_entries = graphene.List(LexicalEntry)
     entries_total = graphene.Int()
-
-    dbType = dbPerspectivePage
-
-    class Meta:
-        pass
 
 
 class DictionaryPerspective(LingvodocObjectType):
@@ -573,7 +772,8 @@ class DictionaryPerspective(LingvodocObjectType):
         sort_by_field = LingvodocID(),
         offset = graphene.Int(),
         limit = graphene.Int(),
-        created_entries = graphene.List(LingvodocID))
+        created_entries = graphene.List(LingvodocID),
+        debug_flag = graphene.Boolean())
 
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     roles = graphene.Field(UserAndOrganizationsRoles)
@@ -754,8 +954,25 @@ class DictionaryPerspective(LingvodocObjectType):
 
     @fetch_object()
     def resolve_counter(self, info, mode):
-        lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
-        lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
+
+        lexes = (
+
+            DBSession
+
+                .query(
+                    dbLexicalEntry)
+
+                .filter(
+                    dbLexicalEntry.parent == self.dbObject)
+
+                .join(
+                    dbEntity,
+                    dbEntity.parent_id == dbLexicalEntry.id)
+
+                .join(
+                    dbPublishingEntity,
+                    dbPublishingEntity.id == dbEntity.id))
+
         if mode == 'all':
             # info.context.acl_check('view', 'lexical_entries_and_entities',
             #                        (self.dbObject.client_id, self.dbObject.object_id))
@@ -769,7 +986,7 @@ class DictionaryPerspective(LingvodocObjectType):
                                  dbEntity.marked_for_deletion == False)
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
-        counter = counter_query.group_by(dbLexicalEntry).count()
+        counter = counter_query.group_by(dbLexicalEntry.id).count()
         return counter
 
     @fetch_object('last_modified_at')
@@ -1215,8 +1432,10 @@ class DictionaryPerspective(LingvodocObjectType):
 
         lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
         if ids is not None:
-            ids = list(ids)
-            lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids))
+            id_info = list(ids)
+            if len(ids) > 2:
+                id_info = ids_to_id_query(id_info)
+            lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(id_info))
         if authors or start_date or end_date:
             lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
 

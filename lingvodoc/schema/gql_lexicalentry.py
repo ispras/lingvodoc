@@ -77,6 +77,17 @@ class LexicalEntry(LingvodocObjectType):
             Relationship,
             MovedTo)
 
+    def __init__(
+        self,
+        *args,
+        gql_Entities = None,
+        **kwargs):
+
+        if gql_Entities is not None:
+            self.gql_Entities = gql_Entities
+
+        super().__init__(*args, **kwargs)
+
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info, mode='all'):

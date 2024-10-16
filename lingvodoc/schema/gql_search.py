@@ -583,16 +583,6 @@ def search_mechanism(
 
             # Loading search data.
 
-            lexical_entry_list = (
-
-                DBSession.query(dbLexicalEntry)
-
-                    .filter(
-                        tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
-                            lexical_entry_id_list))
-                        
-                    .all())
-
             perspective_list = (
 
                 DBSession.query(dbPerspective)
@@ -618,7 +608,7 @@ def search_mechanism(
             result_lexical_entries, _ = (
 
                 entries_with_entities(
-                    lexical_entry_list,
+                    lexical_entry_id_list,
                     accept = True,
                     delete = False,
                     mode = None,
@@ -1021,8 +1011,6 @@ def search_mechanism(
 
     # Searching for and getting lexical entries.
 
-    resolved_search = None
-
     if full_or_block:
 
         entry_id_query = (
@@ -1055,21 +1043,6 @@ def search_mechanism(
             '\n entry_query:\n ' +
             str(entry_query.statement.compile(compile_kwargs = {"literal_binds": True})))
 
-        resolved_search = entry_query.all()
-
-    if not resolved_search:
-
-        # Saving search results data, if required.
-
-        if __debug_flag__:
-
-            with gzip.open(
-                search_data_file_name, 'wb') as search_data_file:
-
-                pickle.dump(([], [], []), search_data_file)
-
-        return [], [], []
-
     if load_entities:
 
         res_lexical_entries, _ = (
@@ -1078,7 +1051,7 @@ def search_mechanism(
             # and undeleted perspectives.
 
             entries_with_entities(
-                resolved_search,
+                entry_query,
                 accept = True,
                 delete = False,
                 mode = None,
@@ -1089,7 +1062,7 @@ def search_mechanism(
 
         res_lexical_entries = [
             graphene_obj(lexical_entry, LexicalEntry)
-            for lexical_entry in resolved_search]
+            for lexical_entry in entry_query]
 
     res_perspectives, res_dictionaries = (
         get_perspectives_dictionaries(res_lexical_entries))

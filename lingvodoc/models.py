@@ -1023,25 +1023,6 @@ class Dictionary(
     domain = Column(Integer, default=0)
 
 
-class PerspectivePage(
-    CompositeIdMixin,
-    TableNameMixin,
-    ParentMixin,
-    CreatedAtMixin,
-    TranslationMixin,
-    StateMixin,
-    MarkedForDeletionMixin,
-    AdditionalMetadataMixin,
-    ObjectTOCMixin,
-    Base):
-    """
-    This object used to compile and get list of lexical entries with extra information
-    after filtering, sorting and pagination on backend
-    Parent: DictionaryPerspective
-    """
-    __parentname__ = 'DictionaryPerspective'
-
-
 class DictionaryPerspective(
     CompositeIdMixin,
     TableNameMixin,
@@ -1967,15 +1948,18 @@ class Entity(
         return cls(**attr_dict)
 
 
-class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
+class PublishingEntity(
+    CompositeIdMixin,
+    TableNameMixin,
+    CreatedAtMixin,
+    Base):
+
     __parentname__ = 'Entity'
     __table_args__ = ((ForeignKeyConstraint(['client_id', 'object_id'],
                                             [__parentname__.lower() + '.client_id',
                                              __parentname__.lower() + '.object_id']),)
                       )
 
-    object_id = Column(SLBigInteger(), primary_key=True)
-    client_id = Column(SLBigInteger(), primary_key=True)
     published = Column(Boolean, default=False, nullable=False)
     accepted = Column(Boolean, default=False, nullable=False)
     parent = relationship('Entity', backref=backref("publishingentity", uselist=False))
