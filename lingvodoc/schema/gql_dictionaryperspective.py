@@ -231,7 +231,7 @@ def graphene_track_multiple(
         data_query = (
 
             data_query.filter(
-                dbLexicalEntry.id.not_in(
+                dbLexicalEntry.id.notin_(
                     ids_to_id_query(created_entries))))
 
     # We'll either get total entry count now or after filtering.
@@ -657,7 +657,7 @@ def entries_with_entities(
     **query_args):
 
     if mode == 'debug':
-        return [LexicalEntry(lex for lex in lexes]
+        return [LexicalEntry(lex) for lex in lexes]
 
     if mode == 'not_accepted':
         query_args['accept'] = False
