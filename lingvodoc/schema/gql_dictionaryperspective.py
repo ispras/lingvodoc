@@ -29,7 +29,11 @@ from sqlalchemy import (
 
 from sqlalchemy.orm import aliased, joinedload
 
-from sqlalchemy.sql.expression import Grouping, nullsfirst, nullslast
+from sqlalchemy.sql.expression import (
+    case,
+    Grouping,
+    nullsfirst,
+    nullslast)
 
 # Lingvodoc imports.
 
@@ -131,15 +135,37 @@ def graphene_track_multiple(
         aliased(dbPublishingEntity, name = 't_publishingentity'))
 
     filter_list = []
+    filter_outer_list = []
 
     if accept is not None:
-        filter_list.append(dbPublishingEntity.accepted == accept)
+
+        filter_list.append(
+            dbPublishingEntity.accepted == accept)
+
+        filter_outer_list.append(
+            or_(
+                dbPublishingEntity.accepted == accept,
+                dbPublishingEntity.accepted == None))
 
     if publish is not None:
-        filter_list.append(dbPublishingEntity.published == publish)
+
+        filter_list.append(
+            dbPublishingEntity.published == publish)
+
+        filter_outer_list.append(
+            or_(
+                dbPublishingEntity.published == publish,
+                dbPublishingEntity.published == None))
 
     if delete is not None:
-        filter_list.append(dbEntity.marked_for_deletion == delete)
+
+        filter_list.append(
+            dbEntity.marked_for_deletion == delete)
+
+        filter_outer_list.append(
+            or_(
+                dbEntity.marked_for_deletion == delete,
+                dbEntity.marked_for_deletion == None))
 
     # First, created entries.
     #
@@ -177,7 +203,17 @@ def graphene_track_multiple(
                     dbLexicalEntry.id.in_(
                         ids_to_id_query(created_entries)),
 
-                    *filter_list)
+                    *filter_outer_list)
+
+                # For created entries we place last created first, for their entities last created go last.
+
+                .order_by(
+                    desc(dbLexicalEntry.created_at),
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id,
+                    dbEntity.created_at,
+                    dbEntity.client_id,
+                    dbEntity.object_id)
 
                 .all())
 
@@ -297,7 +333,7 @@ def graphene_track_multiple(
                 isouter = have_empty)
 
             .filter(
-                *filter_list))
+                *(filter_outer_list if have_empty else filter_list)))
 
     log.debug(
         '\n data_query:\n ' +
@@ -571,6 +607,23 @@ def graphene_track_multiple(
             order_f(data_cte.c.lexicalentry_client_id),
             order_f(data_cte.c.lexicalentry_object_id)])
 
+        if sort_by_field:
+
+            d_order_by_list.append(
+
+                order_f(
+                    case(
+                        [(and_(
+                            data_cte.c.t_entity_field_client_id == sort_by_field[0],
+                            data_cte.c.t_entity_field_object_id == sort_by_field[1]),
+                            func.lower(data_cte.c.t_entity_content))],
+                        else_ = None)))
+
+        d_order_by_list.extend([
+            order_f(data_cte.c.t_entity_created_at),
+            order_f(data_cte.c.t_entity_client_id),
+            order_f(data_cte.c.t_entity_object_id)])
+
         data_query = (
 
             DBSession
@@ -631,6 +684,23 @@ def graphene_track_multiple(
             order_f(data_cte.c.lexicalentry_client_id),
             order_f(data_cte.c.lexicalentry_object_id)])
 
+        if sort_by_field:
+
+            d_order_by_list.append(
+
+                order_f(
+                    case(
+                        (and_(
+                            data_cte.c.t_entity_field_client_id == sort_by_field[0],
+                            data_cte.c.t_entity_field_object_id == sort_by_field[1]),
+                            func.lower(data_cte.c.t_entity_content)),
+                        else_ = None)))
+
+        d_order_by_list.extend([
+            order_f(data_cte.c.t_entity_created_at),
+            order_f(data_cte.c.t_entity_client_id),
+            order_f(data_cte.c.t_entity_object_id)])
+
         data_query = (
 
             data_query
@@ -689,7 +759,8 @@ def entries_with_entities(
                 db_entity,
                 publishingentity = db_p_entity)
 
-            for _, db_entity, db_p_entity in lep_list]
+            for _, db_entity, db_p_entity in lep_list
+            if db_entity]
 
         result_list.append(
 
