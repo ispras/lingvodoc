@@ -123,16 +123,54 @@ def graphene_track_multiple(
     check_perspective = True,
     debug_flag = False):
 
-    # Using aliased representation in case lexes is a query which references dbEntity.
+    # Getting our base data query.
+    #
+    # Using just entry ids from CTE if the incoming info is a query cause trying to re-use the query is too
+    # complex, there's aliasing considerations and errors cropping up randomly, so we're choosing simple and
+    # safe.
 
-    global dbEntity
-    global dbPublishingEntity
+    data_query = (
 
-    dbEntity = (
-        aliased(dbEntity, name = 't_entity'))
+        DBSession
 
-    dbPublishingEntity = (
-        aliased(dbPublishingEntity, name = 't_publishingentity'))
+            .query(
+                dbLexicalEntry))
+
+    if isinstance(lexes, list):
+
+        data_query = (
+
+            data_query
+
+                .filter(
+                    dbLexicalEntry.id.in_(
+                        ids_to_id_query(lexes))))
+
+    else:
+
+        lexes_cte = (
+
+            lexes
+
+                .with_entities(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id)
+
+                .cte())
+
+        data_query = (
+
+            data_query
+
+                .filter(
+                    dbLexicalEntry.client_id == lexes_cte.c.client_id,
+                    dbLexicalEntry.object_id == lexes_cte.c.object_id))
+
+    log.debug(
+        '\n data_query:\n ' +
+        str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+    # Entity filtering conditions.
 
     filter_list = []
     filter_outer_list = []
@@ -168,9 +206,6 @@ def graphene_track_multiple(
                 dbEntity.marked_for_deletion == None))
 
     # First, created entries.
-    #
-    # We assume that our caller knows exactly what they need when supplying a list of created entry ids, so
-    # we simply get all required entities.
 
     new_entities_result = []
     entry_total_count = 0
@@ -179,10 +214,7 @@ def graphene_track_multiple(
 
         new_entities_result = (
 
-            DBSession
-
-                .query(
-                    dbLexicalEntry)
+            data_query
 
                 .outerjoin(
                     dbEntity,
@@ -192,12 +224,8 @@ def graphene_track_multiple(
                     dbPublishingEntity,
                     dbPublishingEntity.id == dbEntity.id)
 
-                .with_entities(
-                    dbLexicalEntry,
-                    dbEntity,
-                    dbPublishingEntity)
-
-                .with_labels()
+                .add_entity(dbEntity)
+                .add_entity(dbPublishingEntity)
 
                 .filter(
                     dbLexicalEntry.id.in_(
@@ -209,8 +237,8 @@ def graphene_track_multiple(
 
                 .order_by(
                     desc(dbLexicalEntry.created_at),
-                    dbLexicalEntry.client_id,
-                    dbLexicalEntry.object_id,
+                    desc(dbLexicalEntry.client_id),
+                    desc(dbLexicalEntry.object_id),
                     dbEntity.created_at,
                     dbEntity.client_id,
                     dbEntity.object_id)
@@ -225,32 +253,9 @@ def graphene_track_multiple(
     if filter:
         have_empty = False
 
-    # Getting our base data query.
-
-    data_query = lexes
-
-    if isinstance(lexes, list):
-
-        data_query = (
-
-            DBSession
-
-                .query(
-                    dbLexicalEntry)
-
-                .filter(
-                    dbLexicalEntry.id.in_(
-                        ids_to_id_query(lexes))))
-
     # If required, checking for perspective deletion.
 
     if check_perspective:
-
-        global dbPerspective
-        global dbDictionary
-
-        dbPerspective = aliased(dbPerspective)
-        dbDictionary = aliased(dbDictionary)
 
         data_query = (
 
@@ -280,14 +285,18 @@ def graphene_track_multiple(
         log.debug(
             f'\n entry_total_count: {entry_total_count}')
 
-    # NOTE:
-    #
-    # We assume that if lexes come in a form of a query, it's prepared by the caller for whatever we'll need
-    # to do, joins, limits/offsets etc.
-
     # Simple case, we just need to slice the entries.
 
     if not (sort_by_field or have_empty or filter):
+
+        data_query = (
+
+            data_query
+
+                .order_by(
+                    desc(dbLexicalEntry.created_at),
+                    desc(dbLexicalEntry.client_id),
+                    desc(dbLexicalEntry.object_id)))
 
         if offset:
 
@@ -303,24 +312,39 @@ def graphene_track_multiple(
 
             limit = None
 
-    # If we are going to have empty entities and we need to sort, we'll need an emptiness check.
+        offset_limit_cte = (
 
-    data_query_list = [
-        dbLexicalEntry,
-        dbEntity,
-        dbPublishingEntity]
+            data_query
+
+                .with_entities(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id)
+
+                .cte())
+
+        data_query = (
+
+            DBSession
+
+                .query(
+                    dbLexicalEntry)
+
+                .filter(
+                    dbLexicalEntry.client_id == offset_limit_cte.c.client_id,
+                    dbLexicalEntry.object_id == offset_limit_cte.c.object_id))
+
+    # If we are going to have empty entities and we need to sort, we'll need an emptiness check.
 
     if have_empty or sort_by_field:
 
-        data_query_list.append(
-            (dbEntity.client_id != None).label('is_not_empty'))
+        data_query = (
+
+            data_query.add_column(
+                (dbEntity.client_id != None).label('is_not_empty')))
 
     data_query = (
 
         data_query
-
-            .with_entities(*data_query_list)
-            .with_labels()
 
             .join(
                 dbEntity,
@@ -331,6 +355,11 @@ def graphene_track_multiple(
                 dbPublishingEntity,
                 dbPublishingEntity.id == dbEntity.id,
                 isouter = have_empty)
+
+            .add_entity(dbEntity)
+            .add_entity(dbPublishingEntity)
+
+            .with_labels()
 
             .filter(
                 *(filter_outer_list if have_empty else filter_list)))
@@ -367,11 +396,11 @@ def graphene_track_multiple(
             filter_str = f'%{filter}%'
 
         text_filter_condition = (
-            data_cte.c.t_entity_content
+            data_cte.c.entity_content
                 .op(op_str)(filter_str))
 
         url_filter_condition = (
-            func.substring(data_cte.c.t_entity_content, '.*/([^/]*)$')
+            func.substring(data_cte.c.entity_content, '.*/([^/]*)$')
                 .op(op_str)(filter_str))
 
         text_filter_query = (
@@ -383,8 +412,8 @@ def graphene_track_multiple(
                     data_cte.c.lexicalentry_object_id.label('entry_oid_f'))
 
                 .filter(
-                    dbTextField.client_id == data_cte.c.t_entity_field_client_id,
-                    dbTextField.object_id == data_cte.c.t_entity_field_object_id,
+                    dbTextField.client_id == data_cte.c.entity_field_client_id,
+                    dbTextField.object_id == data_cte.c.entity_field_object_id,
                     dbTextAtom.parent_client_id == dbTextField.data_type_translation_gist_client_id,
                     dbTextAtom.parent_object_id == dbTextField.data_type_translation_gist_object_id,
                     dbTextAtom.locale_id == ENGLISH_LOCALE,
@@ -404,8 +433,8 @@ def graphene_track_multiple(
                     data_cte.c.lexicalentry_object_id.label('entry_oid_f'))
 
                 .filter(
-                    dbUrlField.client_id == data_cte.c.t_entity_field_client_id,
-                    dbUrlField.object_id == data_cte.c.t_entity_field_object_id,
+                    dbUrlField.client_id == data_cte.c.entity_field_client_id,
+                    dbUrlField.object_id == data_cte.c.entity_field_object_id,
                     dbUrlAtom.parent_client_id == dbUrlField.data_type_translation_gist_client_id,
                     dbUrlAtom.parent_object_id == dbUrlField.data_type_translation_gist_object_id,
                     dbUrlAtom.locale_id == ENGLISH_LOCALE,
@@ -458,8 +487,7 @@ def graphene_track_multiple(
         log.debug(
             f'\n entry_total_count: {entry_total_count}')
 
-        data_cte = (
-            data_query.cte())
+        data_cte = None
 
     # General sorting things.
 
@@ -468,6 +496,7 @@ def graphene_track_multiple(
         agg_f = func.min
         bool_f = func.bool_and
         order_f = asc
+        reverse_f = desc
         null_f = nullsfirst
 
     else:
@@ -475,6 +504,7 @@ def graphene_track_multiple(
         agg_f = func.max
         bool_f = func.bool_or
         order_f = desc
+        reverse_f = asc
         null_f = nullslast
 
     # We get entry sorting data if we need to sort by field.
@@ -491,12 +521,12 @@ def graphene_track_multiple(
                 .query(
                     data_cte.c.lexicalentry_client_id.label('entry_cid_s'),
                     data_cte.c.lexicalentry_object_id.label('entry_oid_s'),
-                    agg_f(func.lower(data_cte.c.t_entity_content)).label('sort_content'),
+                    agg_f(func.lower(data_cte.c.entity_content)).label('sort_content'),
                     func.count().label('sort_count'))
 
                 .filter(
-                    data_cte.c.t_entity_field_client_id == sort_by_field[0],
-                    data_cte.c.t_entity_field_object_id == sort_by_field[1])
+                    data_cte.c.entity_field_client_id == sort_by_field[0],
+                    data_cte.c.entity_field_object_id == sort_by_field[1])
 
                 .group_by(
                     'entry_cid_s',
@@ -541,9 +571,9 @@ def graphene_track_multiple(
                 null_f(order_f('sort_count'))])
 
         ol_order_by_list.extend([
-            'created_at',
-            'entry_cid_ol',
-            'entry_oid_ol'])
+            reverse_f('created_at'),
+            reverse_f('entry_cid_ol'),
+            reverse_f('entry_oid_ol')])
 
         offset_limit_query = (
 
@@ -603,9 +633,9 @@ def graphene_track_multiple(
                 null_f(order_f(offset_limit_cte.c.sort_count))])
 
         d_order_by_list.extend([
-            order_f(data_cte.c.lexicalentry_created_at),
-            order_f(data_cte.c.lexicalentry_client_id),
-            order_f(data_cte.c.lexicalentry_object_id)])
+            reverse_f(data_cte.c.lexicalentry_created_at),
+            reverse_f(data_cte.c.lexicalentry_client_id),
+            reverse_f(data_cte.c.lexicalentry_object_id)])
 
         if sort_by_field:
 
@@ -614,15 +644,15 @@ def graphene_track_multiple(
                 order_f(
                     case(
                         [(and_(
-                            data_cte.c.t_entity_field_client_id == sort_by_field[0],
-                            data_cte.c.t_entity_field_object_id == sort_by_field[1]),
-                            func.lower(data_cte.c.t_entity_content))],
+                            data_cte.c.entity_field_client_id == sort_by_field[0],
+                            data_cte.c.entity_field_object_id == sort_by_field[1]),
+                            func.lower(data_cte.c.entity_content))],
                         else_ = None)))
 
         d_order_by_list.extend([
-            order_f(data_cte.c.t_entity_created_at),
-            order_f(data_cte.c.t_entity_client_id),
-            order_f(data_cte.c.t_entity_object_id)])
+            order_f(data_cte.c.entity_created_at),
+            order_f(data_cte.c.entity_client_id),
+            order_f(data_cte.c.entity_object_id)])
 
         data_query = (
 
@@ -639,6 +669,8 @@ def graphene_track_multiple(
 
                 .order_by(
                     *d_order_by_list))
+
+        data_cte = None
 
     # Nah, just sorting and we're done.
 
@@ -680,9 +712,9 @@ def graphene_track_multiple(
                 null_f(order_f(sort_cte.c.sort_count))])
 
         d_order_by_list.extend([
-            order_f(data_cte.c.lexicalentry_created_at),
-            order_f(data_cte.c.lexicalentry_client_id),
-            order_f(data_cte.c.lexicalentry_object_id)])
+            reverse_f(data_cte.c.lexicalentry_created_at),
+            reverse_f(data_cte.c.lexicalentry_client_id),
+            reverse_f(data_cte.c.lexicalentry_object_id)])
 
         if sort_by_field:
 
@@ -691,21 +723,23 @@ def graphene_track_multiple(
                 order_f(
                     case(
                         (and_(
-                            data_cte.c.t_entity_field_client_id == sort_by_field[0],
-                            data_cte.c.t_entity_field_object_id == sort_by_field[1]),
-                            func.lower(data_cte.c.t_entity_content)),
+                            data_cte.c.entity_field_client_id == sort_by_field[0],
+                            data_cte.c.entity_field_object_id == sort_by_field[1]),
+                            func.lower(data_cte.c.entity_content)),
                         else_ = None)))
 
         d_order_by_list.extend([
-            order_f(data_cte.c.t_entity_created_at),
-            order_f(data_cte.c.t_entity_client_id),
-            order_f(data_cte.c.t_entity_object_id)])
+            order_f(data_cte.c.entity_created_at),
+            order_f(data_cte.c.entity_client_id),
+            order_f(data_cte.c.entity_object_id)])
 
         data_query = (
 
             data_query
                 .order_by(
                     *d_order_by_list))
+
+        data_cte = None
 
     log.debug(
         '\n data_query:\n ' +
