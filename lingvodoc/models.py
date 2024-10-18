@@ -1949,10 +1949,14 @@ class Entity(
 
 
 class PublishingEntity(
-    CompositeIdMixin,
     TableNameMixin,
     CreatedAtMixin,
     Base):
+
+    # NOTE:
+    #
+    # Can't have CompositeIdMixin cause it would mess up ObjectTOC creation when entities are created and
+    # they automatically also create corresponding publishing info.
 
     __parentname__ = 'Entity'
     __table_args__ = ((ForeignKeyConstraint(['client_id', 'object_id'],
@@ -1960,9 +1964,40 @@ class PublishingEntity(
                                              __parentname__.lower() + '.object_id']),)
                       )
 
+    client_id = Column(SLBigInteger(), primary_key = True)
+    object_id = Column(SLBigInteger(), primary_key = True)
+
     published = Column(Boolean, default=False, nullable=False)
     accepted = Column(Boolean, default=False, nullable=False)
     parent = relationship('Entity', backref=backref("publishingentity", uselist=False))
+
+    @hybrid_property
+    def id(self):
+
+        return (
+            self.client_id,
+            self.object_id)
+
+    @id.setter
+    def id(self, id):
+
+        if id is None:
+
+            self.client_id = None
+            self.object_id = None
+
+            return
+
+        self.client_id = id[0]
+        self.object_id = id[1]
+
+    @id.comparator
+    def id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.client_id,
+                cls.object_id))
 
 
 user_to_group_association = Table('user_to_group_association', Base.metadata,
