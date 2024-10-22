@@ -1023,11 +1023,16 @@ def search_mechanism(
                 entry_id_query.union(
                     *full_or_block[1:]))
 
+        query_list = (
+            [dbLexicalEntry.client_id, dbLexicalEntry.object_id] if load_entities else
+            [dbLexicalEntry])
+
         entry_query = (
 
             DBSession
 
-                .query(dbLexicalEntry)
+                .query(
+                    *query_list)
 
                 .filter(
                     dbLexicalEntry.marked_for_deletion == False,

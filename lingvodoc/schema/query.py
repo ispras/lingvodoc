@@ -3620,7 +3620,9 @@ class Query(graphene.ObjectType):
 
             DBSession
 
-                .query(dbLexicalEntry)
+                .query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id)
 
                 .join(dbEntity)
                 .join(dbPerspective)
@@ -3745,7 +3747,7 @@ class Query(graphene.ObjectType):
         entry_list, _ = (
 
             entries_with_entities(
-                results_cursor.distinct().from_self(),
+                results_cursor.distinct(),
                 publish = search_in_published,
                 accept = True,
                 check_perspective = False))
@@ -4714,7 +4716,11 @@ class Query(graphene.ObjectType):
         entry_query = (
 
             DBSession
-                .query(dbLexicalEntry)
+
+                .query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id)
+
                 .filter(
 
                     tuple_(

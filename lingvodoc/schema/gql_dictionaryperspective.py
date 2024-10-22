@@ -88,7 +88,10 @@ from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_user import User
 
-from lingvodoc.utils import ids_to_id_query, statistics
+from lingvodoc.utils import (
+    ids_to_id_query,
+    render_statement,
+    statistics)
 
 from lingvodoc.utils.creation import (
     create_dictionary_persp_to_field,
@@ -149,14 +152,7 @@ def graphene_track_multiple(
     else:
 
         lexes_cte = (
-
-            lexes
-
-                .with_entities(
-                    dbLexicalEntry.client_id,
-                    dbLexicalEntry.object_id)
-
-                .cte())
+            lexes.cte())
 
         data_query = (
 
@@ -166,9 +162,12 @@ def graphene_track_multiple(
                     dbLexicalEntry.client_id == lexes_cte.c.client_id,
                     dbLexicalEntry.object_id == lexes_cte.c.object_id))
 
+    # Can't have the usual compile with literal binds cause when used in connected_words can have additional
+    # query params.
+
     log.debug(
-        '\n data_query:\n ' +
-        str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+        '\ndata_query:\n' +
+        render_statement(data_query.statement))
 
     # Entity filtering conditions.
 
@@ -365,8 +364,8 @@ def graphene_track_multiple(
                 *(filter_outer_list if have_empty else filter_list)))
 
     log.debug(
-        '\n data_query:\n ' +
-        str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+        '\ndata_query:\n' +
+        render_statement(data_query.statement))
 
     data_cte = None
 
@@ -466,8 +465,8 @@ def graphene_track_multiple(
                     data_cte.c.lexicalentry_object_id == filter_cte.c.entry_oid_f))
 
         log.debug(
-            '\n data_query:\n ' +
-            str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+            '\ndata_query:\n' +
+            render_statement(data_query.statement))
 
         # Getting total entry count after filtering.
 
@@ -742,8 +741,8 @@ def graphene_track_multiple(
         data_cte = None
 
     log.debug(
-        '\n data_query:\n ' +
-        str(data_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+        '\ndata_query:\n' +
+        render_statement(data_query.statement))
 
     return (
         new_entities_result,
@@ -1535,7 +1534,17 @@ class DictionaryPerspective(LingvodocObjectType):
         else:
             raise ResponseError(message="mode: <all|published|not_accepted|deleted|all_with_deleted>")
 
-        lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
+        lexes = (
+
+            DBSession
+
+                .query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id)
+
+                .filter(
+                    dbLexicalEntry.parent == self.dbObject))
+
         if ids is not None:
             id_info = list(ids)
             if len(ids) > 2:
