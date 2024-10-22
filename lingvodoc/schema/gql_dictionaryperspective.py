@@ -753,9 +753,9 @@ def graphene_track_multiple(
 
 def entries_with_entities(
     lexes,
-    mode,
-    is_edit_mode=True,
-    created_entries=[],
+    mode = None,
+    is_edit_mode = True,
+    created_entries = [],
     limit = None,
     offset = None,
     **query_args):

@@ -4735,8 +4735,8 @@ class Query(graphene.ObjectType):
 
             entries_with_entities(
                 entry_query,
-                publish = search_in_published,
-                accept = True,
+                publish = publish,
+                accept = accept,
                 check_perspective = False))
 
         entity_list = []
