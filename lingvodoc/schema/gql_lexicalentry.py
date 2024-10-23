@@ -1,52 +1,63 @@
-import graphene
+
+# Standard library imports.
+
 import time
 import string
 import random
 import logging
+from uuid import uuid4
+
+# External imports.
+
+import graphene
+
+from pyramid.security import authenticated_userid
 
 from sqlalchemy import tuple_
 
-from lingvodoc.schema.gql_holders import (
-    LingvodocObjectType,
-    CompositeIdHolder,
-    AdditionalMetadata,
-    CreatedAt,
-    DeletedAt,
-    MarkedForDeletion,
-    Relationship,
-    MovedTo,
-    fetch_object,
-    client_id_check,
-    del_object,
-    undel_object,
-    acl_check_by_id,
-    ResponseError,
-    LingvodocID,
-    ObjectVal
-)
+# Lingvodoc imports.
+
+from lingvodoc.cache.caching import CACHE
 
 from lingvodoc.models import (
-    Entity as dbEntity,
-    Field as dbField,
-    PublishingEntity as dbPublishingEntity,
+    BaseGroup as dbBaseGroup,
     Client,
     DBSession,
+    DictionaryPerspective as dbPerspective,
+    Entity as dbEntity,
+    Field as dbField,
     Group as dbGroup,
     LexicalEntry as dbLexicalEntry,
-    User as dbUser,
-    BaseGroup as dbBaseGroup
-)
+    PublishingEntity as dbPublishingEntity,
+    User as dbUser)
+
 from lingvodoc.schema.gql_entity import Entity
+
+from lingvodoc.schema.gql_holders import (
+    acl_check_by_id,
+    AdditionalMetadata,
+    client_id_check,
+    CompositeIdHolder,
+    CreatedAt,
+    del_object,
+    DeletedAt,
+    fetch_object,
+    LingvodocID,
+    LingvodocObjectType,
+    MarkedForDeletion,
+    MovedTo,
+    ObjectVal,
+    Relationship,
+    ResponseError,
+    undel_object)
 
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
+from lingvodoc.utils import ids_to_id_query
 from lingvodoc.utils.creation import create_lexicalentry
 from lingvodoc.utils.deletion import real_delete_entity
-from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
-from uuid import uuid4
 
-from lingvodoc.cache.caching import CACHE
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -287,39 +298,99 @@ class DeleteLexicalEntry(graphene.Mutation):
         return DeleteLexicalEntry(triumph=True)
 
 
-
 class BulkDeleteLexicalEntry(graphene.Mutation):
 
     class Arguments:
-        ids = graphene.List(LingvodocID, required=True)
+        ids = graphene.List(LingvodocID)
+        perspective_id = LingvodocID()
+        empty = graphene.Boolean()
 
     deleted_entries = graphene.List(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        ids = None,
+        perspective_id = None,
+        empty = None):
 
-        ids = args.get('ids')
+        entry_check_flag = True
+        acl_check_flag = True
+
+        # Deleting entries specified by ids.
+
+        if ids is not None:
+
+            entry_query = (
+
+                DBSession
+
+                    .query(
+                        dbLexicalEntry)
+
+                    .filter(
+                        dbLexicalEntry.id.in_(
+                            ids_to_id_query(ids))))
+
+        # Deleting entries in a perspective.
+
+        elif perspective_id is not None:
+
+            if not dbPerspective.exists(perspective_id):
+
+                return ResponseError('Perspective {perspective_id} does not exist.')
+
+            info.context.acl_check(
+                'delete', 'lexical_entries_and_entities', perspective_id)
+
+            entry_check_flag = False
+            acl_check_flag = False
+
+            entry_query = (
+
+                DBSession
+
+                    .query(
+                        dbLexicalEntry)
+
+                    .filter(
+                        dbLexicalEntry.parent_id == perspective_id,
+                        dbLexicalEntry.marked_for_deletion == False))
+
+            # If we need only empty entries, we check by entities.
+
+            if empty:
+
+                entry_query = (
+
+                    entry_query
+                        .outerjoin(dbEntity)
+                        .filter(dbEntity.client_id == None))
+
+        else:
+
+            return ResponseError('Please specify what entries to delete.')
+
         task_id = str(uuid4())
-
-        dblexicalentries = CACHE.get(objects =
-            {
-               dbLexicalEntry : ids
-            },
-        DBSession=DBSession, keep_dims=True)
 
         settings = info.context.request.registry.settings
         client_id = info.context.client_id
 
         deleted_entries = []
-        for dblexicalentry in dblexicalentries:
-            # client_id, object_id = lex_id
-            # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-            if not dblexicalentry or dblexicalentry.marked_for_deletion:
+
+        for index, dblexicalentry in enumerate(entry_query.yield_per(4096)):
+
+            if (entry_check_flag and (
+                not dblexicalentry or dblexicalentry.marked_for_deletion)):
+
                 raise ResponseError(message="Error: No such entry in the system")
 
-            info.context.acl_check(
-                'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
+            if acl_check_flag:
+
+                info.context.acl_check(
+                    'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
 
             if 'desktop' in settings:
 
@@ -333,11 +404,10 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
                     "bulk_delete_lexicalentry",
                     client_id,
                     task_id = task_id,
-                    counter = len(ids))
+                    counter = index + 1)
 
-            lexicalentry = LexicalEntry(id=[dblexicalentry.client_id, dblexicalentry.object_id])
-            lexicalentry.dbObject = dblexicalentry
-            deleted_entries.append(lexicalentry)
+            deleted_entries.append(
+                LexicalEntry(dblexicalentry))
 
         return BulkDeleteLexicalEntry(deleted_entries=deleted_entries, triumph=True)
 
