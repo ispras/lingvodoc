@@ -98,7 +98,11 @@ def csv_to_columns_starling(path, url):
         value_list = x.rstrip().split('#####')
         split_count += len(value_list) - 1
 
-        lines.append(value_list)
+        # Adding only rows with at least single non-empty cell.
+
+        if any(value.strip() for value in value_list):
+            lines.append(value_list)
+
         #n = len(x.rstrip().split('|'))
 
     # If we hadn't seen the special Starling separator '#####', we assume that it's actually not
@@ -174,7 +178,13 @@ def csv_to_columns_excel(path, url):
     csv_reader = (
         csv.reader(csv_file, 'excel'))
 
-    row_list = [row for row in csv_reader]
+    # Using only rows with at least single non-empty cell.
+
+    row_list = [
+
+        row
+        for row in csv_reader
+        if any(value.strip() for value in row)]
 
     # Assuming first row contains field headers.
 
