@@ -1,5 +1,14 @@
 import os
+import io
 import pympi
+import traceback
+import logging
+
+import cchardet as chardet
+from pdb import set_trace as A
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 
 class ConvertRule:
@@ -15,31 +24,32 @@ class ConvertRule:
 
 
 def _export_to_elan(textGrid_file):
+
     if os.stat(textGrid_file).st_size == 0:
         return 'error'
+
     try:
         '''
         textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-8')
         elan = tgt.io.export_to_elan(textgrid)
         '''
-        textgrid = pympi.Praat.TextGrid(file_path=textGrid_file, codec='utf-8')
+        with open(textGrid_file, 'rb') as markup_stream:
+            markup_bytes = markup_stream.read()
+
+        textgrid = pympi.Praat.TextGrid(ifile=io.BytesIO(markup_bytes),
+                                        codec=chardet.detect(markup_bytes)['encoding'])
+
         elan = pympi.Elan.to_string(textgrid.to_eaf())
 
-    except Exception as e:
-        try:
-            print('first exception')
-            print(e)
-            '''
-            textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-16')
-            elan = tgt.io.export_to_elan(textgrid)
-            '''
-            textgrid = pympi.Praat.TextGrid(file_path=textGrid_file, codec='utf-16')
-            elan = pympi.Elan.to_string(textgrid.to_eaf())
+    except Exception as exception:
 
-        except Exception as e:
-            print('second exception')
-            print(e)
-            return 'error'
+        traceback_string = (
+            ''.join(traceback.format_exception(exception, exception, exception.__traceback__))[:-1])
+
+        log.debug(traceback_string)
+
+        return 'error'
+
     return elan
 
 
