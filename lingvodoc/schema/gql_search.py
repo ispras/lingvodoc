@@ -348,17 +348,21 @@ def save_xlsx_data(
             pprint.pformat(group_list, width = 192)))
 
     # Saving data of all found lexical entries.
+    already_used_langs = set()
 
-    for language_id in group_list:
+    for idx, language_id in enumerate(group_list):
+
+        language_parent = None
 
         if language_id is None:
 
-            language_name = '(ungrouped)'
+            language_name = f'(ungrouped_{idx + 1})'
 
         else:
 
             language = id_to_language_dict[language_id]
             language_name = language.get_translation(xlsx_context.locale_id)
+            language_parent = language.parent
 
         dictionary_list = group_dict[language_id]
 
@@ -369,6 +373,19 @@ def save_xlsx_data(
 
         if not dictionary_list:
             continue
+
+        if not (language_name in already_used_langs):
+            already_used_langs.add(language_name)
+
+        elif language_parent is not None:
+            language_parent_name = language_parent.get_translation(xlsx_context.locale_id)
+            language_name = f'{language_name} ({language_parent_name})'
+            if not (language_name in already_used_langs):
+                already_used_langs.add(language_name)
+            else:
+                raise NotImplementedError
+        else:
+            raise NotImplementedError
 
         xlsx_context.ready_worksheet(language_name)
 
