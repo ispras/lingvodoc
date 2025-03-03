@@ -252,7 +252,7 @@ def save_xlsx_data(
         key = lambda language: (
             language.parent_client_id or -1,
             language.parent_object_id or -1,
-            language.additional_metadata['younger_siblings']))
+            language.additional_metadata.get('younger_siblings', [])))
 
     visited = set()
     stack = set()
