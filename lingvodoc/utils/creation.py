@@ -683,7 +683,7 @@ def create_parser_result(
         dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
 
     # we get result as html
-    if "timarkh" in parser.method:
+    if "timarkh" in parser.method or "hfst" in parser.method:
         result = parse_method(dedoc_output, **arguments)
 
     elif "apertium" in parser.method:
