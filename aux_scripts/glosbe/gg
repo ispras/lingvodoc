@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Changing dir to 'glosbe'
+[ $work_dir ] || work_dir="/home/ubuntu/lingvodoc/aux_scripts/glosbe/"
+mkdir -p $work_dir
+cd $work_dir
+
+# Killing previous glosbe processes if any
+touch pids
+kill -9 $(cat pids) 2>/dev/null
+> pids
+
+# Just listing workdir and exit if no any args
+(($# == 0)) && ls -d */ >&2 && exit 0
+
+for lang in $@
+do
+  mkdir -p $lang
+
+  # Getting last status
+  touch $lang/last
+  last=$(cat $lang/last)
+  current=$(sort -u $lang/${lang}_fasmer_done.txt | wc -l | awk '{ print $1 }')
+  delta=$((current - last))
+  echo -n $current > $lang/last
+
+  # Run process
+  echo "$lang: $current (+$delta)"
+  python3 glosbe.py $lang >&2 & echo -n "$! " >> pids
+done
