@@ -100,6 +100,7 @@ SQLAlchemy==1.1.2
 tablib==0.13.0
 tensorflow==2.17.0
 #tgt==1.4.2
+torch==2.6.0
 tqdm==4.51.0
 transaction==1.6.1
 translationstring==1.3
