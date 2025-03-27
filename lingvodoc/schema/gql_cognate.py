@@ -5626,7 +5626,6 @@ class NeuroCognateAnalysis(graphene.Mutation):
 
         source_perspective_id = LingvodocID(required=True)
         perspective_info_list = graphene.List(graphene.List(LingvodocID), required=True)
-        match_translations = graphene.Boolean()
         base_language_id = LingvodocID()
         input_pairs = ObjectVal()
         truth_threshold = graphene.Float()
@@ -5643,7 +5642,6 @@ class NeuroCognateAnalysis(graphene.Mutation):
     def neuro_cognate_statistics(
             perspective_info_list,
             source_perspective_id,
-            match_translations,
             input_pairs,
             locale_id,
             user_id,
@@ -5708,7 +5706,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         if not input_len or not compare_len:
             triumph = False
             message = "No input words or words to compare is received"
-        elif compare_len > 10 ** 4:
+        elif compare_len > 10 ** 5:
             triumph = False
             message = f"Too many words to compare: {compare_len}"
         else:
@@ -5720,7 +5718,6 @@ class NeuroCognateAnalysis(graphene.Mutation):
                 storage,
                 host_url,
                 cache_kwargs,
-                match_translations,
                 truth_threshold,
                 only_orphans_flag
             )
@@ -5743,7 +5740,6 @@ class NeuroCognateAnalysis(graphene.Mutation):
         info,
         source_perspective_id,
         perspective_info_list,
-        match_translations,
         base_language_id,
         truth_threshold=0.97,
         only_orphans_flag=True,
@@ -5840,7 +5836,6 @@ class NeuroCognateAnalysis(graphene.Mutation):
             return NeuroCognateAnalysis.neuro_cognate_statistics(
                 perspective_info_list,
                 source_perspective_id,
-                match_translations,
                 input_pairs,
                 locale_id,
                 user.id,

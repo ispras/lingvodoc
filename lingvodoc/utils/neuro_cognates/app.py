@@ -9,7 +9,7 @@ from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus, initialize_cache
 
 
-# Определение архитектуры модели -------------------------------------------------
+# Choose model architecture
 class TransformerEncoderBlock(nn.Module):
     def __init__(self, embed_dim, num_heads, ff_dim, dropout=0.1):
         super().__init__()
@@ -100,7 +100,7 @@ def process_batch(args):
             (compare_words, compare_trans, compare_ids, _), links = (
                 self.split_items(compare_list, input_links))
 
-            # Создание батча
+            # Batch creation
             batch = {
                 'word1': [base_word] * len(compare_words),
                 'trans1': [base_tran] * len(compare_words),
@@ -108,13 +108,13 @@ def process_batch(args):
                 'trans2': [self._process_text(t) for t in compare_trans]
             }
 
-            # Преобразование в тензоры
+            # Convert to tensors
             word1 = torch.stack(batch['word1'])
             trans1 = torch.stack(batch['trans1'])
             word2 = torch.stack(batch['word2'])
             trans2 = torch.stack(batch['trans2'])
 
-            # Предсказание
+            # Prediction
             outputs = self.model(word1, trans1, word2, trans2)
             probs = torch.sigmoid(outputs).squeeze()
 
@@ -135,8 +135,7 @@ def process_batch(args):
             None,
             similarities,
             []
-        )] if similarities else [],
-        len(similarities))
+        )] if similarities else [], links)
 
 
 class NeuroCognates:
@@ -148,7 +147,6 @@ class NeuroCognates:
                  storage,
                  host_url,
                  cache_kwargs,
-                 distilled=False,
                  truth_threshold=0.97,
                  only_orphans_flag=True):
 
@@ -165,7 +163,7 @@ class NeuroCognates:
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
 
-        # Загрузка модели
+        # Load model
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         checkpoint = torch.load(os.path.join(script_dir, 'best_model.pth'), map_location=self.device)
 
@@ -222,7 +220,7 @@ class NeuroCognates:
             current_stage += 1
             finished = (current_stage == input_len)
 
-            # Обновление статуса задачи
+            # Task status
             passed = now() - start_time
             left = passed / current_stage * input_len - passed
 
@@ -233,7 +231,7 @@ class NeuroCognates:
             progress = 100 if finished else int(current_stage / input_len * 100)
             status = "Finished" if finished else f"~ {days}d:{hours}h:{minutes}m left ~"
 
-            # Сохранение результатов
+            # Save results
             if current_stage % 10 == 0 or finished:
                 result_dict = dict(
                     suggestion_list=results,
