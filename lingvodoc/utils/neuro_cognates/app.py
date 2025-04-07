@@ -52,6 +52,7 @@ class DualPathSiamese(nn.Module):
 
         self.alpha = nn.Parameter(torch.tensor(0.7))
         self.beta = nn.Parameter(torch.tensor(0.3))
+        self.match_coef = nn.Parameter(torch.tensor(0.5))
 
         self.classifier = nn.Sequential(
             nn.Linear(4 * 128, 256),
@@ -60,6 +61,32 @@ class DualPathSiamese(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(256, 1)
         )
+
+        self.init_weights()
+
+    def _get_exact_match(self, trans1, trans2):
+        """Сравнение первых 4 символов в переводах"""
+        t1_first4 = trans1[:, :4]  # [B, 4]
+        t2_first4 = trans2[:, :4]  # [B, 4]
+
+        # Сравниваем символы и учитываем паддинг
+        exact_match = (t1_first4 == t2_first4).all(dim=1).float().unsqueeze(1)
+        return exact_match
+
+    def init_weights(self):
+        for name, module in self.named_modules():
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0)
+            elif isinstance(module, nn.LSTM):
+                for name, param in module.named_parameters():
+                    if 'weight_ih' in name:
+                        nn.init.xavier_uniform_(param)
+                    elif 'weight_hh' in name:
+                        nn.init.orthogonal_(param)
+                    elif 'bias' in name:
+                        nn.init.constant_(param, 0)
 
     def _encode(self, x, encoder):
         emb = self.embedding(x) + self.pos_embed[:, :x.size(1), :]
@@ -82,50 +109,54 @@ class DualPathSiamese(nn.Module):
         diff = torch.abs(pair1 - pair2)
         mul = pair1 * pair2
         combined = torch.cat([pair1, pair2, diff, mul], dim=1)
-        return self.classifier(combined)
 
+        exact_match = self._get_exact_match(trans1, trans2)
+
+        base_pred = self.classifier(combined)
+        return base_pred + self.match_coef * exact_match
+
+    def freeze_layers(self):
+        # Заморозка первых слоев
+        for name, param in self.named_parameters():
+            if any([s in name for s in ['embedding', 'pos_embed', 'word_encoder.0', 'trans_encoder.0']]):
+                param.requires_grad = False
 
 def process_batch(args):
     self, input_word, input_tran, input_id, input_links = args
     similarities = []
 
-    with torch.no_grad():
-        base_word = self._process_text(input_word)
-        base_tran = self._process_text(input_tran)
+    base_word_tensor = self._process_text(input_word)
+    base_tran_tensor = self._process_text(input_tran)
 
-        for i, compare_list in enumerate(self.compare_lists):
-            if not compare_list:
-                continue
+    for i, compare_list in enumerate(self.compare_lists):
+        if not compare_list:
+            continue
 
-            (compare_words, compare_trans, compare_ids, _), links = (
-                self.split_items(compare_list, input_links))
+        (compare_words, compare_trans, compare_ids, _), links = (
+            self.split_items(compare_list, input_links))
 
-            # Batch creation
-            batch = {
-                'word1': [base_word] * len(compare_words),
-                'trans1': [base_tran] * len(compare_words),
-                'word2': [self._process_text(w) for w in compare_words],
-                'trans2': [self._process_text(t) for t in compare_trans]
-            }
+        # Batch creation
+        batch_size = len(compare_words)
+        batch = {
+            'word1': base_word_tensor.repeat(batch_size, 1),
+            'trans1': base_tran_tensor.repeat(batch_size, 1),
+            'word2': torch.stack([self._process_text(w) for w in compare_words]),
+            'trans2': torch.stack([self._process_text(t) for t in compare_trans])
+        }
 
-            # Convert to tensors
-            word1 = torch.stack(batch['word1'])
-            trans1 = torch.stack(batch['trans1'])
-            word2 = torch.stack(batch['word2'])
-            trans2 = torch.stack(batch['trans2'])
-
-            # Prediction
-            outputs = self.model(word1, trans1, word2, trans2)
+        # Prediction
+        with torch.no_grad():
+            outputs = self.model(**batch)
             probs = torch.sigmoid(outputs).squeeze()
 
-            for idx, prob in enumerate(probs):
-                if prob.item() > self.truth_threshold:
-                    similarities.append((
-                        i,
-                        [compare_words[idx], compare_trans[idx]],
-                        compare_ids[idx],
-                        f"{prob.item():.4f}"
-                    ))
+        for idx, prob in enumerate(probs):
+            if prob.item() > self.truth_threshold:
+                similarities.append((
+                    i,
+                    [compare_words[idx], compare_trans[idx]],
+                    compare_ids[idx],
+                    f"{prob.item():.4f}"
+                ))
 
     return (
         [(
@@ -166,21 +197,29 @@ class NeuroCognates:
         # Load model
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         checkpoint = torch.load(os.path.join(script_dir, 'best_model.pth'), map_location=self.device)
+        config = checkpoint.get('config', {})
 
         self.model = DualPathSiamese(
             vocab_size=len(checkpoint['char_to_index']),
-            embed_dim=checkpoint['config']['embed_dim'],
-            max_len=checkpoint['config']['max_len']
+            embed_dim=config.get('embed_dim', 128),
+            max_len=config.get('max_len', 43)
         ).to(self.device)
 
         self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.char_to_index = checkpoint['char_to_index']
-        self.max_len = checkpoint['config']['max_len']
+        self.model.char_to_index = checkpoint['char_to_index']
+
+        if 'alpha' in config:
+            self.model.alpha.data.fill_(config['alpha'])
+        if 'beta' in config:
+            self.model.beta.data.fill_(config['beta'])
+        if 'match_coef' in config:
+            self.model.match_coef.data.fill_(config['match_coef'])
+
         self.model.eval()
 
     def _process_text(self, text):
-        indices = [self.char_to_index.get(c, 1) for c in text.lower()[:self.max_len]]
-        indices += [0] * (self.max_len - len(indices))
+        indices = [self.model.char_to_index.get(c, 1) for c in text.lower()[:self.model.max_len]]
+        indices += [0] * (self.model.max_len - len(indices))
         return torch.tensor(indices, dtype=torch.long, device=self.device)
 
     @staticmethod
