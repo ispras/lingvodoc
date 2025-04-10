@@ -5706,7 +5706,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         if not input_len or not compare_len:
             triumph = False
             message = "No input words or words to compare is received"
-        elif compare_len > 10 ** 5:
+        elif compare_len > 10 ** 4:
             triumph = False
             message = f"Too many words to compare: {compare_len}"
         else:

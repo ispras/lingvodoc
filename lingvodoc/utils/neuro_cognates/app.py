@@ -147,7 +147,8 @@ def process_batch(args):
         # Prediction
         with torch.no_grad():
             outputs = self.model(**batch)
-            probs = torch.sigmoid(outputs).squeeze()
+            #probs = torch.sigmoid(outputs).squeeze()
+            probs = torch.sigmoid(outputs).cpu().numpy().flatten()
 
         for idx, prob in enumerate(probs):
             if prob.item() > self.truth_threshold:
@@ -158,13 +159,15 @@ def process_batch(args):
                     f"{prob.item():.4f}"
                 ))
 
+    similarities.sort(key=lambda s: s[3], reverse=True)
+
     return (
         [(
             self.input_index,
             f"{input_word} '{input_tran}'",
             input_id,
             None,
-            similarities,
+            similarities[:5],
             []
         )] if similarities else [], links)
 
@@ -291,23 +294,50 @@ class NeuroCognates:
 
             task.set(current_stage, progress, status, result_link)
 
-        try:
-            with Pool(processes=os.cpu_count() // 2) as pool:
-                (input_words, input_trans, input_lex_ids, input_linked_groups), _ = self.split_items(word_pairs)
-                args_list = zip([self] * len(input_words), input_words, input_trans, input_lex_ids, input_linked_groups)
+        (input_words, input_trans, input_lex_ids, input_linked_groups), _ = self.split_items(word_pairs)
+        args_list = zip([self] * input_len, input_words, input_trans, input_lex_ids, input_linked_groups)
 
-                for result in pool.imap_unordered(process_batch, args_list):
-                    add_result(result)
+        def f(proc):
+            task.set(None, 0, f"Using {proc} processes...")
+            pool = Pool(proc)
+            jobs = pool.imap_unordered(process_batch, args_list)
+            pool.close()
+
+            try:
+                for _ in range(input_len):
+
                     if os.path.exists(stamp_file):
-                        pool.terminate()
+                        os.remove(stamp_file)
                         raise InterruptedError("Task stopped manually")
 
-        except InterruptedError:
-            task.set(None, -1, "Stopped manually", result_link)
+                    else:
+                        result = jobs.next(timeout=600)
+                        add_result(result)
 
-        finally:
-            if os.path.exists(stamp_file):
-                os.remove(stamp_file)
+            except RuntimeError:
+                msg = "No enough memory for the task"
+
+                if proc > 1:
+                    task.set(None, -1, msg)
+                    pool.terminate()
+                    f(proc - 1)
+                    return
+
+                else:
+                    raise InterruptedError(msg)
+
+            except InterruptedError as e:
+                task.set(None, -1, str(e), result_link)
+                pool.terminate()
+                return
+
+        try:
+            set_start_method('spawn')
+            f(os.cpu_count() // 2)
+            print("Completed pool")
+
+        except Exception as e:
+            print(e)
 
         return results
 
