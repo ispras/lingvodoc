@@ -7,6 +7,8 @@ import pickle
 from time import time as now
 from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus, initialize_cache
+import tritonclient.grpc as grpcclient
+import numpy as np
 
 
 # Choose model architecture
@@ -52,7 +54,7 @@ class DualPathSiamese(nn.Module):
 
         self.alpha = nn.Parameter(torch.tensor(0.7))
         self.beta = nn.Parameter(torch.tensor(0.3))
-        self.match_coef = nn.Parameter(torch.tensor(0.5))
+        self.match_coef = nn.Parameter(torch.tensor(0.8), requires_grad=False)
 
         self.classifier = nn.Sequential(
             nn.Linear(4 * 128, 256),
@@ -128,6 +130,8 @@ def process_batch(args):
     base_word_tensor = self._process_text(input_word)
     base_tran_tensor = self._process_text(input_tran)
 
+    triton_client = grpcclient.InferenceServerClient(url="10.100.194.95:8001")
+
     for i, compare_list in enumerate(self.compare_lists):
         if not compare_list:
             continue
@@ -144,11 +148,17 @@ def process_batch(args):
             'trans2': torch.stack([self._process_text(t) for t in compare_trans])
         }
 
+        inputs = []
+
+        for field, tensor in batch.items():
+            inputs.append(grpcclient.InferInput(field, [batch_size, self.model.max_len], "INT32"))
+            inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
+
         # Prediction
         with torch.no_grad():
-            outputs = self.model(**batch)
             #probs = torch.sigmoid(outputs).squeeze()
-            probs = torch.sigmoid(outputs).cpu().numpy().flatten()
+            outputs = triton_client.infer("neuro_cognates", inputs)
+            probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
 
         for idx, prob in enumerate(probs):
             if prob.item() > self.truth_threshold:
@@ -198,15 +208,15 @@ class NeuroCognates:
         script_dir = os.path.dirname(script_path)
 
         # Load model
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        checkpoint = torch.load(os.path.join(script_dir, 'best_model.pth'), map_location=self.device)
+        #self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        checkpoint = torch.load(os.path.join(script_dir, 'best_model.pth'))  # map_location=self.device)
         config = checkpoint.get('config', {})
 
         self.model = DualPathSiamese(
             vocab_size=len(checkpoint['char_to_index']),
             embed_dim=config.get('embed_dim', 128),
             max_len=config.get('max_len', 43)
-        ).to(self.device)
+        ) #.to(self.device)
 
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.char_to_index = checkpoint['char_to_index']
@@ -218,12 +228,14 @@ class NeuroCognates:
         if 'match_coef' in config:
             self.model.match_coef.data.fill_(config['match_coef'])
 
+        #self.triton_client = grpcclient.InferenceServerClient(url="10.100.194.95:8001")
+
         self.model.eval()
 
     def _process_text(self, text):
         indices = [self.model.char_to_index.get(c, 1) for c in text.lower()[:self.model.max_len]]
         indices += [0] * (self.model.max_len - len(indices))
-        return torch.tensor(indices, dtype=torch.long, device=self.device)
+        return torch.tensor(indices, dtype=torch.long)  # device=self.device)
 
     @staticmethod
     def split_items(items, input_links=None):
@@ -244,6 +256,7 @@ class NeuroCognates:
         results = []
         group_count = 0
         current_stage = 0
+        retry = 0
         result_link = ""
         input_len = len(word_pairs)
         compare_len = sum(map(len, self.compare_lists))
@@ -252,7 +265,7 @@ class NeuroCognates:
         stamp_file = os.path.join(self.storage['path'], 'lingvodoc_stamps', str(task.id))
 
         def add_result(res):
-            nonlocal current_stage, result_link, group_count
+            nonlocal current_stage, result_link, group_count, retry
             if res is None:
                 return
 
@@ -272,6 +285,8 @@ class NeuroCognates:
 
             progress = 100 if finished else int(current_stage / input_len * 100)
             status = "Finished" if finished else f"~ {days}d:{hours}h:{minutes}m left ~"
+            if retry:
+                status += f" ({retry} failed)"
 
             # Save results
             if current_stage % 10 == 0 or finished:
@@ -298,43 +313,51 @@ class NeuroCognates:
         args_list = zip([self] * input_len, input_words, input_trans, input_lex_ids, input_linked_groups)
 
         def f(proc):
-            task.set(None, 0, f"Using {proc} processes...")
+            nonlocal retry
+            task.set(None, 0, f"Using {proc} process(es)...")
             pool = Pool(proc)
             jobs = pool.imap_unordered(process_batch, args_list)
             pool.close()
 
-            try:
-                for _ in range(input_len):
-
+            for _ in range(input_len):
+                try:
                     if os.path.exists(stamp_file):
                         os.remove(stamp_file)
                         raise InterruptedError("Task stopped manually")
 
                     else:
-                        result = jobs.next(timeout=600)
+                        result = jobs.next(timeout=60)
                         add_result(result)
 
-            except RuntimeError:
-                msg = "No enough memory for the task"
+                except RuntimeError:
+                    msg = "No enough memory for the task"
 
-                if proc > 1:
-                    task.set(None, -1, msg)
+                    if proc > 1:
+                        task.set(None, -1, msg)
+                        pool.terminate()
+                        f(proc - 1)
+                        return
+
+                    else:
+                        raise InterruptedError(msg)
+
+                except InterruptedError as e:
+                    task.set(None, -1, str(e), result_link)
                     pool.terminate()
-                    f(proc - 1)
                     return
 
-                else:
-                    raise InterruptedError(msg)
-
-            except InterruptedError as e:
-                task.set(None, -1, str(e), result_link)
-                pool.terminate()
-                return
+                except Exception:
+                    if retry < 5:
+                        retry += 1
+                        continue
+                    else:
+                        task.set(None, -1, "Server is busy now. Try again later.", result_link)
+                        pool.terminate()
+                        return
 
         try:
             set_start_method('spawn')
-            f(os.cpu_count() // 2)
-            print("Completed pool")
+            f(1)
 
         except Exception as e:
             print(e)
@@ -342,7 +365,7 @@ class NeuroCognates:
         return results
 
     def index(self, word_pairs, task):
-        return NeuroCognates.predict_cognates.delay(
+        return self.predict_cognates.delay(
             self,
             word_pairs,
             task)
