@@ -1,16 +1,19 @@
 import torch
-import torch.nn as nn
+#import torch.nn as nn
 from torch.multiprocessing import Pool, set_start_method
 import os
 import gzip
 import pickle
-from time import time as now
+from time import sleep, time as now
 from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus, initialize_cache
 import tritonclient.grpc as grpcclient
 import numpy as np
+import requests
+import re
 
-
+# Model is hosted on remote server now. This code is used there.
+'''
 # Choose model architecture
 class TransformerEncoderBlock(nn.Module):
     def __init__(self, embed_dim, num_heads, ff_dim, dropout=0.1):
@@ -122,6 +125,7 @@ class DualPathSiamese(nn.Module):
         for name, param in self.named_parameters():
             if any([s in name for s in ['embedding', 'pos_embed', 'word_encoder.0', 'trans_encoder.0']]):
                 param.requires_grad = False
+'''
 
 def process_batch(args):
     self, input_word, input_tran, input_id, input_links = args
@@ -151,13 +155,13 @@ def process_batch(args):
         inputs = []
 
         for field, tensor in batch.items():
-            inputs.append(grpcclient.InferInput(field, [batch_size, self.model.max_len], "INT32"))
+            inputs.append(grpcclient.InferInput(field, [batch_size, self.max_len], "INT32"))
             inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
 
         # Prediction
         with torch.no_grad():
-            #probs = torch.sigmoid(outputs).squeeze()
             outputs = triton_client.infer("neuro_cognates", inputs)
+            #probs = torch.sigmoid(outputs).squeeze()
             probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
 
         for idx, prob in enumerate(probs):
@@ -208,18 +212,22 @@ class NeuroCognates:
         script_dir = os.path.dirname(script_path)
 
         # Load model
-        #self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         checkpoint = torch.load(os.path.join(script_dir, 'best_model.pth'))  # map_location=self.device)
         config = checkpoint.get('config', {})
+
+        self.max_len = config.get('max_len', 43)
+        self.char_to_index = checkpoint['char_to_index']
+
+        '''
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = DualPathSiamese(
             vocab_size=len(checkpoint['char_to_index']),
             embed_dim=config.get('embed_dim', 128),
             max_len=config.get('max_len', 43)
-        ) #.to(self.device)
+        ).to(self.device)
 
         self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.model.char_to_index = checkpoint['char_to_index']
 
         if 'alpha' in config:
             self.model.alpha.data.fill_(config['alpha'])
@@ -228,13 +236,12 @@ class NeuroCognates:
         if 'match_coef' in config:
             self.model.match_coef.data.fill_(config['match_coef'])
 
-        #self.triton_client = grpcclient.InferenceServerClient(url="10.100.194.95:8001")
-
         self.model.eval()
+        '''
 
     def _process_text(self, text):
-        indices = [self.model.char_to_index.get(c, 1) for c in text.lower()[:self.model.max_len]]
-        indices += [0] * (self.model.max_len - len(indices))
+        indices = [self.char_to_index.get(c, 1) for c in text.lower()[:self.max_len]]
+        indices += [0] * (self.max_len - len(indices))
         return torch.tensor(indices, dtype=torch.long)  # device=self.device)
 
     @staticmethod
@@ -256,7 +263,6 @@ class NeuroCognates:
         results = []
         group_count = 0
         current_stage = 0
-        retry = 0
         result_link = ""
         input_len = len(word_pairs)
         compare_len = sum(map(len, self.compare_lists))
@@ -265,7 +271,7 @@ class NeuroCognates:
         stamp_file = os.path.join(self.storage['path'], 'lingvodoc_stamps', str(task.id))
 
         def add_result(res):
-            nonlocal current_stage, result_link, group_count, retry
+            nonlocal current_stage, result_link, group_count
             if res is None:
                 return
 
@@ -285,8 +291,6 @@ class NeuroCognates:
 
             progress = 100 if finished else int(current_stage / input_len * 100)
             status = "Finished" if finished else f"~ {days}d:{hours}h:{minutes}m left ~"
-            if retry:
-                status += f" ({retry} failed)"
 
             # Save results
             if current_stage % 10 == 0 or finished:
@@ -313,54 +317,81 @@ class NeuroCognates:
         args_list = zip([self] * input_len, input_words, input_trans, input_lex_ids, input_linked_groups)
 
         def f(proc):
-            nonlocal retry
+            nonlocal start_time
+            pool = None
             task.set(None, 0, f"Using {proc} process(es)...")
-            pool = Pool(proc)
-            jobs = pool.imap_unordered(process_batch, args_list)
-            pool.close()
 
-            for _ in range(input_len):
-                try:
+            try:
+                memory_free_mibs = 25000
+
+                # Check metrics 20 times every second pause between
+                for i in range(20):
+                    memory_values = []
+
+                    if i:
+                        sleep(1)
+
+                    metrics_req = requests.get("http://10.100.194.95:8002/metrics")
+
+                    if metrics_req.status_code != 200:
+                        raise ConnectionRefusedError("Server is not available now. Please ask administrator.")
+
+                    for value in 'total', 'used':
+                        memory_values.append(
+                            int(re.search(f'\nnv_gpu_memory_{value}_bytes[^\s]* ([\d]*)', metrics_req.text).group(1)))
+
+                    memory_free_mibs = min((memory_values[0] - memory_values[1]) / (2**20), memory_free_mibs)
+
+                memory_free_words = int(memory_free_mibs * 1.55)  # coef 1.55 is selected empirically
+
+                if compare_len > memory_free_words:
+                    raise MemoryError("No enough memory for this task now. Try again later.")
+
+                pool = Pool(proc)
+                jobs = pool.imap_unordered(process_batch, args_list)
+                start_time = now()  # correcting start time after metrics checking
+                pool.close()
+
+                for _ in range(input_len):
                     if os.path.exists(stamp_file):
                         os.remove(stamp_file)
                         raise InterruptedError("Task stopped manually")
 
                     else:
-                        result = jobs.next(timeout=60)
+                        result = jobs.next(timeout=120)
                         add_result(result)
 
-                except RuntimeError:
-                    msg = "No enough memory for the task"
+            except RuntimeError:
+                msg = "No enough memory for the task"
 
-                    if proc > 1:
-                        task.set(None, -1, msg)
-                        pool.terminate()
-                        f(proc - 1)
-                        return
-
-                    else:
-                        raise InterruptedError(msg)
-
-                except InterruptedError as e:
-                    task.set(None, -1, str(e), result_link)
+                if proc > 1:
+                    task.set(None, -1, msg)
                     pool.terminate()
+                    f(proc - 1)
                     return
 
-                except Exception:
-                    if retry < 5:
-                        retry += 1
-                        continue
-                    else:
-                        task.set(None, -1, "Server is busy now. Try again later.", result_link)
-                        pool.terminate()
-                        return
+                else:
+                    raise MemoryError(msg)
 
-        try:
-            set_start_method('spawn')
-            f(1)
+            except (InterruptedError, ConnectionRefusedError, MemoryError) as e:
+                task.set(None, -1, str(e), result_link)
 
-        except Exception as e:
-            print(e)
+                if pool is not None:
+                    pool.terminate()
+
+                return
+
+            except Exception as e:
+                print(e)
+                task.set(None, -1, "Something went wrong, probably server is busy. Try again later.", result_link)
+
+                if pool is not None:
+                    pool.terminate()
+
+                return
+
+        set_start_method('spawn')
+        f(1)
 
         return results
 
