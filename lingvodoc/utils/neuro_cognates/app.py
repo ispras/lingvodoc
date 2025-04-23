@@ -134,44 +134,44 @@ def process_batch(args):
     base_word_tensor = self._process_text(input_word)
     base_tran_tensor = self._process_text(input_tran)
 
-    triton_client = grpcclient.InferenceServerClient(url="10.100.194.95:8001")
+    with grpcclient.InferenceServerClient(url="10.100.194.95:8001") as triton_client:
 
-    for i, compare_list in enumerate(self.compare_lists):
-        if not compare_list:
-            continue
+        for i, compare_list in enumerate(self.compare_lists):
+            if not compare_list:
+                continue
 
-        (compare_words, compare_trans, compare_ids, _), links = (
-            self.split_items(compare_list, input_links))
+            (compare_words, compare_trans, compare_ids, _), links = (
+                self.split_items(compare_list, input_links))
 
-        # Batch creation
-        batch_size = len(compare_words)
-        batch = {
-            'word1': base_word_tensor.repeat(batch_size, 1),
-            'trans1': base_tran_tensor.repeat(batch_size, 1),
-            'word2': torch.stack([self._process_text(w) for w in compare_words]),
-            'trans2': torch.stack([self._process_text(t) for t in compare_trans])
-        }
+            # Batch creation
+            batch_size = len(compare_words)
+            batch = {
+                'word1': base_word_tensor.repeat(batch_size, 1),
+                'trans1': base_tran_tensor.repeat(batch_size, 1),
+                'word2': torch.stack([self._process_text(w) for w in compare_words]),
+                'trans2': torch.stack([self._process_text(t) for t in compare_trans])
+            }
 
-        inputs = []
+            inputs = []
 
-        for field, tensor in batch.items():
-            inputs.append(grpcclient.InferInput(field, [batch_size, self.max_len], "INT32"))
-            inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
+            for field, tensor in batch.items():
+                inputs.append(grpcclient.InferInput(field, [batch_size, self.max_len], "INT32"))
+                inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
 
-        # Prediction
-        with torch.no_grad():
-            outputs = triton_client.infer("neuro_cognates", inputs)
-            #probs = torch.sigmoid(outputs).squeeze()
-            probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
+            # Prediction
+            with torch.no_grad():
+                outputs = triton_client.infer("neuro_cognates", inputs)
+                #probs = torch.sigmoid(outputs).squeeze()
+                probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
 
-        for idx, prob in enumerate(probs):
-            if prob.item() > self.truth_threshold:
-                similarities.append((
-                    i,
-                    [compare_words[idx], compare_trans[idx]],
-                    compare_ids[idx],
-                    f"{prob.item():.4f}"
-                ))
+            for idx, prob in enumerate(probs):
+                if prob.item() > self.truth_threshold:
+                    similarities.append((
+                        i,
+                        [compare_words[idx], compare_trans[idx]],
+                        compare_ids[idx],
+                        f"{prob.item():.4f}"
+                    ))
 
     similarities.sort(key=lambda s: s[3], reverse=True)
 
@@ -324,8 +324,8 @@ class NeuroCognates:
             try:
                 memory_free_mibs = 25000
 
-                # Check metrics 20 times every second pause between
-                for i in range(20):
+                # Check metrics 15 times every second
+                for i in range(15):
                     memory_values = []
 
                     if i:
