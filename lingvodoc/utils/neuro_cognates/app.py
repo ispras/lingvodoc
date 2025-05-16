@@ -134,7 +134,7 @@ def process_batch(args):
     base_word_tensor = self._process_text(input_word)
     base_tran_tensor = self._process_text(input_tran)
 
-    with grpcclient.InferenceServerClient(url="10.100.194.95:8001") as triton_client:
+    with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
 
         for i, compare_list in enumerate(self.compare_lists):
             if not compare_list:
@@ -242,7 +242,7 @@ class NeuroCognates:
     def _process_text(self, text):
         indices = [self.char_to_index.get(c, 1) for c in text.lower()[:self.max_len]]
         indices += [0] * (self.max_len - len(indices))
-        return torch.tensor(indices, dtype=torch.long)  # device=self.device)
+        return torch.tensor(indices, dtype=torch.int32)  # device=self.device)
 
     @staticmethod
     def split_items(items, input_links=None):
@@ -331,7 +331,7 @@ class NeuroCognates:
                     if i:
                         sleep(1)
 
-                    metrics_req = requests.get("http://10.100.194.95:8002/metrics")
+                    metrics_req = requests.get("http://10.100.192.136:8002/metrics")
 
                     if metrics_req.status_code != 200:
                         raise ConnectionRefusedError("Server is not available now. Please ask administrator.")
