@@ -521,7 +521,7 @@ class Query(graphene.ObjectType):
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     optimized_translation_search = graphene.List(graphene.String, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
-    user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
+    user_blobs = graphene.List(UserBlobs, data_type=graphene.List(graphene.String), is_global=graphene.Boolean())
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(BaseGroup)
@@ -3982,15 +3982,20 @@ class Query(graphene.ObjectType):
         if not data_type and is_global:
             raise ResponseError("Error: cannot list globally without data_type")
         if data_type and is_global:
-            if data_type in allowed_global_types:
-                user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=data_type).all()
-            else:
-                raise ResponseError(message="Error: you can not list that data type globally.")
+            for dt in data_type:
+                if dt in allowed_global_types:
+                    user_blobs.extend(
+                        DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=dt).all())
+                else:
+                    raise ResponseError(message="Error: you can not list that data type globally.")
         elif not client:
             raise ResponseError('not authenticated')
         if data_type:
             if not is_global:
-                user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id, data_type=data_type).all()
+                for dt in data_type:
+                    user_blobs.extend(
+                        DBSession.query(dbUserBlobs).filter_by(
+                        marked_for_deletion=False, user_id=client.user_id, data_type=dt).all())
         else:
             user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id).all()
         user_blobs_list = list()
