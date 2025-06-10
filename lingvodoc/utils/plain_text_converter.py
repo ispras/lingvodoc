@@ -207,7 +207,7 @@ def txt_to_parallel_columns(columns_inf, order_field_id):
     max_count = 0
     for column_inf in columns_inf:
         blob_id = tuple(column_inf.get("blob_id"))
-        field_id = tuple(column_inf.get("field_id"))
+        field_id = tuple(column_inf.get("field_ids")[0])
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
 
         columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_id)
@@ -257,7 +257,7 @@ def create_entity(
 
 class ColumnInf(graphene.InputObjectType):
     blob_id = LingvodocID(required=True)
-    field_id = LingvodocID(required=True)
+    field_ids = graphene.List(LingvodocID, required=True)
     dedash = graphene.Boolean()
 
 
