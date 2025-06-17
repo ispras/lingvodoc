@@ -4,6 +4,7 @@ import logging
 import traceback
 import re
 import urllib
+import json
 
 import graphene
 from sqlalchemy import create_engine
@@ -207,16 +208,66 @@ def txt_to_parallel_columns(columns_inf, order_field_id):
     max_count = 0
     for column_inf in columns_inf:
         blob_id = tuple(column_inf.get("blob_id"))
-        field_id = tuple(column_inf.get("field_id"))
+        field_ids = list(map(tuple, column_inf.get("field_ids")))
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
 
-        columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_id)
+        columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_ids[0])
         if count > max_count:
             max_count = count
 
     columns_dict[order_field_id] = get_lexgraph_list(max_count)
 
-    return join_sentences(columns_dict, order_field_id)
+    yield join_sentences(columns_dict, order_field_id)
+
+
+def json_to_parallel_columns(columns_inf, order_field_id):
+
+    for column_inf in columns_inf:
+
+        blob_id = tuple(column_inf.get("blob_id"))
+        field_ids = list(map(tuple, column_inf.get("field_ids")))
+        blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
+        path = blob.real_storage_path
+        url = blob.content
+
+        try:
+            with open(path, 'rb') as json_file:
+                json_data = json.load(json_file)
+
+        except FileNotFoundError:
+            with urllib.request.urlopen(urllib.parse.quote(url, safe='/:')) as json_file:
+                json_data = json.load(json_file)
+
+        langs = json_data.get('head', {}).get('langs', [])
+        body = json_data.get('body')
+
+        if len(langs) < 2 or len(langs) != len(field_ids) or not body:
+            raise ValueError("Wrong structure of input json.")
+
+        result = defaultdict(list)
+
+        # Init field to be the first one in result table
+        result[order_field_id] = []
+
+        max_count = 0
+        for lang, column in zip(langs, field_ids):
+            if column in result:
+                raise ValueError("Different columns in the table have identical names.")
+
+            count = 0
+            for note in body:
+                if note.get('t') != 'text' or not (content := note.get('c')):
+                    continue
+
+                result[column].append(" ".join(content.get(lang, [])))
+                count += 1
+
+            if count > max_count:
+                max_count = count
+
+        result[order_field_id] = get_lexgraph_list(max_count)
+
+        yield result, max_count
 
 
 def create_entity(
@@ -257,7 +308,7 @@ def create_entity(
 
 class ColumnInf(graphene.InputObjectType):
     blob_id = LingvodocID(required=True)
-    field_id = LingvodocID(required=True)
+    field_ids = graphene.List(LingvodocID, required=True)
     dedash = graphene.Boolean()
 
 
@@ -271,26 +322,30 @@ class GqlParallelCorpora(graphene.Mutation):
     triumph = graphene.Boolean()
 
     class Arguments:
-        corpus_inf = CorpusInf(required=True)
+        corpora_inf = graphene.List(CorpusInf, required=True)
         columns_inf = graphene.List(ColumnInf, required=True)
+        mode = graphene.String(required=True)
 
     def mutate(root, info, **args):
-        corpus_inf = args.get("corpus_inf")
+        corpora_inf = args.get("corpora_inf")
         columns_inf = args.get("columns_inf")
+        mode = args.get("mode")
         cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
         sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
 
-        default_name = "corpus #1"
-        translation_atoms = corpus_inf.get("translation_atoms")
-        task_name = translation_atoms[0].get('content', default_name) if translation_atoms else default_name
+        # Naming task as input blobs
+        translation_gists = list(map(lambda corp_inf: corp_inf.get("translation_atoms"), corpora_inf))
+        task_name = ', '.join(map(lambda atoms, index: atoms[0].get('content', f'corpus #{index}'),
+                                  translation_gists, range(len(translation_gists))))
 
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
-        task = TaskStatus(user_id, "Txt corpora conversion", task_name, 5)
+        task = TaskStatus(user_id, f"{mode} corpora conversion", task_name, 5)
 
         convert_start.delay(
             [info.context["client_id"], None],
-            corpus_inf,
+            corpora_inf,
             columns_inf,
+            mode,
             cache_kwargs,
             sqlalchemy_url,
             task.key)
@@ -325,7 +380,7 @@ def get_translation_gist_id(translation_atoms, client_id, gist_type):
 
 
 @celery.task
-def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
+def convert_start(ids, corpora_inf, columns_inf, mode, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
@@ -359,78 +414,87 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             # Getting txt data, checking that the txt file is Lingvodoc-valid.
             order_field_id = get_field_tracker(
                 client_id, data_type='Ordering', DBSession=DBSession)(searchstring='Order')
-            columns_dict, max_count = txt_to_parallel_columns(columns_inf, order_field_id)
 
-            task_status.set(3, 50, "creating dictionary and perspective...")
+            if mode == 'txt':
+                get_parallel_columns = txt_to_parallel_columns(columns_inf, order_field_id)
+            elif mode == 'json':
+                get_parallel_columns = json_to_parallel_columns(columns_inf, order_field_id)
+            else:
+                raise NotImplementedError
 
-            parent_id = corpus_inf.get("parent_id")
-            dbdictionary_obj = (
-                create_dbdictionary(
-                    id=obj_id.id_pair(client_id),
-                    parent_id=parent_id,
-                    translation_gist_id=
-                        get_translation_gist_id(corpus_inf.get("translation_atoms"), old_client_id, "Dictionary"),
-                    add_group=True,
-                    category=2,
-                    additional_metadata={
-                        'license': corpus_inf.get('license') or 'proprietary'
-                    }))
+            task_status.set(3, 50, "creating dictionaries and perspectives...")
 
-            dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
-            translation_atoms = [
-                {"locale_id": ENGLISH_LOCALE, "content": "Parallel corpora"},
-                {"locale_id": RUSSIAN_LOCALE, "content": "Параллельные корпуса"}]
+            for corpus_inf in corpora_inf:
 
-            new_persp = (
-                create_perspective(
-                    id=obj_id.id_pair(client_id),
-                    parent_id=dictionary_id,  # TODO: use all object attrs
-                    translation_gist_id=
-                        get_translation_gist_id(translation_atoms, old_client_id, "Perspective"),
-                    add_group=True,
-                    additional_metadata={"parallel": True}
-                ))
+                parent_id = corpus_inf.get("parent_id")
+                dbdictionary_obj = (
+                    create_dbdictionary(
+                        id=obj_id.id_pair(client_id),
+                        parent_id=parent_id,
+                        translation_gist_id=
+                            get_translation_gist_id(corpus_inf.get("translation_atoms"), old_client_id, "Dictionary"),
+                        add_group=True,
+                        category=2,
+                        additional_metadata={
+                            'license': corpus_inf.get('license') or 'proprietary'
+                        }))
 
-            perspective_id = [new_persp.client_id, new_persp.object_id]
+                dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
+                translation_atoms = [
+                    {"locale_id": ENGLISH_LOCALE, "content": "Parallel corpora"},
+                    {"locale_id": RUSSIAN_LOCALE, "content": "Параллельные корпуса"}]
 
-            for position, field_id in enumerate(columns_dict, 1):
-                create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                                 parent_id=perspective_id,
-                                                 field_id=field_id,
-                                                 upper_level=None,
-                                                 link_id=None,
-                                                 position=position)
+                new_persp = (
+                    create_perspective(
+                        id=obj_id.id_pair(client_id),
+                        parent_id=dictionary_id,  # TODO: use all object attrs
+                        translation_gist_id=
+                            get_translation_gist_id(translation_atoms, old_client_id, "Perspective"),
+                        add_group=True,
+                        additional_metadata={"parallel": True}
+                    ))
 
-            task_status.set(4, 70, "uploading...")
+                perspective_id = [new_persp.client_id, new_persp.object_id]
+                columns_dict, max_count = next(get_parallel_columns)
 
-            for i in range(max_count):
-                le_client_id, le_object_id = client_id, obj_id.next
-                lexentr = dbLexicalEntry(object_id=le_object_id,
-                                         client_id=le_client_id,
-                                         parent_client_id=perspective_id[0],
-                                         parent_object_id=perspective_id[1])
-                DBSession.add(lexentr)
-                lexentr_tuple = le_client_id, le_object_id
+                for position, field_id in enumerate(columns_dict, 1):
+                    create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
+                                                     parent_id=perspective_id,
+                                                     field_id=field_id,
+                                                     upper_level=None,
+                                                     link_id=None,
+                                                     position=position)
 
-                for field_id, contents in columns_dict.items():
-                    if i >= len(contents):
-                        continue
+                task_status.set(4, 70, "uploading...")
 
-                    content = contents[i]
+                for i in range(max_count):
+                    le_client_id, le_object_id = client_id, obj_id.next
+                    lexentr = dbLexicalEntry(object_id=le_object_id,
+                                             client_id=le_client_id,
+                                             parent_client_id=perspective_id[0],
+                                             parent_object_id=perspective_id[1])
+                    DBSession.add(lexentr)
+                    lexentr_tuple = le_client_id, le_object_id
 
-                    if content:
-                        new_ent = (
-                            create_entity(
-                                id = obj_id.id_pair(client_id),
-                                parent_id = lexentr_tuple,
-                                additional_metadata = None,
-                                field_id = field_id,
-                                locale_id = ENGLISH_LOCALE,
-                                content = content,
-                                save_object = False))
+                    for field_id, contents in columns_dict.items():
+                        if i >= len(contents):
+                            continue
 
-                        CACHE.set(objects = [new_ent, ], DBSession=DBSession)
-                        # DBSession.add(new_ent)
+                        content = contents[i]
+
+                        if content:
+                            new_ent = (
+                                create_entity(
+                                    id = obj_id.id_pair(client_id),
+                                    parent_id = lexentr_tuple,
+                                    additional_metadata = None,
+                                    field_id = field_id,
+                                    locale_id = ENGLISH_LOCALE,
+                                    content = content,
+                                    save_object = False))
+
+                            CACHE.set(objects = [new_ent, ], DBSession=DBSession)
+                            # DBSession.add(new_ent)
         DBSession.flush()
 
     except Exception as exception:
