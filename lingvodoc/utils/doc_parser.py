@@ -67,6 +67,8 @@ def insert_parser_output_to_text(text, parser_output, lang=""):
     for w_tag in w_tag_list:
         word = w_tag.contents[-1]
         match_index = text.find(word, search_start_index)
+        if match_index == -1:
+            continue
         if match_index - len(ESC_PAT) > 0 and match_index + len(word) + len(ESC_PAT) < len(text):
             if text[match_index-len(ESC_PAT):match_index] == ESC_PAT and text[match_index+len(word):match_index+len(word)+len(ESC_PAT)] == ESC_PAT:
                 continue
@@ -318,7 +320,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
     morph_file_id, morph_filename = tempfile.mkstemp()
 
-    dedoc_output_without_tags = re.sub(r"(<.*?>)|&nbsp", "", dedoc_output)
+    dedoc_output_without_tags = re.sub(r"(<.*?>)|&nbsp;", "", dedoc_output)
 
     input_file_id, input_filename = (
         tempfile.mkstemp(text = True))
