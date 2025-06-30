@@ -7829,6 +7829,7 @@ class Tsakorpus(graphene.Mutation):
         'apertium_tuv': 'tuvan',
         'apertium_hye': 'armenian',
         'apertium-krc': 'karachay_balkar',
+        'apertium_krl': 'karelian',
         'hfst_kalmyk': 'kalmyk',
         'hfst_ancient_kalmyk': 'ancient_kalmyk'}
 
