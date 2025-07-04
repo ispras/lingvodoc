@@ -87,10 +87,10 @@ def upgrade():
 
           -- Initial batch of additional tags.
 
-          with
+          with tag_cte as (
 
-          raw_cte as (
-            select distinct E.content, E.created_at
+            insert into tag_table
+            select distinct E.content
 
             from
               public.entity E,
@@ -102,19 +102,14 @@ def upgrade():
               E.field_client_id = entity_field_client_id and
               E.field_object_id = entity_field_object_id and
               E.marked_for_deletion = false and
+              E.created_at > start_date and
               P.client_id = E.client_id and
               P.object_id = E.object_id and
               (accept is null or P.accepted = accept) and
               (publish is null or P.published = publish)
-          ),
 
-          tag_cte as (
-            insert into tag_table
-            select content from raw_cte
-            where exists (select 1 from raw_cte where created_at > start_date)
             on conflict do nothing
-            returning *
-          )
+            returning *)
 
           insert into tag_list_a
           select * from tag_cte;
