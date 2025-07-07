@@ -4773,8 +4773,8 @@ class Query(graphene.ObjectType):
                     :field_object_id,
                     :client_id,
                     :object_id,
-                    :publish,
-                    :accept)
+                    :publish or false,
+                    :accept or false)
 
                 '''
 
