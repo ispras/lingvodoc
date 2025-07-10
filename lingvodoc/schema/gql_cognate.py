@@ -4304,7 +4304,7 @@ class CognateAnalysis(graphene.Mutation):
 
             perspective_info_list = [
 
-                (tuple(language_id),
+                (tuple(language_id or []),
                  tuple(perspective_id),
                  tuple(transcription_field_id),
                  tuple(translation_field_id),
