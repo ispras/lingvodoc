@@ -9,6 +9,8 @@ import logging
 import pdb
 import pprint
 import traceback
+import time
+from pdb import set_trace as A
 
 # External imports.
 
@@ -137,6 +139,12 @@ def new_format(current_statistics):
 
         if 'disambiguation' in stat_dict:
             new_dict['disambiguation'] = stat_dict['disambiguation']
+
+        if 'first_created_at' in stat_dict:
+            new_dict['first_created_at'] = stat_dict['first_created_at']
+
+        if 'last_created_at' in stat_dict:
+            new_dict['last_created_at'] = stat_dict['last_created_at']
 
         new_format_statistics.append(new_dict)
 
@@ -296,17 +304,26 @@ def stat_perspective(
                 .all())
 
         # Counting lexical entries.
+        default_counts = {'web': 0, 'desktop': 0, 'total': 0}
+        default_created_at = {
+            'first_created_at': time.time(),
+            'last_created_at': 0.0
+        }
 
         user_data_total = {
-            'login': None, 'name': None}
+            'login': None, 'name': None,
+            **default_created_at
+        }
 
         user_data_dict = {
-            None: user_data_total}
+            None: user_data_total
+        }
 
         if entry_count_list:
 
             user_data_total['lexical entries'] = {
-                'web': 0, 'desktop': 0, 'total': 0}
+                **default_counts
+            }
 
         for client_id, user_id, is_browser, entry_count in entry_count_list:
 
@@ -317,10 +334,16 @@ def stat_perspective(
                 user_data_dict[user_id] = {
                     'login': user.login,
                     'name': user.name,
-                    'lexical entries': {'web': 0, 'desktop': 0, 'total': 0}}
+                    'lexical entries': {
+                        **default_counts
+                    },
+                    **default_created_at
+                }
+
+            user_data = user_data_dict[user_id]
 
             entry_data = (
-                user_data_dict[user_id]['lexical entries'])
+                user_data['lexical entries'])
 
             entry_data_total = (
                 user_data_total['lexical entries'])
@@ -394,7 +417,9 @@ def stat_perspective(
                             entity_query.c.entity_client_id,
                             entity_query.c.published,
                             entity_query.c.accepted,
-                            func.count('*').label('entity_count')),
+                            func.count('*').label('entity_count'),
+                            func.min(entity_query.c.entity_created_at).label('first_created_at'),
+                            func.max(entity_query.c.entity_created_at).label('last_created_at')),
 
                         entity_query.c.entity_created_at,
                         time_begin,
@@ -450,7 +475,9 @@ def stat_perspective(
                         DBSession.query(
                             entity_query.c.entity_client_id,
                             entity_query.c.published,
-                            entity_query.c.accepted),
+                            entity_query.c.accepted,
+                            func.min(entity_query.c.entity_created_at).label('first_created_at'),
+                            func.max(entity_query.c.entity_created_at).label('last_created_at')),
 
                         entity_query.c.entity_created_at,
                         time_begin,
@@ -475,12 +502,16 @@ def stat_perspective(
                             entry_group_query.c.entity_client_id,
                             entry_group_query.c.published,
                             entry_group_query.c.accepted,
-                            func.count('*').label('entity_count'))
+                            func.count('*').label('entity_count'),
+                            entry_group_query.c.first_created_at,
+                            entry_group_query.c.last_created_at)
 
                         .group_by(
                             entry_group_query.c.entity_client_id,
                             entry_group_query.c.published,
-                            entry_group_query.c.accepted)
+                            entry_group_query.c.accepted,
+                            entry_group_query.c.first_created_at,
+                            entry_group_query.c.last_created_at)
 
                         .subquery())
 
@@ -501,7 +532,9 @@ def stat_perspective(
                         Client.is_browser_client,
                         entity_count_query.c.published,
                         entity_count_query.c.accepted,
-                        entity_count_query.c.entity_count)
+                        entity_count_query.c.entity_count,
+                        entity_count_query.c.first_created_at,
+                        entity_count_query.c.last_created_at)
 
                     .join(
                         entity_count_query,
@@ -511,7 +544,15 @@ def stat_perspective(
 
             # Counting entities.
 
-            for user_id, is_browser, published, accepted, entity_count in entity_count_list:
+            default_entities = {
+                'published': {},
+                'unpublished': {},
+                'total': {},
+                'unaccepted': {}
+            }
+
+            for (user_id, is_browser, published, accepted,
+                 entity_count, first_created_at, last_created_at) in entity_count_list:
 
                 if user_id not in user_data_dict:
 
@@ -521,36 +562,34 @@ def stat_perspective(
                         'login': user.login,
                         'name': user.name,
                         'entities': {
-                            'published': {},
-                            'unpublished': {},
-                            'total': {},
-                            'unaccepted': {}}}
+                            **default_entities
+                        },
+                        'first_created_at': first_created_at,
+                        'last_created_at': last_created_at
+                    }
 
                 user_data = user_data_dict[user_id]
+
+                user_data['first_created_at'] = min(user_data['first_created_at'], first_created_at)
+                user_data['last_created_at'] = max(user_data['last_created_at'], last_created_at)
 
                 if 'entities' not in user_data:
 
                     user_data['entities'] = {
-                        'published': {},
-                        'unpublished': {},
-                        'total': {},
-                        'unaccepted': {}}
+                        **default_entities
+                    }
+
+                entity_data = user_data['entities']
 
                 if 'entities' not in user_data_total:
 
                     user_data_total['entities'] = {
-                        'published': {},
-                        'unpublished': {},
-                        'total': {},
-                        'unaccepted': {}}
+                        **default_entities
+                    }
+
+                entity_data_total = user_data_total['entities']
 
                 # Counting entities by publishing status, data type and client type.
-
-                entity_data = (
-                    user_data['entities'])
-
-                entity_data_total = (
-                    user_data_total['entities'])
 
                 client_string = (
                     'web' if is_browser else 'desktop')

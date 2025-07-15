@@ -887,7 +887,9 @@ class DictionaryPerspective(LingvodocObjectType):
             ObjectVal,
             starting_time = graphene.Int(),
             ending_time = graphene.Int(),
-            disambiguation_flag = graphene.Boolean()))
+            disambiguation_flag = graphene.Boolean(),
+            first_created_at = graphene.Float(),
+            last_created_at = graphene.Float()))
 
     is_template = graphene.Boolean()
     counter = graphene.Int(mode=graphene.String())
