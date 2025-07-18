@@ -1,15 +1,12 @@
 
 # Standard library imports.
 
-import ast
-import collections
 import datetime
-import io
 import logging
-import pdb
 import pprint
 import traceback
 import time
+import copy
 from pdb import set_trace as A
 
 # External imports.
@@ -561,9 +558,7 @@ def stat_perspective(
                     user_data_dict[user_id] = {
                         'login': user.login,
                         'name': user.name,
-                        'entities': {
-                            **default_entities
-                        },
+                        'entities': copy.deepcopy(default_entities),
                         'first_created_at': first_created_at,
                         'last_created_at': last_created_at
                     }
@@ -575,17 +570,13 @@ def stat_perspective(
 
                 if 'entities' not in user_data:
 
-                    user_data['entities'] = {
-                        **default_entities
-                    }
+                    user_data['entities'] = copy.deepcopy(default_entities)
 
                 entity_data = user_data['entities']
 
                 if 'entities' not in user_data_total:
 
-                    user_data_total['entities'] = {
-                        **default_entities
-                    }
+                    user_data_total['entities'] = copy.deepcopy(default_entities)
 
                 entity_data_total = user_data_total['entities']
 
