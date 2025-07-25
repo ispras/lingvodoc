@@ -1,3 +1,1 @@
-matplotlib==1.5.3
-# for win10 with python-3.10
-#matplotlib==2.2.5
+matplotlib==2.2.5 #1.5.3
