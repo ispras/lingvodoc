@@ -28,7 +28,7 @@ RUN \
   git config --global http.maxRequestBuffer 100M && \
   git config --global core.compression 0 && \
   ln -sf $(which python3.9) /usr/bin/python3 && \
-  pip3 install pip==20.0.2 && \
+  pip3 install pip==20.3.2 && \
   pip3 install --upgrade setuptools==44.0 && \
   pip3 install -r server-requirements-1.txt && \
   pip3 install -r server-requirements-final.txt
