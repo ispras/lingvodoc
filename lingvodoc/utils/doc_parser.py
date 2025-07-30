@@ -302,7 +302,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
         return parsed
 
-    if lang in ['kaz', 'tat', 'bak-tat']:
+    if lang in ['kaz', 'tat', 'bak-tat', 'jpn-eng']:
         bilingual = True
     else:
         bilingual = False
@@ -341,6 +341,10 @@ def apertium_parser(dedoc_output, apertium_path, lang):
     elif lang == 'bak-tat':
         s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-tat-bak bak-tat-biltrans >> " + biltrans_filename)
         s2 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-tat-bak bak-tat-morph >> " + morph_filename)
+
+    elif lang == 'jpn-eng':
+        s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-jpn-eng jpn-eng-biltrans >> " + biltrans_filename)
+        s2 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-jpn-eng jpn-eng-morph >> " + morph_filename)
 
     elif lang == 'sah':
         s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-sah sah-morph >> " + morph_filename)
@@ -481,6 +485,12 @@ def apertium_krc(dedoc_output, apertium_path):
 
 def apertium_krl(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'krl')
+
+def apertium_jpn(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'jpn')
+
+def apertium_jpn_eng(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'jpn-eng')
 
 def hfst_kalmyk(dedoc_output):
     return hfst_parser(dedoc_output, 'xal')

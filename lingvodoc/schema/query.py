@@ -7830,6 +7830,8 @@ class Tsakorpus(graphene.Mutation):
         'apertium_hye': 'armenian',
         'apertium-krc': 'karachay_balkar',
         'apertium_krl': 'karelian',
+        'apertium_jpn': 'japanese',
+        'apertium_jpn_eng': 'japanese_english',
         'hfst_kalmyk': 'kalmyk',
         'hfst_ancient_kalmyk': 'ancient_kalmyk'}
 
