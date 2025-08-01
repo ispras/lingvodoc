@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y locales
 RUN locale-gen ru_RU.UTF-8
 ENV LANG='ru_RU.UTF-8' LANGUAGE='ru_RU:ru' LC_ALL='ru_RU.UTF-8' DEBIAN_FRONTEND=noninteractive
@@ -6,14 +6,13 @@ ADD . /api
 WORKDIR /api
 
 # Base apps and custom repository
-RUN apt update && apt install -y wget curl gnupg2 software-properties-common
+RUN apt update && apt install -y wget gnupg2
 
 # Modifying sources.list and app keys
 RUN wget -O- https://packages.sil.org/keys/pso-keyring-2016.gpg > /etc/apt/trusted.gpg.d/pso-keyring-2016.gpg && \
     . /etc/os-release && echo "deb http://packages.sil.org/$ID $VERSION_CODENAME main" > /etc/apt/sources.list.d/packages-sil-org.list && \
-    echo "deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
-	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
-	add-apt-repository ppa:deadsnakes/ppa
+    echo "deb http://apt.postgresql.org/pub/repos/apt/ $VERSION_CODENAME-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 
 # Most apps installing
 RUN --mount=type=cache,target=/var/cache/apt \
@@ -25,7 +24,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
     fonts-sil-gentium fonts-sil-gentium-basic fonts-sil-gentiumplus \
     fonts-sil-gentiumplus-compact libxft-dev \
     libpng16-16 libpng-dev libfreetype6 libfreetype6-dev \
-    ffmpeg libxml2-dev libxslt-dev
+    ffmpeg libxml2-dev libxslt-dev curl
     #libfreetype-dev
 
 # Adjusting git and pip
