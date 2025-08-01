@@ -61,6 +61,6 @@ services:
       /api/wait-for-postgres.sh pg && \
       git config --global --add safe.directory /api && \
       alembic --config /api/docker/docker-alembic.ini upgrade head && \
-      gunicorn --preload --paster /api/docker/docker.ini"
+      gunicorn -b 0.0.0.0 --preload --paster /api/docker/docker.ini"
     ports:
       - "16543:6543"
