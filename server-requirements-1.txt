@@ -50,6 +50,7 @@ nltk==3.5
 numpy==1.23.5
 odfpy==1.4.0
 openpyxl==2.6.4
+optree==0.16.0
 packaging==20.3
 pandas==1.4.3
 passlib==1.6.5
