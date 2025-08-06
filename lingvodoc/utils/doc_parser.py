@@ -351,7 +351,8 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         s2 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-sah sah-multi >> " + multi_filename)
 
     else:
-        s1 = os.system(f"cat '{input_filename}' | apertium -d {apertium_path}/apertium-{lang} {lang}-morph >> {morph_filename}")
+        # We split lang by '_' if we are using custom parser
+        s1 = os.system(f"cat '{input_filename}' | apertium -d {apertium_path}/apertium-{lang} {lang.split('_')[0]}-morph >> {morph_filename}")
         s2 = s1
 
     if s1 != 0 or s2 != 0:
@@ -497,3 +498,7 @@ def hfst_kalmyk(dedoc_output):
 
 def hfst_ancient_kalmyk(dedoc_output):
     return hfst_parser(dedoc_output, 'anc_xal')
+
+# Custom japanese parser
+def apertium_jpn_yypy22(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'jpn_yypy22')

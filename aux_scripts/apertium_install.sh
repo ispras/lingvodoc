@@ -39,14 +39,21 @@ PARSER_LIST=( \
   "apertium-krl" \
   "apertium-jpn" \
   "apertium-jpn-eng" \
+  "apertium-jpn_yypy22" \
 );
 
 fi;
 
 for PARSER_NAME in "${PARSER_LIST[@]}"; do
 
+  if grep -q '_' <<< "$PARSER_NAME"; then
+    PATH_NAME=$(sed -r 's|^(.*)_(.*)$|\2/\1|' <<< "$PARSER_NAME");
+  else
+    PATH_NAME="apertium/$PARSER_NAME";
+  fi;
+
   if ! [ -d "$1/$PARSER_NAME" ]; then
-    git clone https://github.com/apertium/$PARSER_NAME $1/$PARSER_NAME;
+    git clone https://github.com/$PATH_NAME $1/$PARSER_NAME;
   else
     pushd $1/$PARSER_NAME && git pull && popd;
   fi;
