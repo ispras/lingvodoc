@@ -83,6 +83,8 @@ from lingvodoc.utils.creation import (
 from lingvodoc.utils.deletion import real_delete_dictionary
 from lingvodoc.utils.search import translation_gist_search
 
+from pdb import set_trace as A
+
 
 # Setting up logging.
 log = logging.getLogger(__name__)
