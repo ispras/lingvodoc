@@ -44,6 +44,7 @@ Logbook==1.1.0
 lxml==4.6.5 #4.5.2 #4.4.1
 Mako==1.0.4
 MarkupSafe==2.1.1
+mecab==0.996.11
 minio==6.0.0
 multiprocess==0.70.17
 nltk==3.5
