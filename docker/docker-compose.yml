@@ -53,6 +53,7 @@ services:
       - /api/build/
       - ../:/api
       - /tmp:/tmp
+      - ~/.ssh:/root/.ssh
 
     env_file:
       - ./locale_env.sh

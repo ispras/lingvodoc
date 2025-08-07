@@ -8696,7 +8696,8 @@ class Tsakorpus(graphene.Mutation):
                     language_str = current_language_str
 
                 elif language_str != current_language_str:
-                    raise NotImplementedError
+                    #raise NotImplementedError
+                    continue
 
                 Tsakorpus.process_parser_result(
                     sentence_list,

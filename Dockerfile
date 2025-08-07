@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
     fonts-sil-gentium fonts-sil-gentium-basic fonts-sil-gentiumplus \
     fonts-sil-gentiumplus-compact libxft-dev \
     libpng16-16 libpng-dev libfreetype6 libfreetype6-dev \
-    ffmpeg libxml2-dev libxslt-dev curl
+    ffmpeg libxml2-dev libxslt-dev curl rsync mecab
     #libfreetype-dev
 
 # Adjusting git and pip
@@ -33,6 +33,7 @@ RUN \
   git config --global http.maxRequestBuffer 100M && \
   git config --global core.compression 0 && \
   ln -sf $(which python3.10) /usr/bin/python3 && \
+  ln -sf /etc/mecabrc /usr/local/etc/mecabrc && \
   curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 && \
   pip3 install pip==20.3.2 setuptools==44.0
 
