@@ -12,6 +12,9 @@ import numpy as np
 import requests
 import re
 
+from lingvodoc.utils.neuro_cognates.rerank import RerankerSingleWord
+from pdb import set_trace as A
+
 # Model is hosted on remote server now. This code is used there.
 '''
 # Choose model architecture
@@ -127,8 +130,45 @@ class DualPathSiamese(nn.Module):
                 param.requires_grad = False
 '''
 
+
+## fast text отдельно
+def load_fasttext_model(path: str):
+    """
+    Загрузить эмбеддинги FastText (cc.ru.300).
+    Args:
+        path: путь к файлу с эмбеддингами:
+              - бинарный .bin или распакованный .bin.gz
+              - текстовый .vec или .vec.gz
+    Returns:
+        Объект KeyedVectors с русскими эмбеддингами.
+    """
+    # Определяем формат по расширению
+    root = os.path.splitext(path)[0].lower()
+    ext = os.path.splitext(root)[1].lower()
+    ext += os.path.splitext(path)[1].lower()
+    print(f"{ext=}")
+
+    print(f"{'Loading gensim...':<30}", end="", flush=True)
+    try:
+        from gensim.models import KeyedVectors
+    except ImportError:
+        raise ImportError("Please install gensim: pip install gensim")
+    print("DONE", flush=True)
+
+    print(f"{'Loading fasttext model...':<30}", end="", flush=True)
+    result = KeyedVectors.load_word2vec_format(
+        path,
+        binary=('.vec' not in ext),
+        unicode_errors='ignore',
+        limit=10**6
+    )
+    print("DONE", flush=True)
+
+    return result
+
+
 def process_batch(args):
-    self, input_word, input_tran, input_id, input_links = args
+    self, ft_model, input_word, input_tran, input_id, input_links = args
     similarities = []
 
     base_word_tensor = self._process_text(input_word)
@@ -159,19 +199,36 @@ def process_batch(args):
                 inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
 
             # Prediction
+            print(f"{'':<14}{'Infering...':<16}", end="", flush=True)
             with torch.no_grad():
                 outputs = triton_client.infer("neuro_cognates", inputs)
                 #probs = torch.sigmoid(outputs).squeeze()
                 probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
+            print("DONE", flush=True)
 
-            for idx, prob in enumerate(probs):
-                if prob.item() > self.truth_threshold:
-                    similarities.append((
-                        i,
-                        [compare_words[idx], compare_trans[idx]],
-                        compare_ids[idx],
-                        f"{prob.item():.4f}"
-                    ))
+            print(f"{'':<14}{'Init reranker':<16}", end="", flush=True)
+            reranker = RerankerSingleWord(
+                ft_model,
+                self.language_name_list[self.input_index],
+                self.language_name_list[i]
+            )
+            print("DONE", flush=True)
+
+            print(f"{'':<14}{'Reranking...':<16}", flush=True)
+            ranks = reranker.rerank(
+                f"{input_word}:{input_tran}",
+                [f"{compare_words[j]}:{compare_trans[j]}"
+                 for j in range(batch_size) if probs[j].item() > self.truth_threshold]
+            )
+            print(f"{'':<30}Reranked!", flush=True)
+
+            for idx, (_, _, _, rank) in enumerate(ranks):
+                similarities.append((
+                    i,
+                    [compare_words[idx], compare_trans[idx]],
+                    compare_ids[idx],
+                    f'{rank:.4f}'
+                ))
 
     similarities.sort(key=lambda s: s[3], reverse=True)
 
@@ -192,6 +249,7 @@ class NeuroCognates:
                  input_index,
                  source_perspective_id,
                  perspective_name_list,
+                 language_name_list,
                  storage,
                  host_url,
                  cache_kwargs,
@@ -203,6 +261,7 @@ class NeuroCognates:
         self.source_perspective_id = source_perspective_id
         self.truth_threshold = truth_threshold
         self.perspective_name_list = perspective_name_list
+        self.language_name_list = language_name_list
         self.storage = storage
         self.host_url = host_url
         self.cache_kwargs = cache_kwargs
@@ -314,7 +373,20 @@ class NeuroCognates:
             task.set(current_stage, progress, status, result_link)
 
         (input_words, input_trans, input_lex_ids, input_linked_groups), _ = self.split_items(word_pairs)
-        args_list = zip([self] * input_len, input_words, input_trans, input_lex_ids, input_linked_groups)
+
+        task.set(None, 0, f"Loading fasttext model...")
+
+        ft_model = load_fasttext_model(
+            os.path.join(os.path.dirname(__file__), 'cc.ru.300.vec'))
+
+        args_list = zip(
+            [self] * input_len,
+            [ft_model] * input_len,
+            input_words,
+            input_trans,
+            input_lex_ids,
+            input_linked_groups
+        )
 
         def f(proc):
             nonlocal start_time
@@ -352,14 +424,16 @@ class NeuroCognates:
                 start_time = now()  # correcting start time after metrics checking
                 pool.close()
 
-                for _ in range(input_len):
+                for idx in range(input_len):
                     if os.path.exists(stamp_file):
                         os.remove(stamp_file)
                         raise InterruptedError("Task stopped manually")
 
                     else:
+                        print(f"{idx + 1:<5} of {input_len:<5}{'Infering...':<16}", flush=True)
                         result = jobs.next(timeout=120)
                         add_result(result)
+                        print(f"{'':<30}Infered!", flush=True)
 
             except RuntimeError:
                 msg = "No enough memory for the task"

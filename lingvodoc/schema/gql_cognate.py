@@ -83,6 +83,7 @@ from lingvodoc.models import (
     DictionaryPerspective as dbPerspective,
     DictionaryPerspectiveToField as dbColumn,
     ENGLISH_LOCALE,
+    RUSSIAN_LOCALE,
     Entity as dbEntity,
     Field as dbField,
     Language as dbLanguage,
@@ -5658,9 +5659,11 @@ class NeuroCognateAnalysis(graphene.Mutation):
         input_index = None
         dictionary_name_list = []
         perspective_name_list = []
+        language_name_list = []
 
         for (
-            idx, (_,
+            idx, (
+            language_id,
             perspective_id,
             xcript_fid,
             xlat_fid, _)
@@ -5692,11 +5695,22 @@ class NeuroCognateAnalysis(graphene.Mutation):
             perspective = DBSession.query(dbPerspective).filter_by(
                 client_id = perspective_id[0], object_id = perspective_id[1]).first()
 
-            perspective_name = perspective.get_translation(locale_id)
-            dictionary_name = perspective.parent.get_translation(locale_id)
+            language = DBSession.query(dbLanguage).filter_by(
+                client_id = language_id[0], object_id = language_id[1]).first()
+
+            perspective_name = perspective.get_translation(locale_id).strip()
+            dictionary_name = perspective.parent.get_translation(locale_id).strip()
+
+            language_name = ""
+            while True:
+                language_name += f"{language.get_translation(RUSSIAN_LOCALE).strip().lower()}"
+                if (language := language.parent) is None:
+                    break
+                language_name += " | "
 
             perspective_name_list.append(f"{perspective_name} - {dictionary_name}")
             dictionary_name_list.append(f"{idx + 1}. {dictionary_name}")
+            language_name_list.append(language_name)
 
         message = ""
         triumph = True
@@ -5715,6 +5729,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
                 input_index,
                 source_perspective_id,
                 perspective_name_list,
+                language_name_list,
                 storage,
                 host_url,
                 cache_kwargs,
