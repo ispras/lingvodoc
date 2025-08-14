@@ -160,7 +160,7 @@ def load_fasttext_model(path: str):
         path,
         binary=('.vec' not in ext),
         unicode_errors='ignore',
-        limit=10**6
+        #limit=10**6
     )
     print("DONE", flush=True)
 
@@ -199,28 +199,30 @@ def process_batch(args):
                 inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
 
             # Prediction
-            print(f"{'':<14}{'Infering...':<16}", end="", flush=True)
+            #print(f"{'':<15}{'Infering...':<15}", end="", flush=True)
             with torch.no_grad():
                 outputs = triton_client.infer("neuro_cognates", inputs)
                 #probs = torch.sigmoid(outputs).squeeze()
                 probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
-            print("DONE", flush=True)
+            #print("DONE", flush=True)
 
-            print(f"{'':<14}{'Init reranker':<16}", end="", flush=True)
+            # Init reranker
+            #print(f"{'':<15}{'Init reranker':<15}", end="", flush=True)
             reranker = RerankerSingleWord(
                 ft_model,
                 self.language_name_list[self.input_index],
                 self.language_name_list[i]
             )
-            print("DONE", flush=True)
+            #print("DONE", flush=True)
 
-            print(f"{'':<14}{'Reranking...':<16}", flush=True)
+            # Compute rerank value
+            #print(f"{'':<15}{'Reranking...':<15}", flush=True)
             ranks = reranker.rerank(
                 f"{input_word}:{input_tran}",
                 [f"{compare_words[j]}:{compare_trans[j]}"
                  for j in range(batch_size) if probs[j].item() > self.truth_threshold]
             )
-            print(f"{'':<30}Reranked!", flush=True)
+            #print(f"{'':<30}Reranked!", flush=True)
 
             for idx, (_, _, _, rank) in enumerate(ranks):
                 similarities.append((
@@ -430,10 +432,10 @@ class NeuroCognates:
                         raise InterruptedError("Task stopped manually")
 
                     else:
-                        print(f"{idx + 1:<5} of {input_len:<5}{'Infering...':<16}", flush=True)
+                        #print(f"{idx + 1:>5} of {input_len:<5} {'Processing...':<15}", end="", flush=True)
                         result = jobs.next(timeout=120)
                         add_result(result)
-                        print(f"{'':<30}Infered!", flush=True)
+                        #print("DONE", flush=True)
 
             except RuntimeError:
                 msg = "No enough memory for the task"

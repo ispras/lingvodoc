@@ -89,7 +89,7 @@ class RerankerSingleWord:
             if re.search(f'^{lang}|\W{lang}', self.tgt_lang):
                 tgt_lang_abbr = lang_abbrs[lang]
 
-        print(f"{f'{src_lang_abbr=}':<18} || {f'{tgt_lang_abbr=}':<18}")
+        #print(f"{f'{src_lang_abbr=}':<18} || {f'{tgt_lang_abbr=}':<18}")
 
         if src_lang_abbr is None or tgt_lang_abbr is None:
             return False
