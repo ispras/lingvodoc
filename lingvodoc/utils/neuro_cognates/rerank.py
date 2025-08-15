@@ -89,15 +89,15 @@ class RerankerSingleWord:
             if re.search(f'^{lang}|\W{lang}', self.tgt_lang):
                 tgt_lang_abbr = lang_abbrs[lang]
 
-        #print(f"{f'{src_lang_abbr=}':<18} || {f'{tgt_lang_abbr=}':<18}")
-
         if src_lang_abbr is None or tgt_lang_abbr is None:
             return False
 
-        row_src = df[(df['proto'] == key) & (df['language'] == self.src_lang)]
-        row_tgt = df[(df['proto'] == key) & (df['language'] == self.tgt_lang)]
+        row_src = df[(df['proto'] == key) & (df['language'] == src_lang_abbr)]
+        row_tgt = df[(df['proto'] == key) & (df['language'] == tgt_lang_abbr)]
+
         if row_src.empty or row_tgt.empty:
             return False
+
         vs = re.split(r"[/,]", row_src.iloc[0]['reflex'])
         vt = re.split(r"[/,]", row_tgt.iloc[0]['reflex'])
         return any(x.strip() == c1 for x in vs) and any(x.strip() == c2 for x in vt)

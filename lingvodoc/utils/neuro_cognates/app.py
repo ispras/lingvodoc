@@ -239,7 +239,7 @@ def process_batch(args):
                     i,
                     [outputs[n]['word'], outputs[n]['trans']],
                     outputs[n]['ids'],
-                    f"{(outputs[n]['prob'] + ranks[n]):.4f}"
+                    f"{(outputs[n]['prob'] + ranks[n][3]):.4f}"
                 ))
 
     similarities.sort(key=lambda s: s[3], reverse=True)
