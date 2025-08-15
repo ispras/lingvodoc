@@ -146,7 +146,7 @@ def load_fasttext_model(path: str):
     root = os.path.splitext(path)[0].lower()
     ext = os.path.splitext(root)[1].lower()
     ext += os.path.splitext(path)[1].lower()
-    print(f"{ext=}")
+    #print(f"{ext=}")
 
     print(f"{'Loading gensim...':<30}", end="", flush=True)
     try:
@@ -206,6 +206,17 @@ def process_batch(args):
                 probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
             #print("DONE", flush=True)
 
+            outputs = []
+
+            for word, trans, ids, prob in zip(compare_words, compare_trans, compare_ids, [p.item() for p in probs]):
+                if prob > self.truth_threshold:
+                    outputs.append({
+                        'word': word,
+                        'trans': trans,
+                        'ids': ids,
+                        'prob': prob
+                    })
+
             # Init reranker
             #print(f"{'':<15}{'Init reranker':<15}", end="", flush=True)
             reranker = RerankerSingleWord(
@@ -219,17 +230,16 @@ def process_batch(args):
             #print(f"{'':<15}{'Reranking...':<15}", flush=True)
             ranks = reranker.rerank(
                 f"{input_word}:{input_tran}",
-                [f"{compare_words[j]}:{compare_trans[j]}"
-                 for j in range(batch_size) if probs[j].item() > self.truth_threshold]
+                [f"{outputs[j]['word']}:{outputs[j]['trans']}" for j in range(len(outputs))]
             )
             #print(f"{'':<30}Reranked!", flush=True)
 
-            for idx, (_, _, _, rank) in enumerate(ranks):
+            for n in range(len(outputs)):
                 similarities.append((
                     i,
-                    [compare_words[idx], compare_trans[idx]],
-                    compare_ids[idx],
-                    f'{rank:.4f}'
+                    [outputs[n]['word'], outputs[n]['trans']],
+                    outputs[n]['ids'],
+                    f"{(outputs[n]['prob'] + ranks[n]):.4f}"
                 ))
 
     similarities.sort(key=lambda s: s[3], reverse=True)
