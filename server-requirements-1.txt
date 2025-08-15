@@ -26,6 +26,7 @@ dill==0.3.9
 docutils==0.15.2
 dogpile.cache==0.6.8
 et-xmlfile==1.0.1
+gensim==4.3.3
 gitdb==4.0.4
 GitPython==3.1.0
 graf-python==0.3.1
@@ -86,7 +87,7 @@ requests==2.30.0 #2.22.0
 rtfunicode==2.0
 Rx==1.6.0
 scikit-learn==1.0.2 #0.24.1
-scipy==1.15.3 #1.6.1
+scipy==1.13.1 #1.6.1
 six==1.14.0
 smmap==3.0.2
 snowballstemmer==2.0.0
