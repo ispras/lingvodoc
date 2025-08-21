@@ -55,6 +55,11 @@ RUN \
   g++ -O2 -fPIC -shared -Wl,-soname,liboslon.so -Wno-write-strings -o /usr/lib/liboslon.so /tmp/lingvodoc-ext-oslon-master/analysis.cpp && \
   ldconfig
 
+# Special steps for fasttext model
+RUN \
+  curl https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ru.300.vec.gz --create-dirs -o /opt/fasttext/cc.ru.300.vec.gz && \
+  gzip -d /opt/fasttext/cc.ru.300.vec.gz
+
 # Some final steps
 RUN \
   pip3 install setuptools==58.0

@@ -5774,11 +5774,14 @@ class NeuroCognateAnalysis(graphene.Mutation):
             return ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
+        # Here are: administrator, Julia Normanskaya, Viktoria Kukanova or Irina Novak
+        allowed_users = [1, 5, 180, 317]
 
-        # For now only administrator can use neuro cognates tool
-        if user.id != 1:
+        # For now only allowed_users can use neuro cognates tool
+        if user.id not in allowed_users:
             return ResponseError(error_str)
 
+        '''
         author_client_id_set = (
 
             set(
@@ -5800,20 +5803,17 @@ class NeuroCognateAnalysis(graphene.Mutation):
 
                 .scalar())
 
-        if (user.id != 1 and
+        if (user.id not in allowed_users and
             not author_id_check and
             not info.context.acl_check_if('edit', 'perspective', source_perspective_id)):
 
             return ResponseError(error_str)
+        '''
 
         # Debug mode check.
 
         if debug_flag and user.id != 1:
-
-            return (
-
-                ResponseError(
-                    message = 'Only administrator can use debug mode.'))
+            return ResponseError(message='Only administrator can use debug mode.')
 
         language_str = (
             '{0}/{1}, language {2}/{3}'.format(

@@ -115,7 +115,7 @@ class RerankerSingleWord:
             word2, trans2 = cand.split(':', 1)
             w2_lat = ''.join(self.translit_char(c) for c in word2)
             cons_score = 0.0
-            for i in range(min(len(w1_lat), len(w2_lat))):
+            for i in range(min(len(word1), len(word2))):
                 if self.is_regular_char_match(word1[i], word2[i], corr_df, i, len(w1_lat)):
                     cons_score += 0.5
             trans_score = 1.0 if trans1 == trans2 else 0.0

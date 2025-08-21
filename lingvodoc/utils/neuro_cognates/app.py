@@ -389,7 +389,7 @@ class NeuroCognates:
         task.set(None, 0, f"Loading fasttext model...")
 
         ft_model = load_fasttext_model(
-            os.path.join(os.path.dirname(__file__), 'cc.ru.300.vec'))
+            os.path.join('/', 'opt', 'fasttext', 'cc.ru.300.vec'))
 
         args_list = zip(
             [self] * input_len,
