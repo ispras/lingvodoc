@@ -170,10 +170,13 @@ def load_fasttext_model(path: str):
 def process_batch(args):
     self, ft_model, input_word, input_tran, input_id, input_links = args
     similarities = []
+    inferring_duration = 0
+    rerank_duration = 0
 
     base_word_tensor = self._process_text(input_word)
     base_tran_tensor = self._process_text(input_tran)
 
+    #with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
     with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
 
         for i, compare_list in enumerate(self.compare_lists):
@@ -199,11 +202,13 @@ def process_batch(args):
                 inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
 
             # Prediction
-            #print(f"{'':<15}{'Infering...':<15}", end="", flush=True)
+            #print(f"{'':<15}{'Inferring...':<15}", end="", flush=True)
+            inferring_start = now()
             with torch.no_grad():
                 outputs = triton_client.infer("neuro_cognates", inputs)
                 #probs = torch.sigmoid(outputs).squeeze()
                 probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
+            inferring_duration += now() - inferring_start
             #print("DONE", flush=True)
 
             outputs = []
@@ -217,8 +222,10 @@ def process_batch(args):
                         'prob': prob
                     })
 
+            """
             # Init reranker
             #print(f"{'':<15}{'Init reranker':<15}", end="", flush=True)
+            rerank_start = now()
             reranker = RerankerSingleWord(
                 ft_model,
                 self.language_name_list[self.input_index],
@@ -232,7 +239,11 @@ def process_batch(args):
                 f"{input_word}:{input_tran}",
                 [f"{outputs[j]['word']}:{outputs[j]['trans']}" for j in range(len(outputs))]
             )
+            rerank_duration += now() - rerank_start
             #print(f"{'':<30}Reranked!", flush=True)
+            """
+            # Dirty hack
+            ranks = [[0, 0, 0, 0]] * len(outputs)
 
             for n in range(len(outputs)):
                 similarities.append((
@@ -252,7 +263,7 @@ def process_batch(args):
             None,
             similarities[:5],
             []
-        )] if similarities else [], links)
+        )] if similarities else [], links, inferring_duration, rerank_duration)
 
 
 class NeuroCognates:
@@ -288,6 +299,8 @@ class NeuroCognates:
 
         self.max_len = config.get('max_len', 43)
         self.char_to_index = checkpoint['char_to_index']
+        self.inferring_sumtime = 0
+        self.rerank_sumtime = 0
 
         '''
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -346,7 +359,7 @@ class NeuroCognates:
             if res is None:
                 return
 
-            result, links = res
+            result, links, _, _ = res
             results.extend(result)
             group_count += links
             current_stage += 1
@@ -388,8 +401,13 @@ class NeuroCognates:
 
         task.set(None, 0, f"Loading fasttext model...")
 
+        """
         ft_model = load_fasttext_model(
             os.path.join('/', 'opt', 'fasttext', 'cc.ru.300.vec'))
+        """
+
+        # Dirty hack
+        ft_model = None
 
         args_list = zip(
             [self] * input_len,
@@ -415,6 +433,7 @@ class NeuroCognates:
                     if i:
                         sleep(1)
 
+                    #metrics_req = requests.get("http://10.100.192.136:8002/metrics")
                     metrics_req = requests.get("http://10.100.192.136:8082/metrics")
 
                     if metrics_req.status_code != 200:
@@ -442,10 +461,12 @@ class NeuroCognates:
                         raise InterruptedError("Task stopped manually")
 
                     else:
-                        #print(f"{idx + 1:>5} of {input_len:<5} {'Processing...':<15}", end="", flush=True)
+                        print(f"{idx + 1:>5} of {input_len:<5} {'Processing...':<15}", end="", flush=True)
                         result = jobs.next(timeout=120)
                         add_result(result)
-                        #print("DONE", flush=True)
+                        self.inferring_sumtime += result[2]
+                        self.rerank_sumtime += result[3]
+                        print(f"DONE: {self.inferring_sumtime=:.3f} | {self.rerank_sumtime=:.3f}", flush=True)
 
             except RuntimeError:
                 msg = "No enough memory for the task"
