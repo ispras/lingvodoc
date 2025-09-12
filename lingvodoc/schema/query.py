@@ -1646,20 +1646,25 @@ class Query(graphene.ObjectType):
 
         def get_sorted_metadata_keys(metadata_name):
 
-            all_values = DBSession.query(dbDictionary.additional_metadata[metadata_name]) \
-                .filter(dbDictionary.additional_metadata[metadata_name] != None,
-                        dbDictionary.marked_for_deletion==False)
-
             value_set = set()
 
-            for value, in all_values:
+            try:
 
-                value_set.update(
-                    (value_str.strip() for value_str in re.split(r'\s*,\s*', value))
-                        if isinstance(value, str) else
-                        value)
+                all_values = DBSession.query(dbDictionary.additional_metadata[metadata_name]) \
+                    .filter(dbDictionary.additional_metadata[metadata_name] != None,
+                            dbDictionary.marked_for_deletion==False)
 
-            return sorted(value_set)
+                for value, in all_values:
+
+                    value_set.update(
+                        (value_str.strip() for value_str in re.split(r'\s*,\s*', value))
+                            if isinstance(value, str) else
+                            filter(lambda v: v is not None, value))
+
+                return sorted(value_set)
+
+            except Exception:
+                raise KeyError("Something wrong with metadata")
 
         menu_json_data = {}
         authors_list = get_sorted_metadata_keys("authors")
