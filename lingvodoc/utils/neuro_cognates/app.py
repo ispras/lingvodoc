@@ -424,7 +424,7 @@ class NeuroCognates:
             task.set(None, 0, f"Using {proc} process(es)...")
 
             try:
-                memory_free_mibs = 25000
+                memory_free_mibs = 10**5  # this is like a limit
 
                 # Check metrics 15 times every second
                 for i in range(15):
@@ -462,7 +462,7 @@ class NeuroCognates:
 
                     else:
                         print(f"{idx + 1:>5} of {input_len:<5} {'Processing...':<15}", end="", flush=True)
-                        result = jobs.next(timeout=120)
+                        result = jobs.next(timeout=300)
                         add_result(result)
                         self.inferring_sumtime += result[2]
                         self.rerank_sumtime += result[3]
