@@ -32,7 +32,7 @@ from pydub import AudioSegment
 
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy import and_, create_engine, func, literal
+from sqlalchemy import and_, create_engine, desc, func, literal
 
 from lingvodoc.models import (
     Client,
@@ -2377,6 +2377,15 @@ class Save_Context(object):
             if accepted is not None:
                 entities = entities.filter(PublishingEntity.accepted == accepted)
 
+        # Ordering for compatibility with how it's done by default when we retrieve lexical entries and
+        # entities, see graphene_track_multiple().
+
+        entities = entities.order_by(
+            Entity.created_at,
+            Entity.client_id,
+            Entity.object_id
+        )
+
         # Arranging entities by subentity relation.
 
         entity_list = entities.all()
@@ -2910,13 +2919,39 @@ def compile_document(
             perspective,
             __debug_flag__ = __debug_flag__)
 
-        lexical_entries = session.query(LexicalEntry, Entity).join(Entity).join(PublishingEntity) \
-            .filter(LexicalEntry.parent_id == (perspective.client_id, perspective.object_id),
+        lexical_entries = (
+
+            session
+                .query(LexicalEntry, Entity)
+                .join(Entity)
+                .join(PublishingEntity)
+
+                .filter(
+                    LexicalEntry.parent_id == (perspective.client_id, perspective.object_id),
+                    Entity.parent_id == LexicalEntry.id,
                     LexicalEntry.marked_for_deletion == False,
                     Entity.marked_for_deletion == False,
-                    PublishingEntity.accepted == True)
+                    PublishingEntity.accepted == True
+                )
+        )
+
         if published is not None:
             lexical_entries = lexical_entries.filter(PublishingEntity.published == published)
+
+        # Ordering for compatibility with how it's done by default when we retrieve lexical entries and
+        # entities, see graphene_track_multiple().
+        #
+        # Well, this here is mostly just in case as it's expected that entries and entities are re-sorted
+        # later when they are grouped in a dict and then actually saved, but still.
+
+        lexical_entries = lexical_entries.order_by(
+            desc(LexicalEntry.created_at),
+            desc(LexicalEntry.client_id),
+            desc(LexicalEntry.object_id),
+            Entity.created_at,
+            Entity.client_id,
+            Entity.object_id
+        )
 
         lex_by_id = {}
         lex_by_order = {}
