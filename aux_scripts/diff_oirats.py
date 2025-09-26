@@ -14,25 +14,29 @@ def split_words(text):
     return list(words)
 
 
-def transposition(case1, case2):
-    i1, word1 = case1
-    i2, word2 = case2
-
+def transposition(word1, word2):
     edge = 0.25  # Jaro-Winkler edge
-    skip = 4  # no more words between
     same = jw(word1.lower(), word2.lower()) < edge
-    near = abs(i1 - i2) < (skip + 2)
 
-    return same and near
+    return same
 
+
+def neighbor(i1, i2, delta):
+    skip = 4  # no more words between
+    near = abs(i1 - i2) < (skip + delta + 2)
+
+    return near
 
 # Create an instance of HtmlDiff
 # differ = HtmlDiff()
 text_vars = list()
 text_dist = list()
 
-text_base = "Я   чудное   мгновенье пока ещё помню... передо мной явилась ты!"
+text_base = "Я помню чудное мгновенье, передо мной явилась ты"
+text_vars.append("Я   чудное   мгновенье пока ещё помню... передо мной явилась ты!")
 text_vars.append("Припоминаю я чудесное мгновение, впереди меня ты появилась.")
+text_vars.append("Чудо помню мгновенное, ты появилась предо мною.")
+text_vars.append("Как гений чистой красоты, явилась ты передо мной, помню я")
 
 delimiter = '=' * 40
 print(delimiter)
@@ -46,20 +50,41 @@ for n, text in enumerate(text_vars, 1):
 
     for i1, word1 in enumerate(word_bases):
         for i2, word2 in enumerate(word_vars):
-            if transposition((i1, word1), (i2, word2)):
-                word_match[i1, i2] = 1
-                print(f"{i1 + 1:>2}: {word1:<12} (>) {i2 + 1:>2}: {word2}")
+            word_match[i1, i2] = int(transposition(word1, word2))
 
-        if not sum(word_match[i1]):
-            print(f"{i1 + 1:>2}: {word1:<12} (-)")
+    max_shape = max(word_match.shape)
+    # Which words have no pair (positions)
+    orphans = [i for i, row in enumerate(word_match) if not sum(row)]
+
+    for i1, word1 in enumerate(word_bases):
+        pair_pos = max_shape
+        for i2, word2 in enumerate(word_vars):
+            # Number of orphans between i1 and i2
+            delta = sum([(i1 < i < i2 or i2 < i < i1) for i in orphans])
+
+            if (word_match[i1, i2] and
+                neighbor(i1, i2, delta) and
+                abs(i1 - i2) < abs(i1 - pair_pos)):
+
+                pair_pos = i2
+
+        # If we found any pair
+        if pair_pos != max_shape:
+            print(f"{i1 + 1:>2}: {word1:<12} (>) {pair_pos + 1:>2}: {word_vars[pair_pos]}")
+            continue
+
+        print(f"{i1 + 1:>2}: {word1:<12} (-)")
 
     col_sums = np.sum(word_match, axis=0)
     for i2, word2 in enumerate(word_vars):
         if not col_sums[i2]:
             print(f"{'(+)':>20} {i2 + 1:>2}: {word2}")
 
+    '''
     print(delimiter)
     print(word_match)
+    '''
+
     print(delimiter)
 
 '''
