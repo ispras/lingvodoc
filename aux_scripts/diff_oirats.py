@@ -1,10 +1,9 @@
-from difflib import HtmlDiff
-import webbrowser
-import os, re
+import re
 from string import punctuation as puncts
 import numpy as np
 from rapidfuzz.distance.JaroWinkler import distance as jw
 from pdb import set_trace as A
+delimiter = '=' * 40
 
 
 def split_words(text):
@@ -27,8 +26,7 @@ def neighbor(i1, i2, delta):
 
     return near
 
-# Create an instance of HtmlDiff
-# differ = HtmlDiff()
+
 text_vars = list()
 text_dist = list()
 
@@ -38,46 +36,46 @@ text_vars.append("Припоминаю я чудесное мгновение, �
 text_vars.append("Чудо помню мгновенное, ты появилась предо мною.")
 text_vars.append("Как гений чистой красоты, явилась ты передо мной, помню я")
 
-delimiter = '=' * 40
-print(delimiter)
-
 word_bases = split_words(text_base)
 
 for n, text in enumerate(text_vars, 1):
     word_vars = split_words(text)
-    word_match = np.zeros((len(word_bases), len(word_vars)), dtype=int)
-    text_dist.append(word_match)
+    mtrx_shape = (len(word_bases), len(word_vars))
+    word_match = np.zeros(mtrx_shape, dtype=int)
+    # text_dist.append(word_match)
+    max_shape = max(mtrx_shape)
+    twin_psns = [max_shape * 2] * len(word_bases)
 
     for i1, word1 in enumerate(word_bases):
         for i2, word2 in enumerate(word_vars):
             word_match[i1, i2] = int(transposition(word1, word2))
 
-    max_shape = max(word_match.shape)
-    # Which words have no pair (positions)
+    # Positions of words which have no twin
     orphans = [i for i, row in enumerate(word_match) if not sum(row)]
 
+    print(delimiter)
+
     for i1, word1 in enumerate(word_bases):
-        pair_pos = max_shape
         for i2, word2 in enumerate(word_vars):
+
             # Number of orphans between i1 and i2
             delta = sum([(i1 < i < i2 or i2 < i < i1) for i in orphans])
 
             if (word_match[i1, i2] and
                 neighbor(i1, i2, delta) and
-                abs(i1 - i2) < abs(i1 - pair_pos)):
+                abs(i1 - i2) < abs(i1 - twin_psns[i1])):
 
-                pair_pos = i2
+                twin_psns[i1] = i2
 
-        # If we found any pair
-        if pair_pos != max_shape:
-            print(f"{i1 + 1:>2}: {word1:<12} (>) {pair_pos + 1:>2}: {word_vars[pair_pos]}")
-            continue
+        # If we found a twin
+        if twin_psns[i1] < max_shape:
+            print(f"{i1 + 1:>2}: {word1:<12} (>) {twin_psns[i1] + 1:>2}: {word_vars[twin_psns[i1]]}")
+        else:
+            print(f"{i1 + 1:>2}: {word1:<12} (-)")
 
-        print(f"{i1 + 1:>2}: {word1:<12} (-)")
-
-    col_sums = np.sum(word_match, axis=0)
     for i2, word2 in enumerate(word_vars):
-        if not col_sums[i2]:
+        # A new word, or it is too far from its twin
+        if i2 not in twin_psns:
             print(f"{'(+)':>20} {i2 + 1:>2}: {word2}")
 
     '''
@@ -85,9 +83,12 @@ for n, text in enumerate(text_vars, 1):
     print(word_match)
     '''
 
-    print(delimiter)
+print(delimiter)
 
 '''
+from difflib import HtmlDiff
+import os
+differ = HtmlDiff()
 html_output = differ.make_file(list1, list2, "Benchmark", "Version")
 
 with open('diff.html', 'w') as html_file:
