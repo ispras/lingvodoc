@@ -13,7 +13,7 @@ def split_words(text):
     return list(words)
 
 
-def transposition(word1, word2):
+def transpos(word1, word2):
     edge = 0.25  # Jaro-Winkler edge
     same = jw(word1.lower(), word2.lower()) < edge
 
@@ -48,10 +48,13 @@ for n, text in enumerate(text_vars, 1):
 
     for i1, word1 in enumerate(word_bases):
         for i2, word2 in enumerate(word_vars):
-            word_match[i1, i2] = int(transposition(word1, word2))
+            word_match[i1, i2] = int(transpos(word1, word2))
 
     # Positions of words which have no twin
-    orphans = [i for i, row in enumerate(word_match) if not sum(row)]
+    orphans = (
+        [i for i, row in enumerate(word_match) if not sum(row)] +
+        [j for j, col in enumerate(np.transpose(word_match)) if not sum(col)]
+    )
 
     print(delimiter)
 
@@ -61,11 +64,11 @@ for n, text in enumerate(text_vars, 1):
             # Number of orphans between i1 and i2
             delta = sum([(i1 < i < i2 or i2 < i < i1) for i in orphans])
 
-            if (word_match[i1, i2] and
-                neighbor(i1, i2, delta) and
-                abs(i1 - i2) < abs(i1 - twin_psns[i1])):
-
-                twin_psns[i1] = i2
+            if word_match[i1, i2] and neighbor(i1, i2, delta):
+                if abs(i1 - i2) < abs(i1 - twin_psns[i1]):
+                    twin_psns[i1] = i2
+                else:
+                    break
 
         # If we found a twin
         if twin_psns[i1] < max_shape:
