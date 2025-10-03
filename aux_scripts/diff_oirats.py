@@ -3,7 +3,6 @@ from string import punctuation as puncts
 import numpy as np
 from rapidfuzz.distance.JaroWinkler import distance as jw
 from pdb import set_trace as A
-delimiter = '=' * 40
 
 
 def split_words(text):
@@ -39,9 +38,12 @@ text_base = "Я помню чудное мгновенье, передо мно�
 text_vars.append("Я   чудное   мгновенье пока ещё помню... передо мной явилась ты!")
 text_vars.append("Припоминаю я чудесное мгновение, впереди меня ты появилась.")
 text_vars.append("Чудо помню мгновенное, ты появилась предо мною, потом забыл я.")
-text_vars.append("Как гений чистой красоты, явилась ты передо мной, помню я")
+text_vars.append("Как гений чистой красоты, явилась ты, помню я, передо мной")
 
 word_bases = split_words(text_base)
+
+delimiter = '=' * 40
+print(delimiter)
 
 for n, text in enumerate(text_vars, 1):
     word_vars = split_words(text)
@@ -49,57 +51,58 @@ for n, text in enumerate(text_vars, 1):
     word_match = np.zeros(mtrx_shape, dtype=int)
     # text_dist.append(word_match)
     max_shape = max(mtrx_shape)
-    twin_psns = [None] * len(word_bases)
 
+    # Getting initial matrix of similarities
     for i1, word1 in enumerate(word_bases):
         for i2, word2 in enumerate(word_vars):
             word_match[i1, i2] = int(reversion(word1, word2))
 
-    # Positions of words which have no twin
-    orphans = (
+    # Positions of words which have no similarities
+    orphans = set(
         [i for i, row in enumerate(word_match) if not sum(row)] +
         [j for j, col in enumerate(np.transpose(word_match)) if not sum(col)]
     )
 
-    print(delimiter)
+    for step in "getting_orphans", "getting_twins":
+        twin_psns = [None] * len(word_bases)
 
+        for i1, word1 in enumerate(word_bases):
+            twin_dist = max_shape
+
+            for i2, word2 in enumerate(word_vars):
+                # Number of orphans between i1 and i2
+                delta = sum([(i1 < i < i2 or i2 < i < i1) for i in orphans])
+                cur_dist = neighbor(i1, i2, max_shape, delta)
+
+                if cur_dist is not None and cur_dist < twin_dist:
+                    if word_match[i1, i2]:
+                        twin_dist = cur_dist
+                        twin_psns[i1] = i2
+                elif cur_dist != max_shape:
+                    break
+
+        if step == "getting_orphans":
+            orphans.update(
+                [i for i in range(len(word_bases)) if twin_psns[i] is None] +
+                [j for j in range(len(word_vars)) if j not in twin_psns]
+            )
+
+    # Printing results
     for i1, word1 in enumerate(word_bases):
-        twin_dist = max_shape
-
-        for i2, word2 in enumerate(word_vars):
-            # Number of orphans between i1 and i2
-            delta = sum([(i1 < i < i2 or i2 < i < i1) for i in orphans])
-            cur_dist = neighbor(i1, i2, max_shape, delta)
-
-            if cur_dist is not None and cur_dist < twin_dist:
-                if word_match[i1, i2]:
-                    twin_dist = cur_dist
-                    twin_psns[i1] = i2
-            elif cur_dist != max_shape:
-                break
-
-        # If we found a twin
+        # If we found twins
         if twin_psns[i1] is not None:
-            print(f"{i1 + 1:>2}: {word1:<12} (>) {twin_psns[i1] + 1:>2}: {word_vars[twin_psns[i1]]}")
+            print(f"{i1:>2}: {word1:<12} (>) {twin_psns[i1]:>2}: {word_vars[twin_psns[i1]]}")
         else:
-            print(f"{i1 + 1:>2}: {word1:<12} (-)")
-            if i1 not in orphans:
-                orphans.append(i1)
-
+            print(f"{i1:>2}: {word1:<12} (-)")
     for i2, word2 in enumerate(word_vars):
         # A new word, or it is too far from its twin
         if i2 not in twin_psns:
-            print(f"{'(+)':>20} {i2 + 1:>2}: {word2}")
-            if i2 not in orphans:
-                orphans.append(i2)
+            print(f"{'(+)':>20} {i2:>2}: {word2}")
 
-'''
+    print()
+    #print(word_match)
+    print(f'{sorted(orphans)=}')
     print(delimiter)
-    print(word_match)
-    print(f'{orphans=}')
-'''
-
-print(delimiter)
 
 '''
 from difflib import HtmlDiff
