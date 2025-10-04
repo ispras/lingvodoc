@@ -21,12 +21,12 @@ def reversion(word1, word2):
 
 def neighbor(i1, i2, max_shape, delta=0):
     skip = 4  # no more words between
-    dist = abs(i1 - i2) - delta
+    dist = abs(i1 - i2) - 1 - delta
     # Returns extra-big distance if we are not neighbours yet,
     # a real distance if we are neighbours now and
     # None if we are not neighbours already
     return (
-        dist if dist < skip + 2 else
+        dist if dist <= skip else
         max_shape if i2 < i1 else
         None)
 
@@ -58,10 +58,8 @@ for n, text in enumerate(text_vars, 1):
             word_match[i1, i2] = int(reversion(word1, word2))
 
     # Positions of words which have no similarities
-    orphans = set(
-        [i for i, row in enumerate(word_match) if not sum(row)] +
-        [j for j, col in enumerate(np.transpose(word_match)) if not sum(col)]
-    )
+    orphans1 = set([i for i, row in enumerate(word_match) if not sum(row)])
+    orphans2 = set([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
 
     for step in "getting_orphans", "getting_twins":
         twin_psns = [None] * len(word_bases)
@@ -71,7 +69,7 @@ for n, text in enumerate(text_vars, 1):
 
             for i2, word2 in enumerate(word_vars):
                 # Number of orphans between i1 and i2
-                delta = sum([(i1 < i < i2 or i2 < i < i1) for i in orphans])
+                delta = sum([(i1 < i < i2 or i2 < i < i1) for i in list(orphans1) + list(orphans2)])
                 cur_dist = neighbor(i1, i2, max_shape, delta)
 
                 if cur_dist is not None and cur_dist < twin_dist:
@@ -82,10 +80,8 @@ for n, text in enumerate(text_vars, 1):
                     break
 
         if step == "getting_orphans":
-            orphans.update(
-                [i for i in range(len(word_bases)) if twin_psns[i] is None] +
-                [j for j in range(len(word_vars)) if j not in twin_psns]
-            )
+            orphans1.update([i for i in range(len(word_bases)) if twin_psns[i] is None])
+            orphans2.update([j for j in range(len(word_vars)) if j not in twin_psns])
 
     # Printing results
     for i1, word1 in enumerate(word_bases):
@@ -94,6 +90,7 @@ for n, text in enumerate(text_vars, 1):
             print(f"{i1:>2}: {word1:<12} (>) {twin_psns[i1]:>2}: {word_vars[twin_psns[i1]]}")
         else:
             print(f"{i1:>2}: {word1:<12} (-)")
+
     for i2, word2 in enumerate(word_vars):
         # A new word, or it is too far from its twin
         if i2 not in twin_psns:
@@ -101,7 +98,7 @@ for n, text in enumerate(text_vars, 1):
 
     print()
     #print(word_match)
-    print(f'{sorted(orphans)=}')
+    print(f'{sorted(orphans1)=} {sorted(orphans2)=}')
     print(delimiter)
 
 '''
