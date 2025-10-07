@@ -54,13 +54,13 @@ comment_regexp = r'<(.*)>'
 
 
 def complex_regexp(*regexps, marker):
-    tail = r'[\s\d()]*'
-    op_br = r'\['
-    cl_br = r'\]'
-    glue1 = f'{tail}{marker}|'
-    glue2 = f'{cl_br}{tail}{marker}|{op_br}'
+    tail = r'[\s\d()]*' + marker
+    head = r'\['
+    back = r'\]' + tail
+    glue1 = f'{tail}|'
+    glue2 = f'{back}|{head}'
     result1 = glue1.join(regexps)
-    result2 = f'{op_br}{glue2.join(regexps)}{cl_br}'
+    result2 = f'{head}{glue2.join(regexps)}{back}'
 
     return glue1.join((result1, result2))
 
@@ -88,9 +88,14 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None, marked
     txt_file = re.sub(r' +', ' ', txt_file)
 
     # Replace colons in markers to another symbol to differ from colons in text
-    txt_file = re.sub(r':(\d)', r'#\1', txt_file)
+    txt_file = re.sub(r':(\d)', r'##\1', txt_file)
 
-    if not (sentences := re.split(complex_regexp(tib_end, oir_end, marker=('\n' * marked)), txt_file)[:-1]):
+    marker = '\n' * marked
+    delimiter = complex_regexp(tib_end, oir_end, marker=marker)
+    # Find delimiters and mark them
+    txt_file = re.sub(f'({delimiter})', r'\1#~', txt_file)
+
+    if not (sentences := txt_file.split(f'{marker}#~')[:-1]):
         raise ValueError("No one sentence is found. Be careful, sentences must end with '||' or ':' simbols. These symbols may be closed in square brackets.")
 
     if not column:
@@ -101,7 +106,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None, marked
 
     count = 0
     for x in sentences:
-        line = x.replace('#', ':').strip()
+        line = x.replace('##', ':').strip()
 
         if not line:
             continue
@@ -114,7 +119,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None, marked
 
 def join_sentences(columns_dict, order_field_id, marked):
 
-    sentence_regexp = complex_regexp(tib_end, oir_end, marker=('\n' * marked))
+    sentence_regexp = complex_regexp(tib_end, oir_end, marker='')
 
     def clean_text(note, non_base):
         note = re.sub(missed_regexp, '/missed text/', note)
