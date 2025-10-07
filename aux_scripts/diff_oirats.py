@@ -57,7 +57,7 @@ for n, text in enumerate(text_vars, 1):
         for i2, word2 in enumerate(word_vars):
             word_match[i1, i2] = int(reversion(word1, word2))
 
-    # Positions of words which have no similarities
+    # Positions of words which have no similarities by rows and by columns
     orphans1 = set([i for i, row in enumerate(word_match) if not sum(row)])
     orphans2 = set([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
 
@@ -72,6 +72,8 @@ for n, text in enumerate(text_vars, 1):
                 delta = sum([(i1 < i < i2 or i2 < i < i1) for i in list(orphans1) + list(orphans2)])
                 cur_dist = neighbor(i1, i2, max_shape, delta)
 
+                # If we are neighbours now or will be in future and
+                # current distance is less than a found one
                 if cur_dist is not None and cur_dist < twin_dist:
                     if word_match[i1, i2]:
                         twin_dist = cur_dist
@@ -79,6 +81,7 @@ for n, text in enumerate(text_vars, 1):
                 elif cur_dist != max_shape:
                     break
 
+        # Updating orphans sets if some similarities actually are not neighbours
         if step == "getting_orphans":
             orphans1.update([i for i in range(len(word_bases)) if twin_psns[i] is None])
             orphans2.update([j for j in range(len(word_vars)) if j not in twin_psns])
