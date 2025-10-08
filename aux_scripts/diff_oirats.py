@@ -4,9 +4,28 @@ import numpy as np
 from rapidfuzz.distance.JaroWinkler import distance as jw
 from pdb import set_trace as A
 
+'''
+cases = []
+
+sentence = {
+    'numbs': [],
+    'words': [],
+    'links': []
+}
+
+links = {
+    'numbs': [],
+    'words': [],
+    'diffs': []
+}
+
+def compile_diffs(main_numb, main_word, numbs, words, diffs):
+    if
+
+'''
 
 def split_words(text):
-    parts = re.split(f'[{puncts}\s]+', text)
+    parts = re.split(f'[{puncts}\\s]+', text)
     words = filter(lambda p: len(p), parts)
 
     return list(words)
@@ -29,6 +48,22 @@ def neighbor(i1, i2, max_shape, delta=0):
         dist if dist <= skip else
         max_shape if i2 < i1 else
         None)
+
+
+def print_result(twin_psns):
+    for twin1, twin2 in twin_psns.items():
+        if twin1 is not None:
+            (i1, word1) = twin1
+            # If we found twins
+            if twin2 is not None:
+                (i2, word2) = twin2
+                print(f"{i1:>2}: {word1:<12} (>) {i2:>2}: {word2}")
+            else:
+                print(f"{i1:>2}: {word1:<12} (-)")
+        else:
+            # A new word, or it is too far from its twin
+            for (i2, word2) in twin2:
+                print(f"{'(+)':>20} {i2:>2}: {word2}")
 
 
 text_vars = list()
@@ -60,12 +95,22 @@ for n, text in enumerate(text_vars, 1):
     # Positions of words which have no similarities by rows and by columns
     orphans1 = set([i for i, row in enumerate(word_match) if not sum(row)])
     orphans2 = set([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
+    twin_dict = {}
 
     for step in "getting_orphans", "getting_twins":
-        twin_psns = [None] * len(word_bases)
+
+        # Updating orphans sets if some similarities actually are not neighbours
+        if step == "getting_twins":
+            orphans1.update([i for (i, _), twin in twin_dict.items() if twin is None])
+            # Reinitializing twin_dict with found loners
+            twin_dict = {
+                None: [loner for loner in enumerate(word_vars) if loner not in twin_dict.values()]
+            }
+            orphans2.update([j for (j, _) in twin_dict[None]])
 
         for i1, word1 in enumerate(word_bases):
             twin_dist = max_shape
+            twin_dict[(i1, word1)] = None
 
             for i2, word2 in enumerate(word_vars):
                 # Number of orphans between i1 and i2
@@ -77,42 +122,11 @@ for n, text in enumerate(text_vars, 1):
                 if cur_dist is not None and cur_dist < twin_dist:
                     if word_match[i1, i2]:
                         twin_dist = cur_dist
-                        twin_psns[i1] = i2
+                        twin_dict[(i1, word1)] = (i2, word2)
                 elif cur_dist != max_shape:
                     break
 
-        # Updating orphans sets if some similarities actually are not neighbours
-        if step == "getting_orphans":
-            orphans1.update([i for i in range(len(word_bases)) if twin_psns[i] is None])
-            orphans2.update([j for j in range(len(word_vars)) if j not in twin_psns])
-
-    # Printing results
-    for i1, word1 in enumerate(word_bases):
-        # If we found twins
-        if twin_psns[i1] is not None:
-            print(f"{i1:>2}: {word1:<12} (>) {twin_psns[i1]:>2}: {word_vars[twin_psns[i1]]}")
-        else:
-            print(f"{i1:>2}: {word1:<12} (-)")
-
-    for i2, word2 in enumerate(word_vars):
-        # A new word, or it is too far from its twin
-        if i2 not in twin_psns:
-            print(f"{'(+)':>20} {i2:>2}: {word2}")
-
-    print()
+    print_result(twin_dict)
+    print(f'\n{sorted(orphans1)=} {sorted(orphans2)=}\n')
     #print(word_match)
-    print(f'{sorted(orphans1)=} {sorted(orphans2)=}')
     print(delimiter)
-
-'''
-from difflib import HtmlDiff
-import os
-differ = HtmlDiff()
-html_output = differ.make_file(list1, list2, "Benchmark", "Version")
-
-with open('diff.html', 'w') as html_file:
-    html_file.write(html_output)
-
-print("file://" + os.path.abspath('diff.html'))
-#webbrowser.open("file://" + html_file_path)
-'''
