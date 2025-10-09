@@ -176,8 +176,8 @@ def process_batch(args):
     base_word_tensor = self._process_text(input_word)
     base_tran_tensor = self._process_text(input_tran)
 
-    #with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
-    with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
+    with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
+    #with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
 
         for i, compare_list in enumerate(self.compare_lists):
             if not compare_list:
@@ -433,8 +433,8 @@ class NeuroCognates:
                     if i:
                         sleep(1)
 
-                    #metrics_req = requests.get("http://10.100.192.136:8002/metrics")
-                    metrics_req = requests.get("http://10.100.192.136:8082/metrics")
+                    metrics_req = requests.get("http://10.100.192.136:8002/metrics")
+                    #metrics_req = requests.get("http://10.100.192.136:8082/metrics")
 
                     if metrics_req.status_code != 200:
                         raise ConnectionRefusedError("Server is not available now. Please ask administrator.")
