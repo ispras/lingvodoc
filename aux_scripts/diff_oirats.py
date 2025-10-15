@@ -112,45 +112,37 @@ for n, text in enumerate(text_vars, 1):
     holes1 = set([i for i, row in enumerate(word_match) if not sum(row)])
     holes2 = set([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
 
-    for step in "getting_holes", "getting_twins":
+    twin_dict = {}
 
-        # Updating holes sets if some similarities actually are not neighbours
-        if step == "getting_twins":
-            holes1.update([i for (i, _), twin in twin_dict.items() if twin is None])
-            holes2.update([j for (j, w) in enumerate(word_vars) if (j, w) not in
-                           [v[:-1] for v in twin_dict.values() if v is not None]])
+    for i1, word1 in enumerate(word_bases):
+        twin_posn = twin_dist = max_shape
+        twin_dict[(i1, word1)] = None
 
-        twin_dict = {}
+        for i2, word2 in enumerate(word_vars):
+            # Number of holes before i2(!)
+            delta1 = sum([(i < i2) for i in list(holes2)])
+            # Number of holes before i1(!)
+            delta2 = sum([(j < i1) for j in list(holes1)])
 
-        for i1, word1 in enumerate(word_bases):
-            twin_posn = twin_dist = max_shape
-            twin_dict[(i1, word1)] = None
+            cur_dist = neighbor(i1 + delta1, i2 + delta2, max_shape)
 
-            for i2, word2 in enumerate(word_vars):
-                # Number of holes before i2(!)
-                delta1 = sum([(i < i2) for i in list(holes2)])
-                # Number of holes before i1(!)
-                delta2 = sum([(j < i1) for j in list(holes1)])
-                cur_dist = neighbor(i1 + delta1, i2 + delta2, max_shape)
+            # If we are neighbours now or will be in future and
+            # current distance is less than a found one
+            if cur_dist is not None and cur_dist < twin_dist:
+                if word_match[i1, i2]:
+                    twin_dist = cur_dist
+                    twin_posn = i2
+                    twin_dict[(i1, word1)] = (twin_posn, word2, twin_dist)
+            elif cur_dist != max_shape:  # None or a bigger distance value
+                break
 
-                # If we are neighbours now or will be in future and
-                # current distance is less than a found one
-                if cur_dist is not None and cur_dist < twin_dist:
-                    if word_match[i1, i2]:
-                        twin_dist = cur_dist
-                        twin_posn = i2
-                        twin_dict[(i1, word1)] = (twin_posn, word2, twin_dist)
-                elif cur_dist != max_shape:  # None or a bigger distance value
-                    break
+        # If we have a replacement
+        if 0 < twin_dist < max_shape:
+            holes1.add(i1)
+            holes2.add(twin_posn)
 
-            if step == "getting_twins":
-                if 0 < twin_dist < max_shape:
-                    holes1.add(i1)
-                    holes2.add(twin_posn)
-
-        if step == "getting_twins":
-            twin_dict[None] = [loner for loner in enumerate(word_vars) if loner not in
-                               [v[:-1] for v in twin_dict.values() if v is not None]]
+    twin_dict[None] = [loner for loner in enumerate(word_vars) if loner not in
+                       [v[:-1] for v in twin_dict.values() if v is not None]]
 
     compile_diffs(twin_dict, to_log=True)
     diffs_total.append(twin_dict)
