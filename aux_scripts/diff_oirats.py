@@ -29,13 +29,11 @@ def diff_words(word1, word2):
     delta = diff(word1.lower(), word2.lower())
 
     for (sign, _, char) in delta:
-        if sign == '-' and not to_chars:
+        if sign == '-':
             from_chars += char
-
-        if sign == '+' and from_chars:
+        elif sign == '+':
             to_chars += char
-
-        if sign == ' ':
+        else:
             flush_result()
 
     flush_result()
@@ -75,7 +73,7 @@ if __name__ == "__main__":
     # Input texts
     text_vars = list()
 
-    text_base = "Я помню чудное мгновенье, передо мной явилась ты"
+    text_base = "Я помню чудное мгновеньее, передо мной явилась ты"
     text_vars.append("Ещё мгновении чудecное, впереди меня когда-то появилась ты, я помню")
 
     word_bases = split_words(text_base)
