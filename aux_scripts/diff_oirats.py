@@ -6,59 +6,26 @@ from difflib import Differ
 from rapidfuzz.distance.JaroWinkler import distance as jw
 from pdb import set_trace as A
 
+# For debugging
+debug_flag = True
 line = '=' * 55
 dash = '-' * 5
 
-list_sentence = []
-main_sentence = collections.defaultdict(list)
-list_sentence.append(main_sentence)
-diff = Differ().compare
 
+def diff_words(word1, word2):
+    if word1.lower() == word2.lower():
+        return None
 
-def compile_diffs(twin_dict, to_log=False):
+    result = []
+    (sign_, _, char_) = '###'
+    delta = diff(word1.lower(), word2.lower())
 
-    def diff_words(word1, word2):
-        if word1.lower() == word2.lower():
-            return None
+    for (sign, _, char) in delta:
+        if sign_ == '-' and sign == '+':
+            result.append(f'{char_} -> {char}')
+        (sign_, char_) = (sign, char)
 
-        result = []
-        (sign_, _, char_) = '###'
-        delta = diff(word1.lower(), word2.lower())
-
-        for (sign, _, char) in delta:
-            if sign_ == '-' and sign == '+':
-                result.append(f'{char_} -> {char}')
-            (sign_, char_) = (sign, char)
-
-        return result or None
-
-    twin_sentence = {}
-    list_sentence.append(twin_sentence)
-
-    for twin1, twin2 in twin_dict.items():
-        if twin1 is not None:
-            (i1, word1) = twin1
-            # If we found twins
-            if twin2 is not None:
-                (i2, word2, twin_dist) = twin2
-                twin_diff = diff_words(word1, word2)
-                main_sentence[(i1, word1)].append((i2, word2, twin_dist, twin_diff))
-                twin_sentence[(i2, word2)] = (i1, word1, twin_dist, twin_diff)
-                if to_log:
-                    dist = '>' if twin_dist else '='
-                    diff_ = f'(+/-) {twin_diff}' if twin_diff else ''
-
-                    print(f"{i1:>2}: {word1:<12} ({dist}) {i2:>2}: {word2:<12} {diff_}")
-            else:
-                main_sentence[twin1].append(None)
-                if to_log:
-                    print(f"{i1:>2}: {word1:<12} (-)  {dash}")
-        else:
-            # A new word, or it is too far from its twin
-            for (i2, word2) in twin2:
-                twin_sentence[(i2, word2)] = None
-                if to_log:
-                    print(f" {dash:<15} (+) {i2:>2}: {word2:<12}")
+    return result or None
 
 
 def split_words(text):
@@ -68,7 +35,7 @@ def split_words(text):
     return list(words)
 
 
-def reversion(word1, word2):
+def twins(word1, word2):
     edge = 0.25  # Jaro-Winkler edge
     same = jw(word1.lower(), word2.lower()) < edge
 
@@ -78,6 +45,7 @@ def reversion(word1, word2):
 def neighbor(i1, i2, max_shape):
     skip = 4  # no more than four words between
     dist = abs(i1 - i2)
+
     # Returns extra-big distance if we are not neighbours yet,
     # a real distance if we are neighbours now and
     # None if we are not neighbours already
@@ -87,15 +55,22 @@ def neighbor(i1, i2, max_shape):
         None)
 
 
+# Input texts
 text_vars = list()
-diffs_total = list()
 
 text_base = "Я помню чудное мгновенье, передо мной явилась ты"
 text_vars.append("Ещё мгновение чудное, впереди меня когда-то появилась ты, я помню")
 
 word_bases = split_words(text_base)
 
-print(line)
+# Output structures, initializing main sentence
+list_sentence = []
+main_sentence = collections.defaultdict(list)
+list_sentence.append(main_sentence)
+diff = Differ().compare
+
+if debug_flag:
+    print(line)
 
 for n, text in enumerate(text_vars, 1):
     word_vars = split_words(text)
@@ -106,17 +81,20 @@ for n, text in enumerate(text_vars, 1):
     # Getting initial matrix of similarities
     for i1, word1 in enumerate(word_bases):
         for i2, word2 in enumerate(word_vars):
-            word_match[i1, i2] = int(reversion(word1, word2))
+            word_match[i1, i2] = int(twins(word1, word2))
 
     # Positions of words which have no similarities by rows and by columns
     holes1 = set([i for i, row in enumerate(word_match) if not sum(row)])
     holes2 = set([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
 
-    twin_dict = {}
+    # Initializing twin sentence
+    twin_sentence = {}
+    list_sentence.append(twin_sentence)
 
     for i1, word1 in enumerate(word_bases):
-        twin_posn = twin_dist = max_shape
-        twin_dict[(i1, word1)] = None
+        twin_posn = max_shape
+        twin_dist = max_shape
+        twin_word = None
 
         for i2, word2 in enumerate(word_vars):
             # Number of holes before i2(!)
@@ -132,20 +110,40 @@ for n, text in enumerate(text_vars, 1):
                 if word_match[i1, i2]:
                     twin_dist = cur_dist
                     twin_posn = i2
-                    twin_dict[(i1, word1)] = (twin_posn, word2, twin_dist)
+                    twin_word = word2
             elif cur_dist != max_shape:  # None or a bigger distance value
                 break
 
-        # If we have a replacement
-        if 0 < twin_dist < max_shape:
-            holes1.add(i1)
-            holes2.add(twin_posn)
+        # If we have twins
+        if twin_dist < max_shape:
+            twin_diff = diff_words(word1, twin_word)
+            main_sentence[(i1, word1)].append((twin_posn, twin_word, twin_dist, twin_diff))
+            twin_sentence[(twin_posn, twin_word)] = (i1, word1, twin_dist, twin_diff)
 
-    twin_dict[None] = [loner for loner in enumerate(word_vars) if loner not in
-                       [v[:-1] for v in twin_dict.values() if v is not None]]
+            if debug_flag:
+                dist = '>' if twin_dist else '='
+                diff_ = f'(+/-) {twin_diff}' if twin_diff else ''
 
-    compile_diffs(twin_dict, to_log=True)
-    diffs_total.append(twin_dict)
-    print(f'\n{sorted(holes1)=} {sorted(holes2)=}\n')
-    #print(word_match)
-    print(line)
+                print(f"{i1:>2}: {word1:<12} ({dist}) {twin_posn:>2}: {twin_word:<12} {diff_}")
+
+            # If this is a real replacement
+            if twin_dist > 0:
+                holes1.add(i1)
+                holes2.add(twin_posn)
+        else:
+            main_sentence[(i1, word1)].append(None)
+
+            if debug_flag:
+                print(f"{i1:>2}: {word1:<12} (-)  {dash}")
+
+    # A new word, or it is too far from its twin
+    loners = [loner for loner in enumerate(word_vars) if loner not in twin_sentence]
+    for (i, word) in loners:
+        twin_sentence[(i, word)] = None
+
+        if debug_flag:
+            print(f" {dash:<15} (+) {i:>2}: {word:<12}")
+
+    if debug_flag:
+        print(f'\n{sorted(holes1)=} {sorted(holes2)=}\n')
+        print(line)
