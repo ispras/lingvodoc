@@ -13,17 +13,32 @@ dash = '-' * 5
 
 
 def diff_words(word1, word2):
+
+    result = []
+    from_chars = to_chars = ''
+
+    def flush_result():
+        nonlocal from_chars, to_chars
+        if from_chars and to_chars:
+            result.append(f'{from_chars} -> {to_chars}')
+        from_chars = to_chars = ''
+
     if word1.lower() == word2.lower():
         return None
 
-    result = []
-    (sign_, _, char_) = '###'
     delta = diff(word1.lower(), word2.lower())
 
     for (sign, _, char) in delta:
-        if sign_ == '-' and sign == '+':
-            result.append(f'{char_} -> {char}')
-        (sign_, char_) = (sign, char)
+        if sign == '-' and not to_chars:
+            from_chars += char
+
+        if sign == '+' and from_chars:
+            to_chars += char
+
+        if sign == ' ':
+            flush_result()
+
+    flush_result()
 
     return result or None
 
@@ -61,7 +76,7 @@ if __name__ == "__main__":
     text_vars = list()
 
     text_base = "Я помню чудное мгновенье, передо мной явилась ты"
-    text_vars.append("Ещё мгновение чудное, впереди меня когда-то появилась ты, я помню")
+    text_vars.append("Ещё мгновении чудecное, впереди меня когда-то появилась ты, я помню")
 
     word_bases = split_words(text_base)
 
@@ -122,16 +137,15 @@ if __name__ == "__main__":
                 main_sentence[(i1, word1)].append((twin_posn, twin_word, twin_dist, twin_diff))
                 twin_sentence[(twin_posn, twin_word)] = (i1, word1, twin_dist, twin_diff)
 
-                if debug_flag:
-                    dist = '>' if twin_dist else '='
-                    diff_ = f'(+/-) {twin_diff}' if twin_diff else ''
-
-                    print(f"{i1:>2}: {word1:<12} ({dist}) {twin_posn:>2}: {twin_word:<12} {diff_}")
-
                 # If this is a real replacement
                 if twin_dist > 0:
                     holes1.add(i1)
                     holes2.add(twin_posn)
+
+                if debug_flag:
+                    dist = '>' if twin_dist else '='
+                    diff_ = f'(+/-) {twin_diff}' if twin_diff else ''
+                    print(f"{i1:>2}: {word1:<12} ({dist}) {twin_posn:>2}: {twin_word:<12} {diff_}")
             else:
                 main_sentence[(i1, word1)].append(None)
 
