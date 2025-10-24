@@ -379,6 +379,7 @@ from lingvodoc.views.v2.utils import (
 from operator import attrgetter
 
 from lingvodoc.scripts.list_cognates import entities_getter
+from lingvodoc.scripts.diff_oirats import get_diff as get_twins_diff
 
 from pdb import set_trace as A
 
@@ -700,6 +701,12 @@ class Query(graphene.ObjectType):
         graphene.Field(
             ObjectVal,
             result_file = graphene.String(required = True)))
+
+    twins_diff = (
+        graphene.Field(
+            ObjectVal,
+            main_translation = graphene.List(LingvodocID, required = True),
+            twin_translation = graphene.List(graphene.List(LingvodocID), required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -5370,6 +5377,24 @@ class Query(graphene.ObjectType):
 
         return {**result_dict, **sg_state_dict}
 
+    def resolve_twins_diff(self, info, main_translation, twin_translation):
+        def get_content(cid, oid):
+            entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
+            return entity.content if entity else ""
+
+        result = []
+        for main_id, twins in zip(main_translation, twin_translation):
+            if main_id is None:
+                continue
+            main_content = get_content(*main_id)
+
+            twin_content = []
+            for twin_id in twins:
+                twin_content.append(get_content(*twin_id) if twin_id is not None else "")
+
+            result.append(get_twins_diff(main_content, twin_content))
+
+        return result
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
