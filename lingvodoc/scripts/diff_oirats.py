@@ -111,8 +111,9 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
         holes2 = set([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
 
         # Initializing twin sentence
-        twin_sentence = {}
+        twin_sentence = collections.defaultdict(dict)
         list_sentence[twin_id] = twin_sentence
+        twin_equal = []
 
         for i1, (p1, word1) in enumerate(word_bases):
             twin_posn = -1
@@ -146,8 +147,11 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                 twin_key = key2str(twin_posn, len(twin_word))
                 twin_diff = diff_words(word1, twin_word)
 
-                main_sentence[main_key][twin_id] = (twin_posn, twin_word, twin_dist, twin_diff)
-                twin_sentence[twin_key] = (p1, word1, twin_dist, twin_diff)
+                if twin_dist or twin_diff:
+                    main_sentence[main_key][twin_id] = (twin_posn, twin_word, twin_dist, twin_diff)
+                    twin_sentence[twin_key][main_id] = (p1, word1, twin_dist, twin_diff)
+                else:
+                    twin_equal.append(twin_key)
 
                 # If this is a real replacement
                 if twin_dist > 0:
@@ -166,8 +170,8 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
 
         # A new word, or it is too far from its twin
         for i, (p, word) in enumerate(word_vars):
-            if (twin_key := key2str(p, len(word))) not in twin_sentence:
-                twin_sentence[twin_key] = None
+            if (twin_key := key2str(p, len(word))) not in (list(twin_sentence) + twin_equal):
+                twin_sentence[twin_key][main_id] = None
 
                 if debug_flag:
                     print(f" {dash:<15} (+) {i:>2}: {word:<12}")
