@@ -41,24 +41,31 @@ log = logging.getLogger(__name__)
 
 page = r'\d+[ab]?'
 line = r'\d+'
-tib_end = r'\|\|+'
-oir_end = r':+'
+tib_end = r'\|+'
+oir_end = r'\:+'
 
-position_regexp = (f'\[{page}:{line}\]|'
-                   f'\[{page}\]')
+position_regexp = (f'\\[{page}:{line}\\]|'
+                   f'\\[{page}\\]')
 
-line_regexp = f'\({line}\)'
-
-sentence_regexp = (f'{tib_end}|'
-                   f'{oir_end}|'
-                   f'\[{tib_end}\]|'
-                   f'\[{oir_end}\]')
+line_regexp = f'\\({line}\\)'
 
 missed_regexp = r'<(\d+)>'
 comment_regexp = r'<(.*)>'
 
 
-def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
+def complex_regexp(*regexps, marker):
+    tail = r'[\s\d()]*' + marker
+    head = r'\['
+    back = r'\]' + tail
+    glue1 = f'{tail}|'
+    glue2 = f'{back}|{head}'
+    result1 = glue1.join(regexps)
+    result2 = f'{head}{glue2.join(regexps)}{back}'
+
+    return glue1.join((result1, result2))
+
+
+def txt_to_column(path, url, columns_dict=defaultdict(list), column=None, marked=False):
 
     try:
         txt_file = (
@@ -77,11 +84,18 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
         raise ValueError("Be careful, meaningful text must start with a marker like '[12a:23]' or '[12b]' or just '[12]'.")
 
     txt_file = txt_file[txt_start.start():]
-    txt_file = txt_file.replace('\r\n', ' ').replace('\n', ' ').replace('  ', ' ')
-    # Replace colons in markers to another symbol to differ from colons in text
-    txt_file = re.sub(r':(\d)', r'#\1', txt_file)
+    txt_file = re.sub(r'\s*\n', '\n' if marked else ' ', txt_file)
+    txt_file = re.sub(r' +', ' ', txt_file)
 
-    if not (sentences := re.split(sentence_regexp, txt_file)[:-1]):
+    # Replace colons in markers to another symbol to differ from colons in text
+    txt_file = re.sub(r':(\d)', r'##\1', txt_file)
+
+    marker = '\n' * marked
+    delimiter = complex_regexp(tib_end, oir_end, marker=marker)
+    # Find delimiters and mark them
+    txt_file = re.sub(f'({delimiter})', r'\1#~', txt_file)
+
+    if not (sentences := txt_file.split(f'{marker}#~')[:-1]):
         raise ValueError("No one sentence is found. Be careful, sentences must end with '||' or ':' simbols. These symbols may be closed in square brackets.")
 
     if not column:
@@ -90,11 +104,9 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
     if column in columns_dict:
         raise ValueError("Different columns in the table have identical names.")
 
-    col_num = len(columns_dict)
-
     count = 0
     for x in sentences:
-        line = x.replace('#', ':').strip()
+        line = x.replace('##', ':').strip()
 
         if not line:
             continue
@@ -105,7 +117,9 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
     return columns_dict, count
 
 
-def join_sentences(columns_dict, order_field_id):
+def join_sentences(columns_dict, order_field_id, marked):
+
+    sentence_regexp = complex_regexp(tib_end, oir_end, marker='')
 
     def clean_text(note, non_base):
         note = re.sub(missed_regexp, '/missed text/', note)
@@ -139,17 +153,29 @@ def join_sentences(columns_dict, order_field_id):
         return 10 if non_base else 8
 
     threshold = 1.2
-
+    order_it = []
     iterators = {}
+    result = defaultdict(list)
+    non_base = False
     for f_id, lines in columns_dict.items():
         if f_id == order_field_id:
-            order_it = iter(lines)
+            if marked:
+                result[f_id] = columns_dict[f_id]
+            else:
+                order_it = iter(lines)
         elif type(lines) is list:
-            iterators[f_id] = iter(lines)
+            if marked:
+                result[f_id] = [clean_text(note, non_base) for note in lines]
+                non_base = True
+            else:
+                iterators[f_id] = iter(lines)
+
+    if marked:
+        #log.warning("Returned marked sentences")
+        return result, len(result[order_field_id])
 
     count = 0
     buffer = {}
-    result = defaultdict(list)
     for order in order_it:
         words = {}
         sentence = {}
@@ -196,7 +222,7 @@ def join_sentences(columns_dict, order_field_id):
     return result, count
 
 
-def txt_to_parallel_columns(columns_inf, order_field_id):
+def txt_to_parallel_columns(columns_inf, order_field_id, marked=False):
     columns_dict = defaultdict(list)
 
     # Hide dashes in base column if it's needed
@@ -211,13 +237,14 @@ def txt_to_parallel_columns(columns_inf, order_field_id):
         field_ids = list(map(tuple, column_inf.get("field_ids")))
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
 
-        columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_ids[0])
+        columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_ids[0], marked)
         if count > max_count:
             max_count = count
 
     columns_dict[order_field_id] = get_lexgraph_list(max_count)
 
-    yield join_sentences(columns_dict, order_field_id)
+    # Yield is here just for similarities with another function and has no matter
+    yield join_sentences(columns_dict, order_field_id, marked)
 
 
 def json_to_parallel_columns(columns_inf, order_field_id):
@@ -415,8 +442,8 @@ def convert_start(ids, corpora_inf, columns_inf, mode, cache_kwargs, sqlalchemy_
             order_field_id = get_field_tracker(
                 client_id, data_type='Ordering', DBSession=DBSession)(searchstring='Order')
 
-            if mode == 'txt':
-                get_parallel_columns = txt_to_parallel_columns(columns_inf, order_field_id)
+            if mode == 'txt' or mode == 'marked':
+                get_parallel_columns = txt_to_parallel_columns(columns_inf, order_field_id, (mode == 'marked'))
             elif mode == 'json':
                 get_parallel_columns = json_to_parallel_columns(columns_inf, order_field_id)
             else:
