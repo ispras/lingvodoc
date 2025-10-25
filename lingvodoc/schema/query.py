@@ -5386,11 +5386,11 @@ class Query(graphene.ObjectType):
         for main_id, twins in zip(main_translation, twin_translation):
             if main_id is None:
                 continue
-            main_content = get_content(*main_id)
+            main_content = main_id, get_content(*main_id)
 
             twin_content = []
             for twin_id in twins:
-                twin_content.append(get_content(*twin_id) if twin_id is not None else "")
+                twin_content.append((twin_id, get_content(*twin_id)) if twin_id is not None else (twin_id, ""))
 
             result.append(get_twins_diff(main_content, twin_content))
 

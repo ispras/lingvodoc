@@ -12,8 +12,8 @@ dash = '-' * 5
 
 # Input texts
 debug_vars = list()
-debug_base = "Я помню чудное мгновенье, передо мной явилась ты"
-debug_vars.append("Ещё нгновение чюдecное, впереди меня когда-то появилясь ты, я понмю")
+debug_base = ((1,), "Я помню чудное мгновенье, передо мной явилась ты")
+debug_vars.append(((2,), "Ещё нгновение чюдecное, впереди меня когда-то появилясь ты, я понмю"))
 
 def diff_words(word1, word2):
 
@@ -22,9 +22,9 @@ def diff_words(word1, word2):
 
     def flush_result():
         nonlocal from_chars, to_chars
-        if from_chars and to_chars:
-            result.append(f'{from_chars} -> {to_chars}')
-        from_chars = to_chars = ''
+        if from_chars or to_chars:
+            result.append((from_chars, to_chars))
+            from_chars = to_chars = ''
 
     if word1.lower() == word2.lower():
         return None
@@ -82,17 +82,20 @@ def str2key(string):
 
 def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False):
 
-    word_bases = split_words(text_base)
+    main_id, text = text_base
+    main_id = key2str(*main_id)
+    word_bases = split_words(text)
 
     # Output structures, initializing main sentence
-    list_sentence = []
-    main_sentence = collections.defaultdict(list)
-    list_sentence.append(main_sentence)
+    list_sentence = {}
+    main_sentence = collections.defaultdict(dict)
+    list_sentence[main_id] = main_sentence
 
     if debug_flag:
         print(line)
 
-    for n, text in enumerate(text_vars, 1):
+    for (twin_id, text) in text_vars:
+        twin_id = key2str(*twin_id)
         word_vars = split_words(text)
         mtrx_shape = (len(word_bases), len(word_vars))
         word_match = np.zeros(mtrx_shape, dtype=int)
@@ -109,7 +112,7 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
 
         # Initializing twin sentence
         twin_sentence = {}
-        list_sentence.append(twin_sentence)
+        list_sentence[twin_id] = twin_sentence
 
         for i1, (p1, word1) in enumerate(word_bases):
             twin_posn = -1
@@ -136,12 +139,15 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                 elif cur_dist != max_shape:  # None or a bigger distance value
                     break
 
+            main_key = key2str(p1, word1)
+            twin_key = key2str(twin_posn, twin_word)
+
             # If we have twins
             if twin_dist < max_shape:
                 twin_diff = diff_words(word1, twin_word)
 
-                main_sentence[key2str(p1, word1)].append((twin_posn, twin_word, twin_dist, twin_diff))
-                twin_sentence[key2str(twin_posn, twin_word)] = (p1, word1, twin_dist, twin_diff)
+                main_sentence[main_key][twin_id] = (twin_posn, twin_word, twin_dist, twin_diff)
+                twin_sentence[twin_key] = (p1, word1, twin_dist, twin_diff)
 
                 # If this is a real replacement
                 if twin_dist > 0:
@@ -153,7 +159,7 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                     diff_ = f'(+/-) {twin_diff}' if twin_diff else ''
                     print(f"{i1:>2}: {word1:<12} ({dist}) {twin_numb:>2}: {twin_word:<12} {diff_}")
             else:
-                main_sentence[key2str(p1, word1)].append(None)
+                main_sentence[main_key][twin_id] = None
 
                 if debug_flag:
                     print(f"{i1:>2}: {word1:<12} (-)  {dash}")
