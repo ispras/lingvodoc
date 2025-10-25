@@ -139,8 +139,8 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                 elif cur_dist != max_shape:  # None or a bigger distance value
                     break
 
-            main_key = key2str(p1, word1)
-            twin_key = key2str(twin_posn, twin_word)
+            main_key = key2str(p1, len(word1 or ""))
+            twin_key = key2str(twin_posn, len(twin_word or ""))
 
             # If we have twins
             if twin_dist < max_shape:
@@ -165,12 +165,12 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                     print(f"{i1:>2}: {word1:<12} (-)  {dash}")
 
         # A new word, or it is too far from its twin
-        loners = [(i, p, word) for i, (p, word) in enumerate(word_vars) if key2str(p, word) not in twin_sentence]
-        for (i, p, word) in loners:
-            twin_sentence[key2str(p, word)] = None
+        for i, (p, word) in enumerate(word_vars):
+            if twin_key := key2str(p, len(word or "")) not in twin_sentence:
+                twin_sentence[twin_key] = None
 
-            if debug_flag:
-                print(f" {dash:<15} (+) {i:>2}: {word:<12}")
+                if debug_flag:
+                    print(f" {dash:<15} (+) {i:>2}: {word:<12}")
 
         if debug_flag:
             print(line)
