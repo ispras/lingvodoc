@@ -707,7 +707,7 @@ class Query(graphene.ObjectType):
             ObjectVal,
             main_translation = graphene.List(LingvodocID, required = True),
             twin_translation = graphene.List(graphene.List(LingvodocID), required = True),
-            entries_id = graphene.List(LingvodocID, required = True)))
+            entry_ids = graphene.List(LingvodocID, required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -5378,13 +5378,13 @@ class Query(graphene.ObjectType):
 
         return {**result_dict, **sg_state_dict}
 
-    def resolve_twins_diff(self, info, main_translation, twin_translation, entries_id):
+    def resolve_twins_diff(self, info, main_translation, twin_translation, entry_ids):
         def get_content(cid, oid):
             entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
             return entity.content if entity else ""
 
         result = {}
-        for main_id, twins, entry_id in zip(main_translation, twin_translation, entries_id):
+        for main_id, twins, entry_id in zip(main_translation, twin_translation, entry_ids):
             if main_id is None:
                 continue
             main_content = main_id, get_content(*main_id)
