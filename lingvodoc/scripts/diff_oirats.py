@@ -1,6 +1,5 @@
 import collections
 import re
-from string import punctuation as puncts
 import numpy as np
 from difflib import Differ
 from rapidfuzz.distance.JaroWinkler import distance as jw
@@ -76,10 +75,6 @@ def key2str(*key):
     return ','.join([str(k) for k in key])
 
 
-def str2key(string):
-    return string.split(',')
-
-
 def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False):
 
     main_id, text = text_base
@@ -135,7 +130,8 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                         twin_numb = i2
                         twin_posn = p2
                         twin_word = word2
-                elif cur_dist != max_shape:  # None or a bigger distance value
+                # None or a bigger distance value
+                elif cur_dist != max_shape:
                     break
 
             main_key = key2str(p1, len(word1))
@@ -179,9 +175,11 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
             print(f'\n{sorted(holes1)=} {sorted(holes2)=}\n')
             print(list_sentence)
 
+        # If we found any change in twin sentence
         if len(twin_sentence):
             list_sentence[twin_id] = twin_sentence
 
+    # If we found any change in main sentence
     if len(main_sentence):
         list_sentence[main_id] = main_sentence
 
