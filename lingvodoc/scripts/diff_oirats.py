@@ -40,7 +40,6 @@ def diff_words(word1, word2):
             flush_result()
 
     flush_result()
-
     return result or None
 
 
@@ -54,7 +53,6 @@ def split_words(text):
 def twins(word1, word2):
     edge = 0.25  # Jaro-Winkler edge
     same = jw(word1.lower(), word2.lower()) < edge
-
     return same
 
 
@@ -140,10 +138,23 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
             if twin_dist < max_shape:
                 twin_key = key2str(twin_posn, len(twin_word))
                 twin_diff = diff_words(word1, twin_word)
+                orig_posn, orig_word = p1, word1
 
                 if twin_dist or twin_diff:
-                    main_sentence[main_key][twin_id] = (twin_posn, twin_word, twin_dist, twin_diff)
-                    twin_sentence[twin_key][main_id] = (p1, word1, twin_dist, twin_diff)
+                    main_sentence[main_key][twin_id] = (
+                        twin_posn,
+                        twin_word,
+                        twin_dist,
+                        twin_diff,
+                        orig_word
+                    )
+                    twin_sentence[twin_key][main_id] = (
+                        orig_posn,
+                        orig_word,
+                        twin_dist,
+                        twin_diff,
+                        twin_word
+                    )
                 else:
                     twin_equals.append(twin_key)
 
@@ -171,9 +182,7 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                     print(f" {dash:<15} (+) {i:>2}: {word:<12}")
 
         if debug_flag:
-            print(line)
             print(f'\n{sorted(holes1)=} {sorted(holes2)=}\n')
-            print(list_sentence)
 
         # If we found any change in twin sentence
         if len(twin_sentence):
@@ -182,6 +191,10 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
     # If we found any change in main sentence
     if len(main_sentence):
         list_sentence[main_id] = main_sentence
+
+    if debug_flag:
+        print(line)
+        print(list_sentence)
 
     return list_sentence
 
