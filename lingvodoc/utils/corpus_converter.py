@@ -69,6 +69,7 @@ from lingvodoc.utils.creation import (
 )
 
 from lingvodoc.schema.gql_parserresult import diacritic_signs
+from pdb import set_trace as A
 
 DEFAULT_EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -744,7 +745,9 @@ def convert_five_tiers(
 
         mark_re = re.compile('[-.][\dA-Z]+')
         dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?/|]*)')
-        nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
+        # issue 1191
+        nom_re = re.compile(
+            '[-]IN|[-]PRT|[-]AD|[-]NOM|[-]INF|[-]SG.NOM|[-]PL.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
         affix_re = re.compile('[-][\w]+')
 
@@ -1461,9 +1464,9 @@ def convert_five_tiers(
 
                         # Paradigmatic forms
                         pf_times = [i.time for i in word_translation if i.time is not None]
-                        pf_xcrps = [word_translation[i][0].text for i in word_translation
+                        pf_words = [word_translation[i][0].text for i in word_translation
                                     if len(word_translation[i]) > 0 and word_translation[i][0].text is not None]
-                        pf_words = [word_translation[i][1].text for i in word_translation
+                        pf_xcrps = [word_translation[i][1].text for i in word_translation
                                     if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
 
                         pf_time = (pf_times[0], pf_times[-1]) if pf_times else None
@@ -2149,7 +2152,7 @@ def convert_five_tiers(
 
                         nom_dict[content_key] = entry_id
 
-            # Updated words and transcriptions in the second perspective.
+            # Updated words and transcriptions from the second perspective.
 
             pa_word_dict = defaultdict(list)
             pa_xcript_dict = defaultdict(list)
@@ -2356,7 +2359,9 @@ def convert_five_tiers(
                         re.search(mark_re, translation_text))
 
                     if mark_search:
-                        create_le_flag = True
+                        # issue 1191
+                        if additional_entries:
+                            create_le_flag = True
 
                         if merge_by_meaning:
                             nom_key = (
