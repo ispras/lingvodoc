@@ -14,6 +14,7 @@ debug_vars = list()
 debug_base = ((1,), "Я помню чудное мгновенье, передо мной явилась ты")
 debug_vars.append(((2,), "Ещё нгновение чюдecное, впереди меня когда-то появилясь ты, я понмю"))
 
+
 def diff_words(word1, word2):
 
     result = []
@@ -56,7 +57,7 @@ def twins(word1, word2):
     return same
 
 
-def neighbor(i1, i2, max_shape):
+def get_dist(i1, i2, max_shape):
     skip = 4  # no more than four words between
     dist = abs(i1 - i2)
 
@@ -73,7 +74,7 @@ def key2str(*key):
     return ','.join([str(k) for k in key])
 
 
-def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False):
+def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False):
 
     main_id, text = text_base
     main_id = key2str(*main_id)
@@ -81,17 +82,19 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
 
     # Output structures, initializing main sentence
     list_sentence = {}
+    xlsx_table = []
     main_sentence = collections.defaultdict(dict)
 
     if debug_flag:
         print(line)
 
-    for (twin_id, text) in text_vars:
+    for t, (twin_id, text) in enumerate(text_vars):
         twin_id = key2str(*twin_id)
         word_vars = split_words(text)
         mtrx_shape = (len(word_bases), len(word_vars))
         word_match = np.zeros(mtrx_shape, dtype=int)
         max_shape = max(mtrx_shape)
+        xlsx_row = [[]] * (len(text_vars) + 1)
 
         # Getting initial matrix of similarities
         for i1, (_, word1) in enumerate(word_bases):
@@ -104,6 +107,7 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
 
         # Initializing twin sentence
         twin_sentence = collections.defaultdict(dict)
+        twin_diffs = collections.defaultdict(set)
         twin_equals = []
 
         for i1, (p1, word1) in enumerate(word_bases):
@@ -118,7 +122,7 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                 # Number of holes before i1(!)
                 delta2 = sum([(j < i1) for j in list(holes1)])
 
-                cur_dist = neighbor(i1 + delta1, i2 + delta2, max_shape)
+                cur_dist = get_dist(i1 + delta1, i2 + delta2, max_shape)
 
                 # If we are neighbours now or will be in future and
                 # current distance is less than a found one
@@ -133,12 +137,12 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                     break
 
             main_key = key2str(p1, len(word1))
+            orig_posn, orig_word = p1, word1
 
             # If we have twins
             if twin_dist < max_shape:
                 twin_key = key2str(twin_posn, len(twin_word))
                 twin_diff = diff_words(word1, twin_word)
-                orig_posn, orig_word = p1, word1
 
                 if twin_dist or twin_diff:
                     main_sentence[main_key][twin_id] = (
@@ -155,8 +159,25 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                         twin_diff,
                         twin_word
                     )
+
+                    xlsx_value = twin_word
+                    if twin_dist:
+                        xlsx_value += f' | shifted by {twin_dist}'
+                    if twin_diff:
+                        xlsx_value += f' | changed by {twin_diff}'
+                    xlsx_row[t + 1] = xlsx_value
+                    # mark that xlsx row describes changes
+                    xlsx_row[0] = orig_word
+
                 else:
                     twin_equals.append(twin_key)
+                    # store twin_word into xlsx row,
+                    # but it may describe no changes
+                    xlsx_row[t + 1] = twin_word
+
+                # Collect diffs
+                for diff in twin_diff:
+                    twin_diffs[diff].add((orig_word, twin_word))
 
                 # If this is a real replacement
                 if twin_dist > 0:
@@ -169,6 +190,8 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
                     print(f"{i1:>2}: {word1:<12} ({dist}) {twin_numb:>2}: {twin_word:<12} {diff_}")
             else:
                 main_sentence[main_key][twin_id] = None
+                # mark that xlsx row describes changes
+                xlsx_row[0] = orig_word
 
                 if debug_flag:
                     print(f"{i1:>2}: {word1:<12} (-)  {dash}")
@@ -177,6 +200,8 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
         for i, (p, word) in enumerate(word_vars):
             if (twin_key := key2str(p, len(word))) not in (list(twin_sentence) + twin_equals):
                 twin_sentence[twin_key][main_id] = None
+                # mark that xlsx row describes changes
+                xlsx_row[t + 1] = word
 
                 if debug_flag:
                     print(f" {dash:<15} (+) {i:>2}: {word:<12}")
@@ -199,5 +224,35 @@ def get_diff(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False
     return list_sentence
 
 
+def get_xlsx(diffs):
+    return diffs
+
+
+def DiffEntities(main_translation, twin_translation, entry_ids):
+    from lingvodoc.models import DBSession, Entity as dbEntity
+
+    def get_content(cid, oid):
+        entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
+        return entity.content if entity else ""
+
+    result = {}
+    for main_id, twins, entry_id in zip(main_translation, twin_translation, entry_ids):
+        if main_id is None:
+            continue
+        main_content = main_id, get_content(*main_id)
+
+        twin_content = []
+        for twin_id in twins:
+            twin_content.append((twin_id, get_content(*twin_id)) if twin_id is not None else (twin_id, ""))
+
+        if diff := diff_sentences(main_content, twin_content):
+            result[key2str(*(entry_id or (0, 0)))] = diff
+
+    return {
+        'diffs': result,
+        'xlsx_url': get_xlsx(result)
+    }
+
+
 if __name__ == "__main__":
-    get_diff(debug_flag=True)
+    diff_sentences(debug_flag=True)

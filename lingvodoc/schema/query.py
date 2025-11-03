@@ -322,6 +322,8 @@ from lingvodoc.schema.gql_markups import (
     Markup,
     MarkupGroup)
 
+from lingvodoc.schema.gql_twins_diff import DiffEntities
+
 from lingvodoc.scripts import elan_parser
 
 import lingvodoc.scripts.adverb as adverb
@@ -379,7 +381,6 @@ from lingvodoc.views.v2.utils import (
 from operator import attrgetter
 
 from lingvodoc.scripts.list_cognates import entities_getter
-from lingvodoc.scripts.diff_oirats import key2str, get_diff as get_twins_diff
 
 from pdb import set_trace as A
 
@@ -5378,25 +5379,8 @@ class Query(graphene.ObjectType):
 
         return {**result_dict, **sg_state_dict}
 
-    def resolve_twins_diff(self, info, main_translation, twin_translation, entry_ids):
-        def get_content(cid, oid):
-            entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
-            return entity.content if entity else ""
-
-        result = {}
-        for main_id, twins, entry_id in zip(main_translation, twin_translation, entry_ids):
-            if main_id is None:
-                continue
-            main_content = main_id, get_content(*main_id)
-
-            twin_content = []
-            for twin_id in twins:
-                twin_content.append((twin_id, get_content(*twin_id)) if twin_id is not None else (twin_id, ""))
-
-            if diff := get_twins_diff(main_content, twin_content):
-                result[key2str(*(entry_id or (0,0)))] = diff
-
-        return result
+    def resolve_twins_diff(self, info, *args):
+        return DiffEntities(*args)
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
