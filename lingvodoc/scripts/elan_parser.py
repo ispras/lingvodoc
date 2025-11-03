@@ -5,6 +5,7 @@ import re
 import pympi
 
 import collections
+from pdb import set_trace as A
 try: from xml.etree import cElementTree as ElementTree
 except ImportError: from xml.etree import ElementTree
 
@@ -246,9 +247,9 @@ class Elan:
                 word_data = ""
 
                 if res[translation_data]:
-                    transcription_data = res[translation_data][0]
+                    word_data = res[translation_data][0]
                 if len(res[translation_data]) > 1:
-                    word_data = res[translation_data][1]
+                    transcription_data = res[translation_data][1]
 
                 tr_text = hyphen_to_dash(self.word[translation_data])
                 mark = re.search('[-.][\dA-Z]+', tr_text) if type(tr_text) is str else None
