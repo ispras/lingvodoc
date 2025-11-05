@@ -51,7 +51,7 @@ def split_words(text):
     return words
 
 
-def twins(word1, word2):
+def is_twin(word1, word2):
     edge = 0.25  # Jaro-Winkler edge
     same = jw(word1.lower(), word2.lower()) < edge
     return same
@@ -82,7 +82,15 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
 
     # Output structures, initializing main sentence
     list_sentence = {}
-    xlsx_table = []
+    xlsx_table = {}
+
+    def set_xlsx_cell(row, column, value):
+        xlsx_row = xlsx_table.setdefault(
+            row,
+            [None] * (len(text_vars) + 1)
+        )
+        xlsx_row[column] = f'{value:<25}'
+
     main_sentence = collections.defaultdict(dict)
 
     if debug_flag:
@@ -91,15 +99,16 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
     for t, (twin_id, text) in enumerate(text_vars):
         twin_id = key2str(*twin_id)
         word_vars = split_words(text)
-        mtrx_shape = (len(word_bases), len(word_vars))
+        mains_num = len(word_bases)
+        twins_num = len(word_vars)
+        mtrx_shape = (mains_num, twins_num)
         word_match = np.zeros(mtrx_shape, dtype=int)
         max_shape = max(mtrx_shape)
-        xlsx_row = [[]] * (len(text_vars) + 1)
 
         # Getting initial matrix of similarities
         for i1, (_, word1) in enumerate(word_bases):
             for i2, (_, word2) in enumerate(word_vars):
-                word_match[i1, i2] = int(twins(word1, word2))
+                word_match[i1, i2] = int(is_twin(word1, word2))
 
         # Positions of words which have no similarities by rows and by columns
         holes1 = set([i for i, row in enumerate(word_match) if not sum(row)])
@@ -165,18 +174,19 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
                         xlsx_value += f' | shifted by {twin_dist}'
                     if twin_diff:
                         xlsx_value += f' | changed by {twin_diff}'
-                    xlsx_row[t + 1] = xlsx_value
                     # mark that xlsx row describes changes
-                    xlsx_row[0] = orig_word
+                    set_xlsx_cell(i1, 0, orig_word)
+                    set_xlsx_cell(i1, t+1, xlsx_value)
 
                 else:
                     twin_equals.append(twin_key)
                     # store twin_word into xlsx row,
-                    # but it may describe no changes
-                    xlsx_row[t + 1] = twin_word
+                    # but it may describe no changes,
+                    # so we don't set xlsx_column'0 here
+                    set_xlsx_cell(i1, t+1, "<same>")
 
                 # Collect diffs
-                for diff in twin_diff:
+                for diff in (twin_diff or []):
                     twin_diffs[diff].add((orig_word, twin_word))
 
                 # If this is a real replacement
@@ -191,20 +201,22 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
             else:
                 main_sentence[main_key][twin_id] = None
                 # mark that xlsx row describes changes
-                xlsx_row[0] = orig_word
+                set_xlsx_cell(i1, 0, orig_word)
+                set_xlsx_cell(i1, t+1, "<none>")
 
                 if debug_flag:
                     print(f"{i1:>2}: {word1:<12} (-)  {dash}")
 
         # A new word, or it is too far from its twin
-        for i, (p, word) in enumerate(word_vars):
-            if (twin_key := key2str(p, len(word))) not in (list(twin_sentence) + twin_equals):
+        for i2, (p2, word2) in enumerate(word_vars, mains_num):
+            if (twin_key := key2str(p2, len(word2))) not in (list(twin_sentence) + twin_equals):
                 twin_sentence[twin_key][main_id] = None
                 # mark that xlsx row describes changes
-                xlsx_row[t + 1] = word
+                set_xlsx_cell(i2, 0, "<none>")
+                set_xlsx_cell(i2, t+1, word2)
 
                 if debug_flag:
-                    print(f" {dash:<15} (+) {i:>2}: {word:<12}")
+                    print(f" {dash:<15} (+) {(i2 - mains_num):>2}: {word2:<12}")
 
         if debug_flag:
             print(f'\n{sorted(holes1)=} {sorted(holes2)=}\n')
@@ -221,14 +233,14 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
         print(line)
         print(list_sentence)
 
-    return list_sentence
+    return list_sentence, xlsx_table
 
 
-def get_xlsx(diffs):
-    return diffs
+def get_xlsx(table):
+    return table
 
 
-def DiffEntities(main_translation, twin_translation, entry_ids):
+def DiffEntities(main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
     from lingvodoc.models import DBSession, Entity as dbEntity
 
     def get_content(cid, oid):
@@ -236,7 +248,9 @@ def DiffEntities(main_translation, twin_translation, entry_ids):
         return entity.content if entity else ""
 
     result = {}
-    for main_id, twins, entry_id in zip(main_translation, twin_translation, entry_ids):
+    xlsx_table = [[f'{f:<25}' for f in field_names]]
+
+    for main_id, twins, entry_id in zip(main_ids, twin_ids, entry_ids):
         if main_id is None:
             continue
         main_content = main_id, get_content(*main_id)
@@ -245,12 +259,21 @@ def DiffEntities(main_translation, twin_translation, entry_ids):
         for twin_id in twins:
             twin_content.append((twin_id, get_content(*twin_id)) if twin_id is not None else (twin_id, ""))
 
-        if diff := diff_sentences(main_content, twin_content):
+        diff, rows = diff_sentences(main_content, twin_content)
+
+        if diff:
             result[key2str(*(entry_id or (0, 0)))] = diff
+
+        xlsx_table.extend(row for row in rows.values() if row[0] is not None)
+
+    if debug_flag:
+
+        for row in xlsx_table:
+            print(row)
 
     return {
         'diffs': result,
-        'xlsx_url': get_xlsx(result)
+        'xlsx_url': get_xlsx(xlsx_table)
     }
 
 

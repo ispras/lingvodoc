@@ -706,9 +706,10 @@ class Query(graphene.ObjectType):
     twins_diff = (
         graphene.Field(
             ObjectVal,
-            main_translation = graphene.List(LingvodocID, required = True),
-            twin_translation = graphene.List(graphene.List(LingvodocID), required = True),
-            entry_ids = graphene.List(LingvodocID, required = True)))
+            main_ids = graphene.List(LingvodocID, required = True),
+            twin_ids = graphene.List(graphene.List(LingvodocID), required = True),
+            entry_ids = graphene.List(LingvodocID, required = True),
+            field_names = graphene.List(graphene.String, required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -5379,8 +5380,8 @@ class Query(graphene.ObjectType):
 
         return {**result_dict, **sg_state_dict}
 
-    def resolve_twins_diff(self, info, *args):
-        return DiffEntities(*args)
+    def resolve_twins_diff(self, info, **args):
+        return DiffEntities(**args, debug_flag=True)
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
