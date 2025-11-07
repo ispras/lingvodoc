@@ -5381,7 +5381,7 @@ class Query(graphene.ObjectType):
         return {**result_dict, **sg_state_dict}
 
     def resolve_twins_diff(self, info, **args):
-        return DiffEntities(**args, debug_flag=True)
+        return DiffEntities(info, **args, debug_flag=True)
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()

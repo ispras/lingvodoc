@@ -3489,7 +3489,8 @@ class ValencyVerbCases(graphene.Mutation):
     def save_xlsx_file(
         info,
         workbook_stream,
-        debug_flag):
+        debug_flag,
+        title='valency_verb_cases'):
         """
         Saves XLSX file.
         """
@@ -3498,7 +3499,7 @@ class ValencyVerbCases(graphene.Mutation):
 
             workbook_stream.seek(0)
 
-            with open('valency_verb_cases.xlsx', 'wb') as xlsx_file:
+            with open(f'{title}.xlsx', 'wb') as xlsx_file:
                 shutil.copyfileobj(workbook_stream, xlsx_file)
 
         storage = (
@@ -3524,9 +3525,9 @@ class ValencyVerbCases(graphene.Mutation):
             storage_temporary['prefix'] +
 
             '/'.join((
-                'valency_verb_cases',
-                '{:.6f}'.format(current_time),
-                'valency_verb_cases.xlsx')))
+                title,
+                f'{current_time:.6f}',
+                f'{title}.xlsx')))
 
         object_length = (
             workbook_stream.tell())

@@ -3,6 +3,18 @@ import re
 import numpy as np
 from difflib import Differ
 from rapidfuzz.distance.JaroWinkler import distance as jw
+from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusingMethods
+import xlsxwriter
+import io
+import logging
+import lingvodoc.utils as utils
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
+# Reusing the static method
+save_xlsx_file = ReusingMethods.save_xlsx_file
+
 from pdb import set_trace as A
 
 # For debugging
@@ -74,7 +86,11 @@ def key2str(*key):
     return ','.join([str(k) for k in key])
 
 
-def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag=False):
+def diff_sentences(
+        text_base=debug_base,
+        text_vars=tuple(debug_vars),
+        twin_diffs=None,
+        debug_flag=False):
 
     main_id, text = text_base
     main_id = key2str(*main_id)
@@ -116,7 +132,6 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
 
         # Initializing twin sentence
         twin_sentence = collections.defaultdict(dict)
-        twin_diffs = collections.defaultdict(set)
         twin_equals = []
 
         for i1, (p1, word1) in enumerate(word_bases):
@@ -186,8 +201,9 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
                     set_xlsx_cell(i1, t+1, "<same>")
 
                 # Collect diffs
-                for diff in (twin_diff or []):
-                    twin_diffs[diff].add((orig_word, twin_word))
+                if twin_diffs is not None and twin_diff is not None:
+                    for diff in twin_diff:
+                        twin_diffs[diff].add((orig_word, twin_word))
 
                 # If this is a real replacement
                 if twin_dist > 0:
@@ -236,12 +252,57 @@ def diff_sentences(text_base=debug_base, text_vars=tuple(debug_vars), debug_flag
     return list_sentence, xlsx_table
 
 
-def get_xlsx(table):
-    return table
+def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
+
+    workbook_stream = (
+        io.BytesIO())
+
+    workbook = (
+        xlsxwriter.Workbook(
+            workbook_stream, {'in_memory': True}))
+
+    bold = workbook.add_format({'bold': True})
+    green = workbook.add_format({'font_color': 'green'})
+
+    align = workbook.add_format()
+    align.set_align('vcenter')
+    align.set_text_wrap()
+
+    def write_data(worksheet, table):
+        width = 50
+        columns = table.pop(0)
+        worksheet.set_column(0, 0, width, green)
+        worksheet.set_column(1, len(columns) - 1, width)
+        worksheet.write_row(0, 0, columns, bold)
+
+        for row_count, cells in enumerate(table, start=1):
+            height = (len(cells[0]) // width + 1) * 17
+            worksheet.set_row(row_count, height)
+            worksheet.write_row(row_count, 0, cells, align)
+
+            if debug_flag:
+                log.debug(cells)
+
+    for (title, content) in ('By translation', table), ('By substance', xlsx_diffs):
+        worksheet = workbook.add_worksheet(utils.sanitize_worksheet_name(title))
+        write_data(worksheet, content)
+
+    workbook.close()
+
+    xlsx_url = (
+        save_xlsx_file(
+            info,
+            workbook_stream,
+            debug_flag,
+            title='twins_diff'))
+
+    return xlsx_url
 
 
-def DiffEntities(main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
+def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
     from lingvodoc.models import DBSession, Entity as dbEntity
+
+    twin_diffs = collections.defaultdict(set)
 
     def get_content(cid, oid):
         entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
@@ -259,21 +320,37 @@ def DiffEntities(main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
         for twin_id in twins:
             twin_content.append((twin_id, get_content(*twin_id)) if twin_id is not None else (twin_id, ""))
 
-        diff, rows = diff_sentences(main_content, twin_content)
+        diff, rows = diff_sentences(main_content, twin_content, twin_diffs)
 
         if diff:
             result[key2str(*(entry_id or (0, 0)))] = diff
 
         xlsx_table.extend(row for row in rows.values() if row[0] is not None)
 
-    if debug_flag:
+    xlsx_diffs = [[f"{'Difference':<12}", f"{'Word1':<12}", f"{'Word2':<12}"]]
 
-        for row in xlsx_table:
+    for delta, word_set in twin_diffs.items():
+        part1, part2 = delta
+        delta = (
+            f'{part1} -> {part2}' if len(part1) and len(part2) else
+            f'+ {part2}' if not len(part1) else
+            f'- {part1}'
+        )
+
+        xlsx_diffs.append([f"{delta:<12}"])
+        for word1, word2 in word_set:
+            xlsx_diffs.append([f"{'':<12}", f"{word1:<12}", f"{word2:<12}"])
+
+    xlsx_url = write_xlsx(info, xlsx_table, xlsx_diffs)
+
+    if debug_flag:
+        for row in xlsx_table + [''] + xlsx_diffs:
             print(row)
+        print(xlsx_url)
 
     return {
         'diffs': result,
-        'xlsx_url': get_xlsx(xlsx_table)
+        'xlsx_url': xlsx_url
     }
 
 
