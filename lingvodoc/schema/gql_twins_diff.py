@@ -4,7 +4,7 @@ import numpy as np
 from difflib import Differ
 from rapidfuzz.distance.JaroWinkler import distance as jw
 from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusedMethods
-import xlsxwriter
+from xlsxwriter import Workbook
 import io
 import logging
 import lingvodoc.utils as utils
@@ -105,7 +105,7 @@ def diff_sentences(
             row,
             [None] * (len(text_vars) + 1)
         )
-        xlsx_row[column] = f'{value:<25}'
+        xlsx_row[column] = f'{value:<20}'
 
     main_sentence = collections.defaultdict(dict)
 
@@ -258,39 +258,9 @@ def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
         io.BytesIO())
 
     workbook = (
-        xlsxwriter.Workbook(
-            workbook_stream, {'in_memory': True}))
+        Workbook(workbook_stream, {'in_memory': True}))
 
-    base = {'text_wrap': True, 'align': 'vcenter'}
-
-    align = workbook.add_format(base)
-
-    header = workbook.add_format({**base,
-                                  'bold': True,
-                                  'fg_color': '#D7E4BC',
-                                  'border': 1})
-
-    toc = workbook.add_format({**base,
-                               'font_color': 'green'})
-
-    def write_data(worksheet, content, with_toc=False):
-        width = 30
-        columns = content.pop(0)
-        worksheet.set_column(0, 0, width // 3 if with_toc else width)
-        worksheet.set_column(1, len(columns) - 1, width)
-        worksheet.write_row(0, 0, columns, header)
-
-        for row_count, cells in enumerate(content, start=1):
-            height = (max(map(lambda c: len(c), cells)) // width + 1) * 17
-            worksheet.set_row(row_count, height)
-            for column_count, value in enumerate(cells):
-                worksheet.write(row_count, column_count, value,
-                                toc if with_toc and column_count == 0 else align)
-
-            if debug_flag:
-                log.debug(cells)
-
-    config = [{
+    wb_config = [{
         'worksheet': workbook.add_worksheet(
             utils.sanitize_worksheet_name("By translation")),
         'content': table,
@@ -302,7 +272,58 @@ def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
         'with_toc': True
     }]
 
-    for options in config:
+    def style(row=0, cells=('',)):
+
+        blue = '#4169E1'
+        gray = '#C0C0C0'
+        green = '#3CB371'
+        red = '#FF4500'
+        yellow = '#FFD700'
+
+        def colorful(fg_color='white', **special):
+            base = {
+                'text_wrap': True,
+                'valign': 'vcenter',
+                'border': 1,
+                'fg_color': fg_color
+            }
+            return workbook.add_format({**base, **special})
+
+        return (
+            colorful(blue, bold=True, border=2)
+                if row == 0 else
+
+            colorful()
+                if not re.search(r'\w', cells[0]) else
+
+            colorful(gray, align='center', bold=True)
+                if not re.search(r'\w', cells[1]) else
+
+            colorful(green)
+                if '<none>' in cells[0] else
+
+            colorful(red)
+                if any('<none>' in c for c in cells[1:]) else
+
+            colorful(yellow))
+
+    def write_data(worksheet, content, with_toc=False):
+        width = 25
+        columns = content.pop(0)
+        worksheet.set_column(0, 0, width // 2 if with_toc else width)
+        worksheet.set_column(1, len(columns) - 1, width)
+        worksheet.write_row(0, 0, columns, style(0))
+
+        for row_count, cells in enumerate(content, start=1):
+            height = (max(map(lambda c: len(c), cells)) // width + 1) * 17
+            worksheet.set_row(row_count, height)
+            for column_count, value in enumerate(cells):
+                worksheet.write(row_count, column_count, value, style(row_count, cells))
+
+            if debug_flag:
+                log.debug(cells)
+
+    for options in wb_config:
         write_data(**options)
 
     workbook.close()
@@ -327,7 +348,7 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
         return entity.content if entity else ""
 
     result = {}
-    xlsx_table = [[f'{f:<25}' for f in field_names]]
+    xlsx_table = [[f'{f:<20}' for f in field_names]]
 
     for main_id, twins, entry_id in zip(main_ids, twin_ids, entry_ids):
         if main_id is None:
@@ -355,7 +376,7 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
             f'- {part1}'
         )
 
-        xlsx_diffs.append([f"{delta:<12}"])
+        xlsx_diffs.append([f"{delta:<12}", "", ""])
         for word1, word2 in word_set:
             xlsx_diffs.append([f"{'':<12}", f"{word1:<12}", f"{word2:<12}"])
 
