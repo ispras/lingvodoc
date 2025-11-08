@@ -3,7 +3,7 @@ import re
 import numpy as np
 from difflib import Differ
 from rapidfuzz.distance.JaroWinkler import distance as jw
-from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusingMethods
+from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusedMethods
 import xlsxwriter
 import io
 import logging
@@ -13,7 +13,7 @@ import lingvodoc.utils as utils
 log = logging.getLogger(__name__)
 
 # Reusing the static method
-save_xlsx_file = ReusingMethods.save_xlsx_file
+save_xlsx_file = ReusedMethods.save_xlsx_file
 
 from pdb import set_trace as A
 
@@ -160,13 +160,13 @@ def diff_sentences(
                 elif cur_dist != max_shape:
                     break
 
-            main_key = key2str(p1, len(word1))
-            orig_posn, orig_word = p1, word1
+            orig_numb, orig_posn, orig_word = i1, p1, word1
+            main_key = key2str(orig_posn, len(orig_word))
 
             # If we have twins
             if twin_dist < max_shape:
                 twin_key = key2str(twin_posn, len(twin_word))
-                twin_diff = diff_words(word1, twin_word)
+                twin_diff = diff_words(orig_word, twin_word)
 
                 if twin_dist or twin_diff:
                     main_sentence[main_key][twin_id] = (
@@ -186,19 +186,19 @@ def diff_sentences(
 
                     xlsx_value = twin_word
                     if twin_dist:
-                        xlsx_value += f' | shifted by {twin_dist}'
+                        xlsx_value += f" <shifted by {twin_dist}>"
                     if twin_diff:
-                        xlsx_value += f' | changed by {twin_diff}'
+                        xlsx_value += f" <changed by {twin_diff}>"
                     # mark that xlsx row describes changes
-                    set_xlsx_cell(i1, 0, orig_word)
-                    set_xlsx_cell(i1, t+1, xlsx_value)
+                    set_xlsx_cell(orig_numb, 0, orig_word)
+                    set_xlsx_cell(orig_numb, t+1, xlsx_value)
 
                 else:
                     twin_equals.append(twin_key)
                     # store twin_word into xlsx row,
                     # but it may describe no changes,
                     # so we don't set xlsx_column'0 here
-                    set_xlsx_cell(i1, t+1, "<same>")
+                    set_xlsx_cell(orig_numb, t+1, "<same>")
 
                 # Collect diffs
                 if twin_diffs is not None and twin_diff is not None:
@@ -207,21 +207,21 @@ def diff_sentences(
 
                 # If this is a real replacement
                 if twin_dist > 0:
-                    holes1.add(i1)
+                    holes1.add(orig_numb)
                     holes2.add(twin_numb)
 
                 if debug_flag:
                     dist = '>' if twin_dist else '='
                     diff_ = f'(+/-) {twin_diff}' if twin_diff else ''
-                    print(f"{i1:>2}: {word1:<12} ({dist}) {twin_numb:>2}: {twin_word:<12} {diff_}")
+                    print(f"{orig_numb:>2}: {orig_word:<12} ({dist}) {twin_numb:>2}: {twin_word:<12} {diff_}")
             else:
                 main_sentence[main_key][twin_id] = None
                 # mark that xlsx row describes changes
-                set_xlsx_cell(i1, 0, orig_word)
-                set_xlsx_cell(i1, t+1, "<none>")
+                set_xlsx_cell(orig_numb, 0, orig_word)
+                set_xlsx_cell(orig_numb, t+1, "<none>")
 
                 if debug_flag:
-                    print(f"{i1:>2}: {word1:<12} (-)  {dash}")
+                    print(f"{orig_numb:>2}: {orig_word:<12} (-)  {dash}")
 
         # A new word, or it is too far from its twin
         for i2, (p2, word2) in enumerate(word_vars, mains_num):
@@ -261,31 +261,49 @@ def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
         xlsxwriter.Workbook(
             workbook_stream, {'in_memory': True}))
 
-    bold = workbook.add_format({'bold': True})
-    green = workbook.add_format({'font_color': 'green'})
+    base = {'text_wrap': True, 'align': 'vcenter'}
 
-    align = workbook.add_format()
-    align.set_align('vcenter')
-    align.set_text_wrap()
+    align = workbook.add_format(base)
 
-    def write_data(worksheet, table):
-        width = 50
-        columns = table.pop(0)
-        worksheet.set_column(0, 0, width, green)
+    header = workbook.add_format({**base,
+                                  'bold': True,
+                                  'fg_color': '#D7E4BC',
+                                  'border': 1})
+
+    toc = workbook.add_format({**base,
+                               'font_color': 'green'})
+
+    def write_data(worksheet, content, with_toc=False):
+        width = 30
+        columns = content.pop(0)
+        worksheet.set_column(0, 0, width // 3 if with_toc else width)
         worksheet.set_column(1, len(columns) - 1, width)
-        worksheet.write_row(0, 0, columns, bold)
+        worksheet.write_row(0, 0, columns, header)
 
-        for row_count, cells in enumerate(table, start=1):
-            height = (len(cells[0]) // width + 1) * 17
+        for row_count, cells in enumerate(content, start=1):
+            height = (max(map(lambda c: len(c), cells)) // width + 1) * 17
             worksheet.set_row(row_count, height)
-            worksheet.write_row(row_count, 0, cells, align)
+            for column_count, value in enumerate(cells):
+                worksheet.write(row_count, column_count, value,
+                                toc if with_toc and column_count == 0 else align)
 
             if debug_flag:
                 log.debug(cells)
 
-    for (title, content) in ('By translation', table), ('By substance', xlsx_diffs):
-        worksheet = workbook.add_worksheet(utils.sanitize_worksheet_name(title))
-        write_data(worksheet, content)
+    config = [{
+        'worksheet': workbook.add_worksheet(
+            utils.sanitize_worksheet_name("By translation")),
+        'content': table,
+        'with_toc': False
+    }, {
+        'worksheet': workbook.add_worksheet(
+            utils.sanitize_worksheet_name("By substance")),
+        'content': xlsx_diffs,
+        'with_toc': True
+    }]
+
+    for options in config:
+        write_data(**options)
 
     workbook.close()
 
