@@ -274,6 +274,7 @@ def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
 
     def style(row=0, cells=('',)):
 
+        white = '#FFFFF0'
         blue = '#4169E1'
         gray = '#C0C0C0'
         green = '#3CB371'
@@ -293,7 +294,7 @@ def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
             colorful(blue, bold=True, border=2)
                 if row == 0 else
 
-            colorful()
+            colorful(white)
                 if not re.search(r'\w', cells[0]) else
 
             colorful(gray, align='center', bold=True)
@@ -317,8 +318,7 @@ def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
         for row_count, cells in enumerate(content, start=1):
             height = (max(map(lambda c: len(c), cells)) // width + 1) * 17
             worksheet.set_row(row_count, height)
-            for column_count, value in enumerate(cells):
-                worksheet.write(row_count, column_count, value, style(row_count, cells))
+            worksheet.write_row(row_count, 0, cells, style(row_count, cells))
 
             if debug_flag:
                 log.debug(cells)
