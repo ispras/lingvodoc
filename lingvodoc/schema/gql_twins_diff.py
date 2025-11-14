@@ -1,19 +1,13 @@
-import collections
 import re
+import io
+import collections
 import numpy as np
 from difflib import Differ
 from rapidfuzz.distance.JaroWinkler import distance as jw
-from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusedMethods
-from xlsxwriter import Workbook
-import io
 import logging
-import lingvodoc.utils as utils
 
 # Setting up logging.
 log = logging.getLogger(__name__)
-
-# Reusing the static method
-save_xlsx_file = ReusedMethods.save_xlsx_file
 
 from pdb import set_trace as A
 
@@ -27,16 +21,28 @@ debug_base = ((1,), "Я помню чудное мгновенье, передо
 debug_vars.append(((2,), "Ещё нгновение чюдecное, впереди меня когда-то появилясь ты, я понмю"))
 
 
+def align(text, width):
+    return f"{text:<{width}}"
+
+
+def _(text=""):
+    return align(text, 12)
+
+
+def __(text=""):
+    return align(text, 20)
+
+
 def diff_words(word1, word2):
 
     result = []
-    from_chars = to_chars = ''
+    from_chars = to_chars = ""
 
     def flush_result():
         nonlocal from_chars, to_chars
         if from_chars or to_chars:
             result.append((from_chars, to_chars))
-            from_chars = to_chars = ''
+            from_chars = to_chars = ""
 
     if word1.lower() == word2.lower():
         return None
@@ -105,7 +111,7 @@ def diff_sentences(
             row,
             [None] * (len(text_vars) + 1)
         )
-        xlsx_row[column] = f'{value:<20}'
+        xlsx_row[column] = __(value)
 
     main_sentence = collections.defaultdict(dict)
 
@@ -122,8 +128,8 @@ def diff_sentences(
         max_shape = max(mtrx_shape)
 
         # Getting initial matrix of similarities
-        for i1, (_, word1) in enumerate(word_bases):
-            for i2, (_, word2) in enumerate(word_vars):
+        for i1, (_1, word1) in enumerate(word_bases):
+            for i2, (_2, word2) in enumerate(word_vars):
                 word_match[i1, i2] = int(is_twin(word1, word2))
 
         # Positions of words which have no similarities by rows and by columns
@@ -212,8 +218,8 @@ def diff_sentences(
 
                 if debug_flag:
                     dist = '>' if twin_dist else '='
-                    diff_ = f'(+/-) {twin_diff}' if twin_diff else ''
-                    print(f"{orig_numb:>2}: {orig_word:<12} ({dist}) {twin_numb:>2}: {twin_word:<12} {diff_}")
+                    diff_ = f"(+/-) {twin_diff}" if twin_diff else ""
+                    print(f"{orig_numb:>2}: {_(orig_word)} ({dist}) {twin_numb:>2}: {_(twin_word)} {diff_}")
             else:
                 main_sentence[main_key][twin_id] = None
                 # mark that xlsx row describes changes
@@ -221,7 +227,7 @@ def diff_sentences(
                 set_xlsx_cell(orig_numb, t+1, "<none>")
 
                 if debug_flag:
-                    print(f"{orig_numb:>2}: {orig_word:<12} (-)  {dash}")
+                    print(f"{orig_numb:>2}: {_(orig_word)} (-)  {dash}")
 
         # A new word, or it is too far from its twin
         for i2, (p2, word2) in enumerate(word_vars, mains_num):
@@ -232,10 +238,10 @@ def diff_sentences(
                 set_xlsx_cell(i2, t+1, word2)
 
                 if debug_flag:
-                    print(f" {dash:<15} (+) {(i2 - mains_num):>2}: {word2:<12}")
+                    print(f" {dash:<15} (+) {(i2 - mains_num):>2}: {_(word2)}")
 
         if debug_flag:
-            print(f'\n{sorted(holes1)=} {sorted(holes2)=}\n')
+            print(f"\n{sorted(holes1)=} {sorted(holes2)=}\n")
 
         # If we found any change in twin sentence
         if len(twin_sentence):
@@ -252,103 +258,107 @@ def diff_sentences(
     return list_sentence, xlsx_table
 
 
-def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
+def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
+    from xlsxwriter import Workbook
+    from lingvodoc.models import DBSession, Entity as dbEntity
+    from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusedMethods
+    import lingvodoc.utils as utils
 
-    workbook_stream = (
-        io.BytesIO())
+    # Reusing the static method
+    save_xlsx_file = ReusedMethods.save_xlsx_file
 
-    workbook = (
-        Workbook(workbook_stream, {'in_memory': True}))
+    def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
 
-    wb_config = [{
-        'worksheet': workbook.add_worksheet(
-            utils.sanitize_worksheet_name("By translation")),
-        'content': table,
-        'with_toc': False
-    }, {
-        'worksheet': workbook.add_worksheet(
-            utils.sanitize_worksheet_name("By substance")),
-        'content': xlsx_diffs,
-        'with_toc': True
-    }]
+        workbook_stream = (
+            io.BytesIO())
 
-    def style(row=0, cells=('',)):
+        workbook = (
+            Workbook(workbook_stream, {'in_memory': True}))
 
-        white = '#FFFFF0'
-        blue = '#4169E1'
-        gray = '#C0C0C0'
-        green = '#3CB371'
-        red = '#FF4500'
-        yellow = '#FFD700'
+        wb_config = [{
+            'worksheet': workbook.add_worksheet(
+                utils.sanitize_worksheet_name("By translation")),
+            'content': table,
+            'with_toc': False
+        }, {
+            'worksheet': workbook.add_worksheet(
+                utils.sanitize_worksheet_name("By substance")),
+            'content': xlsx_diffs,
+            'with_toc': True
+        }]
 
-        def colorful(fg_color='white', **special):
-            base = {
-                'text_wrap': True,
-                'valign': 'vcenter',
-                'border': 1,
-                'fg_color': fg_color
-            }
-            return workbook.add_format({**base, **special})
+        def style(row=0, cells=("", )):
 
-        return (
-            colorful(blue, bold=True, border=2)
+            white = '#FFFFF0'
+            blue = '#4169E1'
+            gray = '#C0C0C0'
+            green = '#3CB371'
+            red = '#FF4500'
+            yellow = '#FFD700'
+
+            def colorful(fg_color='white', **special):
+                base = {
+                    'text_wrap': True,
+                    'valign': 'vcenter',
+                    'border': 1,
+                    'fg_color': fg_color
+                }
+                return workbook.add_format({**base, **special})
+
+            return (
+                colorful(blue, bold=True, border=2)
                 if row == 0 else
 
-            colorful(white)
+                colorful(white)
                 if not re.search(r'\w', cells[0]) else
 
-            colorful(gray, align='center', bold=True)
+                colorful(gray, align='center', bold=True)
                 if not re.search(r'\w', cells[1]) else
 
-            colorful(green)
+                colorful(green)
                 if '<none>' in cells[0] else
 
-            colorful(red)
+                colorful(red)
                 if any('<none>' in c for c in cells[1:]) else
 
-            colorful(yellow))
+                colorful(yellow))
 
-    def write_data(worksheet, content, with_toc=False):
-        width = 25
-        columns = content.pop(0)
-        worksheet.set_column(0, 0, width // 2 if with_toc else width)
-        worksheet.set_column(1, len(columns) - 1, width)
-        worksheet.write_row(0, 0, columns, style(0))
+        def write_data(worksheet, content, with_toc=False):
+            width = 25
+            columns = content.pop(0)
+            worksheet.set_column(0, 0, width // 2 if with_toc else width)
+            worksheet.set_column(1, len(columns) - 1, width)
+            worksheet.write_row(0, 0, columns, style(0))
 
-        for row_count, cells in enumerate(content, start=1):
-            height = (max(map(lambda c: len(c), cells)) // width + 1) * 17
-            worksheet.set_row(row_count, height)
-            worksheet.write_row(row_count, 0, cells, style(row_count, cells))
+            for row_count, cells in enumerate(content, start=1):
+                height = (max(map(lambda c: len(c), cells)) // width + 1) * 17
+                worksheet.set_row(row_count, height)
+                worksheet.write_row(row_count, 0, cells, style(row_count, cells))
 
-            if debug_flag:
-                log.debug(cells)
+                if debug_flag:
+                    log.debug(cells)
 
-    for options in wb_config:
-        write_data(**options)
+        for options in wb_config:
+            write_data(**options)
 
-    workbook.close()
+        workbook.close()
 
-    xlsx_url = (
-        save_xlsx_file(
-            info,
-            workbook_stream,
-            debug_flag,
-            title='twins_diff'))
+        xlsx_url = (
+            save_xlsx_file(
+                info,
+                workbook_stream,
+                debug_flag,
+                title='twins_diff'))
 
-    return xlsx_url
-
-
-def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
-    from lingvodoc.models import DBSession, Entity as dbEntity
-
-    twin_diffs = collections.defaultdict(set)
+        return xlsx_url
 
     def get_content(cid, oid):
         entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
         return entity.content if entity else ""
 
     result = {}
-    xlsx_table = [[f'{f:<20}' for f in field_names]]
+    twin_diffs = collections.defaultdict(set)
+    xlsx_table = [[__(f) for f in field_names]]
 
     for main_id, twins, entry_id in zip(main_ids, twin_ids, entry_ids):
         if main_id is None:
@@ -364,26 +374,26 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
         if diff:
             result[key2str(*(entry_id or (0, 0)))] = diff
 
-        xlsx_table.extend(row for row in rows.values() if row[0] is not None)
+        xlsx_table.extend([(cell or __('<none>')) for cell in row] for row in rows.values() if row[0] is not None)
 
-    xlsx_diffs = [[f"{'Difference':<12}", f"{'Word1':<12}", f"{'Word2':<12}"]]
+    xlsx_diffs = [[_('Difference'), _('Word1'), _('Word2')]]
 
     for delta, word_set in twin_diffs.items():
         part1, part2 = delta
         delta = (
-            f'{part1} -> {part2}' if len(part1) and len(part2) else
-            f'+ {part2}' if not len(part1) else
-            f'- {part1}'
+            f"{part1} -> {part2}" if len(part1) and len(part2) else
+            f"+ {part2}" if not len(part1) else
+            f"- {part1}"
         )
 
-        xlsx_diffs.append([f"{delta:<12}", "", ""])
+        xlsx_diffs.append([_(delta), _(), _()])
         for word1, word2 in word_set:
-            xlsx_diffs.append([f"{'':<12}", f"{word1:<12}", f"{word2:<12}"])
+            xlsx_diffs.append([_(), _(word1), _(word2)])
 
     xlsx_url = write_xlsx(info, xlsx_table, xlsx_diffs)
 
     if debug_flag:
-        for row in xlsx_table + [''] + xlsx_diffs:
+        for row in xlsx_table + [""] + xlsx_diffs:
             print(row)
         print(xlsx_url)
 
