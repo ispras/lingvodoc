@@ -25,6 +25,7 @@ from lingvodoc.schema.gql_holders import (
 
 import datetime
 from passlib.hash import bcrypt
+from pdb import set_trace as A
 
 class User(LingvodocObjectType):
     """
@@ -311,3 +312,41 @@ class ActivateDeactivateUser(graphene.Mutation):
         user.is_active = args.get('is_active')
         return ActivateDeactivateUser(triumph = True)
 
+
+class AllowSyncDicts(graphene.Mutation):
+
+    class Arguments:
+        user_id = graphene.Int()
+        allowed_sync = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        # Only administrator can allow synchronization
+
+        client_id = info.context.get('client_id')
+
+        if not client_id:
+            return ResponseError(message = 'Error: only administrator can allow synchronization of dictionaries')
+
+        client = DBSession.query(Client).filter_by(id = client_id).first()
+
+        if not client or client.user_id != 1:
+            return ResponseError(message = 'Error: only administrator can allow synchronization of dictionaries')
+
+        user_id = args.get('user_id')
+        user = DBSession.query(dbUser).filter_by(id = user_id).first()
+
+        # Checking that we have a valid user to switch
+
+        if not user:
+            return ResponseError(message = 'Error: No such user in the system')
+
+        user.additional_metadata = {
+            **(user.additional_metadata or {}),
+            'allowed_sync': args.get('allowed_sync')
+        }
+
+        return AllowSyncDicts(triumph = True)

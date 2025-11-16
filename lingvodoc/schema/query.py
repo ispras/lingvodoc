@@ -297,6 +297,7 @@ from lingvodoc.schema.gql_translationgist import (
 
 from lingvodoc.schema.gql_user import (
     ActivateDeactivateUser,
+    AllowSyncDicts,
     CreateUser,
     UpdateUser,
     User)
@@ -9198,6 +9199,7 @@ class MyMutations(graphene.ObjectType):
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
     activate_deactivate_user = ActivateDeactivateUser.Field()
+    allow_sync_dicts = AllowSyncDicts.Field()
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     update_language_atom = UpdateLanguageAtom.Field()
