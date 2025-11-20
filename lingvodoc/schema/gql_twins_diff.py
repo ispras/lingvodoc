@@ -77,13 +77,13 @@ def is_twin(word1, word2):
 
 def get_dist(i1, i2, max_shape):
     skip = 4  # no more than four words between
-    dist = abs(i1 - i2)
+    dist = i2 - i1  # moved right if dist > 0
 
     # Returns extra-big distance if we are not neighbours yet,
     # a real distance if we are neighbours now and
     # None if we are not neighbours already
     return (
-        dist if dist <= skip + 1 else
+        dist if abs(dist) <= skip + 1 else
         max_shape if i2 < i1 else
         None)
 
@@ -156,7 +156,7 @@ def diff_sentences(
 
                 # If we are neighbours now or will be in future and
                 # current distance is less than a found one
-                if cur_dist is not None and cur_dist < twin_dist:
+                if cur_dist is not None and abs(cur_dist) < abs(twin_dist):
                     if word_match[i1, i2]:
                         twin_dist = cur_dist
                         twin_numb = i2
@@ -170,7 +170,7 @@ def diff_sentences(
             main_key = key2str(orig_posn, len(orig_word))
 
             # If we have twins
-            if twin_dist < max_shape:
+            if twin_dist != max_shape:
                 twin_key = key2str(twin_posn, len(twin_word))
                 twin_diff = diff_words(orig_word, twin_word)
 
@@ -212,12 +212,12 @@ def diff_sentences(
                         twin_diffs[diff].add((orig_word, twin_word))
 
                 # If this is a real replacement
-                if twin_dist > 0:
+                if twin_dist != 0:
                     holes1.add(orig_numb)
                     holes2.add(twin_numb)
 
                 if debug_flag:
-                    dist = '>' if twin_dist else '='
+                    dist = '>' if twin_dist > 0 else '<' if twin_dist < 0 else '='
                     diff_ = f"(+/-) {twin_diff}" if twin_diff else ""
                     print(f"{orig_numb:>2}: {_(orig_word)} ({dist}) {twin_numb:>2}: {_(twin_word)} {diff_}")
             else:
