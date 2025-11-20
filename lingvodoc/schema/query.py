@@ -322,7 +322,7 @@ from lingvodoc.schema.gql_markups import (
     Markup,
     MarkupGroup)
 
-from lingvodoc.schema.gql_twins_diff import DiffEntities
+from lingvodoc.schema.gql_twins_diff import DiffEntities, TwinsXlsx
 
 from lingvodoc.scripts import elan_parser
 
@@ -709,7 +709,13 @@ class Query(graphene.ObjectType):
             main_ids = graphene.List(LingvodocID, required = True),
             twin_ids = graphene.List(graphene.List(LingvodocID), required = True),
             entry_ids = graphene.List(LingvodocID, required = True),
-            field_names = graphene.List(graphene.String, required = True)))
+            field_names = graphene.List(graphene.String, required = True),
+            pers_id = LingvodocID(required = True)))
+
+    twins_xlsx = (
+        graphene.Field(
+            graphene.String,
+            pers_id = LingvodocID(required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -5381,7 +5387,10 @@ class Query(graphene.ObjectType):
         return {**result_dict, **sg_state_dict}
 
     def resolve_twins_diff(self, info, **args):
-        return DiffEntities(info, **args, debug_flag=True)
+        return DiffEntities(info, **args, debug_flag=False)
+
+    def resolve_twins_xlsx(self, info, pers_id):
+        return TwinsXlsx(info, pers_id, debug_flag=False)
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()

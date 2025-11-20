@@ -1,5 +1,6 @@
 import re
 import io
+import os
 import collections
 import numpy as np
 from difflib import Differ
@@ -258,16 +259,20 @@ def diff_sentences(
     return list_sentence, xlsx_table
 
 
-def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
+def TwinsXlsx(info, pers_id, xlsx_table=None, twin_diffs=None, debug_flag=False):
+    import pickle
+    import gzip
     from xlsxwriter import Workbook
-    from lingvodoc.models import DBSession, Entity as dbEntity
+    from lingvodoc.schema.gql_holders import ResponseError
     from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusedMethods
     import lingvodoc.utils as utils
 
     # Reusing the static method
     save_xlsx_file = ReusedMethods.save_xlsx_file
 
-    def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
+    # Sub-functions
+
+    def write_xlsx(xlsx_table, xlsx_diffs):
 
         workbook_stream = (
             io.BytesIO())
@@ -278,7 +283,7 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
         wb_config = [{
             'worksheet': workbook.add_worksheet(
                 utils.sanitize_worksheet_name("By translation")),
-            'content': table,
+            'content': xlsx_table,
             'with_toc': False
         }, {
             'worksheet': workbook.add_worksheet(
@@ -352,6 +357,74 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
 
         return xlsx_url
 
+    # Main function's body
+
+    try:
+        request = info.context.request
+        storage = request.registry.settings['storage']
+
+        storage_dir = os.path.join(storage['path'], 'twin_diffs')
+        pickle_path = os.path.join(storage_dir, key2str(*pers_id))
+        os.makedirs(storage_dir, exist_ok=True)
+
+    except Exception as e:
+        return ResponseError(f'Cannot prepare pickle file for twin diffs: {e}')
+
+    if xlsx_table is not None and twin_diffs is not None:
+        xlsx_diffs = [[_('Difference'), _('Word1'), _('Word2')]]
+
+        for delta, word_set in twin_diffs.items():
+            part1, part2 = delta
+            delta = (
+                f"{part1} -> {part2}" if len(part1) and len(part2) else
+                f"+ {part2}" if not len(part1) else
+                f"- {part1}"
+            )
+
+            xlsx_diffs.append([_(delta), _(), _()])
+            for word1, word2 in word_set:
+                xlsx_diffs.append([_(), _(word1), _(word2)])
+
+        xlsx_dict = {
+            'xlsx_table': xlsx_table,
+            'xlsx_diffs': xlsx_diffs
+        }
+
+        try:
+            with gzip.open(pickle_path, 'wb') as f:
+                pickle.dump(xlsx_dict, f)
+
+            if debug_flag:
+                print(f'{pickle_path=}')
+
+            return None
+
+        except Exception as e:
+            return ResponseError(f'Cannot write file \'{pickle_path}\': {e}')
+    else:
+        try:
+            with gzip.open(pickle_path, 'rb') as f:
+                xlsx_dict = pickle.load(f)
+
+            xlsx_url = write_xlsx(**xlsx_dict)
+
+            if debug_flag:
+                for row in xlsx_dict.get('xlsx_table', []) + [""] + xlsx_dict.get('xlsx_diffs', []):
+                    print(row)
+                print(xlsx_url)
+            else:
+                pass
+                #os.remove(pickle_path)
+
+            return xlsx_url
+
+        except Exception as e:
+            return ResponseError(f'Cannot read file \'{pickle_path}\': {e}')
+
+
+def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, pers_id, debug_flag=False):
+    from lingvodoc.models import DBSession, Entity as dbEntity
+
     def get_content(cid, oid):
         entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
         return entity.content if entity else ""
@@ -376,31 +449,10 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
 
         xlsx_table.extend([(cell or __('<none>')) for cell in row] for row in rows.values() if row[0] is not None)
 
-    xlsx_diffs = [[_('Difference'), _('Word1'), _('Word2')]]
+    # Storing result to pickle for further xlsx
+    response = TwinsXlsx(info, pers_id, xlsx_table, twin_diffs, debug_flag)
 
-    for delta, word_set in twin_diffs.items():
-        part1, part2 = delta
-        delta = (
-            f"{part1} -> {part2}" if len(part1) and len(part2) else
-            f"+ {part2}" if not len(part1) else
-            f"- {part1}"
-        )
-
-        xlsx_diffs.append([_(delta), _(), _()])
-        for word1, word2 in word_set:
-            xlsx_diffs.append([_(), _(word1), _(word2)])
-
-    xlsx_url = write_xlsx(info, xlsx_table, xlsx_diffs)
-
-    if debug_flag:
-        for row in xlsx_table + [""] + xlsx_diffs:
-            print(row)
-        print(xlsx_url)
-
-    return {
-        'diffs': result,
-        'xlsx_url': xlsx_url
-    }
+    return result if response is None else response
 
 
 if __name__ == "__main__":
