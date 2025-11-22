@@ -119,7 +119,7 @@ def diff_sentences(
     if debug_flag:
         print(line)
 
-    for t, (twin_id, text) in enumerate(text_vars):
+    for t, (twin_id, text) in enumerate(text_vars, 1):
         twin_id = key2str(*twin_id)
         word_vars = split_words(text)
         mains_num = len(word_bases)
@@ -198,14 +198,17 @@ def diff_sentences(
                         xlsx_value += f" <changed by {twin_diff}>"
                     # mark that xlsx row describes changes
                     set_xlsx_cell(orig_numb, 0, orig_word)
-                    set_xlsx_cell(orig_numb, t+1, xlsx_value)
+                    set_xlsx_cell(orig_numb, t, xlsx_value)
 
                 else:
                     twin_equals.append(twin_key)
+                    # this empty value is important for fields ordering
+                    # within result dictionary
+                    main_sentence[main_key][twin_id] = []
                     # store twin_word into xlsx row,
                     # but it may describe no changes,
                     # so we don't set xlsx_column'0 here
-                    set_xlsx_cell(orig_numb, t+1, "<same>")
+                    set_xlsx_cell(orig_numb, t, "<same>")
 
                 # Collect diffs
                 if twin_diffs is not None and twin_diff is not None:
@@ -225,7 +228,7 @@ def diff_sentences(
                 main_sentence[main_key][twin_id] = None
                 # mark that xlsx row describes changes
                 set_xlsx_cell(orig_numb, 0, orig_word)
-                set_xlsx_cell(orig_numb, t+1, "<none>")
+                set_xlsx_cell(orig_numb, t, "<none>")
 
                 if debug_flag:
                     print(f"{orig_numb:>2}: {_(orig_word)} (-)  {dash}")
@@ -236,7 +239,7 @@ def diff_sentences(
                 twin_sentence[twin_key][main_id] = None
                 # mark that xlsx row describes changes
                 set_xlsx_cell(i2, 0, "<none>")
-                set_xlsx_cell(i2, t+1, word2)
+                set_xlsx_cell(i2, t, word2)
 
                 if debug_flag:
                     print(f" {dash:<15} (+) {(i2 - mains_num):>2}: {_(word2)}")
