@@ -93,6 +93,24 @@ def key2str(*key):
     return ','.join([str(k) for k in key])
 
 
+def pretty(diffs):
+    result = []
+
+    for diff in diffs:
+        if len(diff or []) < 2 or not sum(map(lambda d: len(d), diff)):
+            continue
+
+        d1, d2 = diff
+
+        if not len(d1):
+            result.append(f"+{d2}")
+        elif not len(d2):
+            result.append(f"-{d1}")
+        else:
+            result.append(f"{d1} -> {d2}")
+
+    return ", ".join(result)
+
 def diff_sentences(
         text_base=debug_base,
         text_vars=tuple(debug_vars),
@@ -198,7 +216,7 @@ def diff_sentences(
                     if twin_dist:
                         xlsx_value += f" <shifted by {twin_dist}>"
                     if twin_diff:
-                        xlsx_value += f" <changed by {twin_diff}>"
+                        xlsx_value += f" <changed by {pretty(twin_diff)}>"
                     # mark that xlsx row describes changes
                     set_xlsx_cell(orig_numb, 0, orig_word)
                     set_xlsx_cell(orig_numb, t, xlsx_value)
