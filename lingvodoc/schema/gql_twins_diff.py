@@ -77,7 +77,7 @@ def is_twin(word1, word2):
 
 
 def get_dist(i1, i2, max_shape):
-    skip = 4  # no more than four words between
+    skip = 2  # no more than two words between
     dist = i2 - i1  # moved right if dist > 0
 
     # Returns extra-big distance if we are not neighbours yet,
@@ -120,7 +120,8 @@ def diff_sentences(
         print(line)
 
     for t, (twin_id, text) in enumerate(text_vars, 1):
-        twin_id = key2str(*twin_id)
+        # checking if no entities is in current cell as well
+        twin_id = key2str(*twin_id) if twin_id else f'empty_{t}'
         word_vars = split_words(text)
         mains_num = len(word_bases)
         twins_num = len(word_vars)
@@ -227,13 +228,18 @@ def diff_sentences(
                     diff_ = f"(+/-) {twin_diff}" if twin_diff else ""
                     print(f"{orig_numb:>2}: {_(orig_word)} ({dist}) {twin_numb:>2}: {_(twin_word)} {diff_}")
             else:
-                main_sentence[main_key][twin_id] = None
-                holes1.add(orig_numb)
-                # checking for all nonnative twins
-                holes2.update(twin_numb for twin_numb, same in enumerate(word_match[orig_numb]) if same)
-                # mark that xlsx row describes changes
-                set_xlsx_cell(orig_numb, 0, orig_word)
-                set_xlsx_cell(orig_numb, t, "<none>")
+                # checking if no entities is in current cell as well
+                if len(word_vars):
+                    main_sentence[main_key][twin_id] = None
+                    holes1.add(orig_numb)
+                    # checking for all nonnative twins
+                    holes2.update(twin_numb for twin_numb, same in enumerate(word_match[orig_numb]) if same)
+                    # mark that xlsx row describes changes
+                    set_xlsx_cell(orig_numb, 0, orig_word)
+                    set_xlsx_cell(orig_numb, t, "<none>")
+                else:
+                    main_sentence[main_key][twin_id] = []
+                    set_xlsx_cell(orig_numb, t, "<empty>")
 
                 if debug_flag:
                     print(f"{orig_numb:>2}: {_(orig_word)} (-)  {dash}")
