@@ -148,24 +148,26 @@ def diff_sentences(
             twin_word = None
 
             for i2, (p2, word2) in enumerate(word_vars):
-                # Number of holes before i2(!)
-                delta1 = sum([(i < i2) for i in list(holes2)])
-                # Number of holes before i1(!)
-                delta2 = sum([(j < i1) for j in list(holes1)])
+                # if potential twins
+                if i1 not in holes1 and i2 not in holes2:
+                    # Number of holes before i2(!)
+                    delta1 = sum([(i < i2) for i in list(holes2)])
+                    # Number of holes before i1(!)
+                    delta2 = sum([(j < i1) for j in list(holes1)])
 
-                cur_dist = get_dist(i1 + delta1, i2 + delta2, max_shape)
+                    cur_dist = get_dist(i1 + delta1, i2 + delta2, max_shape)
 
-                # If we are neighbours now or will be in future and
-                # current distance is less than a found one
-                if cur_dist is not None and abs(cur_dist) < abs(twin_dist):
-                    if word_match[i1, i2]:
-                        twin_dist = cur_dist
-                        twin_numb = i2
-                        twin_posn = p2
-                        twin_word = word2
-                # None or a bigger distance value
-                elif cur_dist != max_shape:
-                    break
+                    # If we are neighbours now or will be in future and
+                    # current distance is less than a found one
+                    if cur_dist is not None and abs(cur_dist) < abs(twin_dist):
+                        if word_match[i1, i2]:
+                            twin_dist = cur_dist
+                            twin_numb = i2
+                            twin_posn = p2
+                            twin_word = word2
+                    # None or a bigger distance value
+                    elif cur_dist != max_shape:
+                        break
 
             orig_numb, orig_posn, orig_word = i1, p1, word1
             main_key = key2str(orig_posn, len(orig_word))
@@ -226,6 +228,9 @@ def diff_sentences(
                     print(f"{orig_numb:>2}: {_(orig_word)} ({dist}) {twin_numb:>2}: {_(twin_word)} {diff_}")
             else:
                 main_sentence[main_key][twin_id] = None
+                holes1.add(orig_numb)
+                # checking for all nonnative twins
+                holes2.update(twin_numb for twin_numb, same in enumerate(word_match[orig_numb]) if same)
                 # mark that xlsx row describes changes
                 set_xlsx_cell(orig_numb, 0, orig_word)
                 set_xlsx_cell(orig_numb, t, "<none>")
