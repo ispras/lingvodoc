@@ -191,6 +191,13 @@ def diff_sentences(
             orig_numb, orig_posn, orig_word = i1, p1, word1
             main_key = key2str(orig_posn, len(orig_word))
 
+            # If this is a real replacement, or we have no twins
+            if twin_dist != 0:
+                holes1.add(orig_numb)
+                # kill all self and nonnative twins
+                word_match[orig_numb] = np.zeros(twins_num, dtype=int)
+                holes2.update([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
+
             # If we have twins
             if twin_dist != max_shape:
                 twin_key = key2str(twin_posn, len(twin_word))
@@ -223,8 +230,8 @@ def diff_sentences(
 
                 else:
                     twin_equals.append(twin_key)
-                    # this empty value is important for fields ordering
-                    # within result dictionary
+                    # this empty value is important for
+                    # fields ordering within result dictionary
                     main_sentence[main_key][twin_id] = []
                     # store twin_word into xlsx row,
                     # but it may describe no changes,
@@ -236,26 +243,20 @@ def diff_sentences(
                     for diff in twin_diff:
                         twin_diffs[diff].add((orig_word, twin_word))
 
-                # If this is a real replacement
-                if twin_dist != 0:
-                    holes1.add(orig_numb)
-                    holes2.add(twin_numb)
-
                 if debug_flag:
                     dist = '>' if twin_dist > 0 else '<' if twin_dist < 0 else '='
                     diff_ = f"(+/-) {twin_diff}" if twin_diff else ""
                     print(f"{orig_numb:>2}: {_(orig_word)} ({dist}) {twin_numb:>2}: {_(twin_word)} {diff_}")
             else:
-                # checking if no entities is in current cell as well
-                if len(word_vars):
+                if twins_num:
                     main_sentence[main_key][twin_id] = None
-                    holes1.add(orig_numb)
-                    # checking for all nonnative twins
-                    holes2.update(twin_numb for twin_numb, same in enumerate(word_match[orig_numb]) if same)
                     # mark that xlsx row describes changes
                     set_xlsx_cell(orig_numb, 0, orig_word)
                     set_xlsx_cell(orig_numb, t, "<none>")
+                # if no entities is in current cell
                 else:
+                    # this empty value is important for
+                    # fields ordering within result dictionary
                     main_sentence[main_key][twin_id] = []
                     set_xlsx_cell(orig_numb, t, "<empty>")
 
