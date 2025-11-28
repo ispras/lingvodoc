@@ -10,9 +10,10 @@ import logging
 # Setting up logging.
 log = logging.getLogger(__name__)
 
+# Block for debugging ###
+
 from pdb import set_trace as A
 
-# For debugging
 line = '=' * 55
 dash = '-' * 5
 
@@ -21,19 +22,20 @@ debug_vars = list()
 debug_base = ((1,), "Я помню чудное мгновенье, передо мной явилась ты")
 debug_vars.append(((2,), "Ещё нгновение чюдecное, впереди меня когда-то появилясь ты, я понмю"))
 
-
 def align(text, width):
     return f"{text:<{width}}"
-
 
 def _(text=""):
     return align(text, 12)
 
-
 def __(text=""):
     return align(text, 20)
 
+# end of block for debugging ###
 
+
+# Getting diffs of specific words to display
+# them and to report all the diffs together
 def diff_words(word1, word2):
 
     result = []
@@ -63,6 +65,7 @@ def diff_words(word1, word2):
     return result or None
 
 
+# Split text into words by white spaces and punctuation marks
 def split_words(text):
     words = []
     for match in re.finditer(r'\w+', text):
@@ -70,12 +73,14 @@ def split_words(text):
     return words
 
 
+# Checking if specific words are twins using Jaro-Winkler edge
 def is_twin(word1, word2):
     edge = 0.25  # Jaro-Winkler edge
     same = jw(word1.lower(), word2.lower()) < edge
     return same
 
 
+# Getting distance between two words positions
 def get_dist(i1, i2, max_shape):
     skip = 2  # no more than two words between
     dist = i2 - i1  # moved right if dist > 0
@@ -93,6 +98,7 @@ def key2str(*key):
     return ','.join([str(k) for k in key])
 
 
+# Getting readable diffs
 def pretty(diffs):
     result = []
 
@@ -111,6 +117,9 @@ def pretty(diffs):
 
     return ", ".join(result)
 
+
+# Main function to compare base string
+# with its versions and get a result report
 def diff_sentences(
         text_base=debug_base,
         text_vars=tuple(debug_vars),
@@ -191,7 +200,9 @@ def diff_sentences(
             orig_numb, orig_posn, orig_word = i1, p1, word1
             main_key = key2str(orig_posn, len(orig_word))
 
-            # If this is a real replacement, or we have no twins
+            # If this is a real replacement, or we have no twins near,
+            # we store such positions as holes to have correct deltas
+            # when we check next words
             if twin_dist != 0:
                 holes1.add(orig_numb)
                 # kill all self and nonnative twins
@@ -292,6 +303,7 @@ def diff_sentences(
     return list_sentence, xlsx_table
 
 
+# Getting result report in xlsx format
 def TwinsXlsx(info, pers_id, xlsx_table=None, twin_diffs=None, debug_flag=False):
     import pickle
     import gzip
@@ -455,6 +467,7 @@ def TwinsXlsx(info, pers_id, xlsx_table=None, twin_diffs=None, debug_flag=False)
             return ResponseError(f'Cannot read file \'{pickle_path}\': {e}')
 
 
+# Public function to get data from database and call other functions
 def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, pers_id, debug_flag=False):
     from lingvodoc.models import DBSession, Entity as dbEntity
 
@@ -488,5 +501,6 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, pers_id, debu
     return result if response is None else response
 
 
+# This tail is just for debugging ###
 if __name__ == "__main__":
     diff_sentences(debug_flag=True)
