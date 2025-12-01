@@ -2,7 +2,7 @@ import collections
 
 import minio
 import tempfile
-import time
+from time import time as now
 import os
 import re
 
@@ -55,6 +55,7 @@ class ListChanges(graphene.Mutation):
         # parser changes (blocking parameter)
         # userblobs (with files)
 
+        proxy = graphene.String()
         changes = ObjectVal(required=True)
         sync_stamp = graphene.Int(required=True)  # belongs to perspective
 
@@ -187,3 +188,5 @@ class ListChanges(graphene.Mutation):
                     process_db_objects(c_key, c_ids)
 
         process_db_objects('perspective', {'self_id': pers_id})
+        A()
+        return ListChanges(triumph=True, changes=changes, sync_stamp=now())

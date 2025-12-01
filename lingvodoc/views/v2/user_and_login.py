@@ -619,6 +619,8 @@ def get_user_info(request):  # tested
     response['birthday'] = str(user.birthday)
     response['created_at'] = user.created_at
     response['is_active'] = user.is_active
+    response['allowed_sync'] = (
+            user.additional_metadata or {}).get('allowed_sync')
     if user.email:
         response['email'] = user.email.email
     meta = None
