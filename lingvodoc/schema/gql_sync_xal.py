@@ -41,152 +41,137 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal
 )
 
+from lingvodoc.utils.proxy import try_proxy
+
 from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
 log = logging.getLogger(__name__)
 
 
-class ListChanges(graphene.Mutation):
+def ListChanges(info, id, host, debug_flag=False):
 
-    class Arguments:
-        pers_id = LingvodocID(required=True)
-        # alembic_version changes (blocking parameter)
-        # parser changes (blocking parameter)
-        # userblobs (with files)
+    print('locking client')
+    log.error('locking client')
 
-        proxy = graphene.String()
-        changes = ObjectVal(required=True)
-        sync_stamp = graphene.Int(required=True)  # belongs to perspective
+    request = info.context.request
+    try_proxy(request)
+    DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")
+    variables = {'auth': authenticated_userid(request)}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    if not client:
+        raise ResponseError('try to login again')
 
-    changes = ObjectVal()
-    sync_stamp = graphene.Int()  # belongs to perspective
-    triumph = graphene.Boolean()
+    client_id = request.authenticated_userid
+    user_id = Client.get_user_by_client_id(client_id).id
 
-    @staticmethod
-    @client_id_check()
-    def mutate(root, info, **args):
-        print('locking client')
-        log.error('locking client')
+    is_admin = (user_id == 1)
 
-        request = info.context.request
-        DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")
-        variables = {'auth': authenticated_userid(request)}
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-        if not client:
-            raise ResponseError('try to login again')
+    task = TaskStatus(user_id, "Synchronisation with server", '', 5)
+    task.set(1, 1, "Started", "")
 
-        client_id = request.authenticated_userid
-        user_id = Client.get_user_by_client_id(client_id).id
+    changes = collections.defaultdict(list)
 
-        is_admin = False
-        if user_id == 1:
-            is_admin = True
-
-        task = TaskStatus(user_id, "Synchronisation with server", '', 5)
-        task.set(1, 1, "Started", "")
-
-        pers_id = args.get('pers_id')
-        changes = collections.defaultdict(list)
-
-        def add_to_result(dbObject, key):
-            if dbObject is None:
-                return None
-
-            updated_at = dbObject.updated_at
-            synced_at = dbObject.additional_metadata.get('synced_at', 0)
-
-            if updated_at > synced_at:
-                changes[key].append(dbObject)
-                return True
-            else:
-                return False
-
-        def get_db_objects(dbModel, key, self_id=None, parent_id=None):
-
-            if (dbModel is None or
-                    (self_id is None and parent_id is None)):
-                return []
-
-            dbFilter = [
-                dbModel.marked_for_deletion == False
-            ]
-
-            if self_id is not None:
-                cid, oid = self_id
-                dbFilter.extend([
-                    dbModel.client_id == cid,
-                    dbModel.object_id == oid
-                ])
-            else:
-                cid, oid = parent_id
-                dbFilter.extend([
-                    dbModel.parent_client_id == cid,
-                    dbModel.parent_object_id == oid
-                ])
-
-            db_objects = (
-                DBSession
-                    .query(dbModel)
-                    .filter(*dbFilter)
-                    .all()
-            ) or []
-
-            for obj in db_objects:
-                add_to_result(obj, key)
-
-            return db_objects
-
-        hidden = none = []
-
-        # Tuples: (dbModel, parents, children)
-        tree = {
-            'parserresult': (dbParserResult, ['entity'], none),
-            'publishing': (dbPublishingEntity, hidden, none),
-            'entity': (dbEntity, ['entity', 'field', 'publishing'], none),  # cycle
-            'lexical': (dbLexicalEntry, hidden, ['entity']),
-            'field': (dbFields, ['gist'], none),
-            'perstofield': (dbDictionaryPerspectiveToField, ['perstofield', 'field'], none),  # cycle
-            'perspective': (dbDictionaryPerspective, ['dictionary', 'gist'], ['perstofield', 'lexical']),
-            'dictionary': (dbDictionary, ['language', 'gist'], hidden),
-            'language': (dbLanguage, ['language', 'gist'], hidden),  # cycle
-            'atom': (dbTranslationAtom, hidden, none),
-            'gist': (dbTranslationGist, hidden, ['atom'])
-        }
-
-        def process_db_objects(key, ids):
-            dbModel, parents, children = tree[key]
-            objects = get_db_objects(dbModel, key, **ids)
-
-            for obj in objects:
-                for p_key in parents:
-                    p_ids = (
-                        {'self_id': (obj.self_client_id, obj.self_object_id)}
-                        if key == p_key == 'perstofield' or key == p_key == 'entity' else
-
-                        {'self_id': (obj.entity_client_id, obj.entity_object_id)}
-                        if p_key == 'entity' else
-
-                        {'self_id': (obj.field_client_id, obj.field_object_id)}
-                        if p_key == 'field' else
-
-                        {'self_id': (obj.translation_gist_client_id, obj.translation_gist_object_id)}
-                        if p_key == 'gist' else
-
-                        {'self_id': (obj.client_id, obj.object_id)}
-                        if p_key == 'publishing' else
-
-                        {'self_id': (obj.parent_client_id, obj.parent_object_id)}
-                    )
-                    if any(x is None for x in p_ids['self_id']):
-                        continue
-
-                    process_db_objects(p_key, p_ids)
-
-                for c_key in children:
-                    c_ids = {'parent_id': (obj.client_id, obj.object_id)}
-                    process_db_objects(c_key, c_ids)
-
-        process_db_objects('perspective', {'self_id': pers_id})
+    def add_to_result(dbObject, key):
+        if dbObject is None:
+            return None
         A()
-        return ListChanges(triumph=True, changes=changes, sync_stamp=now())
+        updated_at = dbObject.updated_at
+        metadata = dbObject.additional_metadata
+        synced_at = metadata.get('xal_synced_at', 0)
+
+        if updated_at > synced_at:
+            changes[key].append([synced_at, updated_at, dbObject])
+            metadata['xal_synced_at'] = updated_at  # debugging
+            return True
+        else:
+            return False
+
+    def get_db_objects(dbModel, key, self_id=None, parent_id=None):
+
+        if (dbModel is None or
+                (self_id is None and parent_id is None)):
+            return []
+
+        dbFilter = [
+            dbModel.marked_for_deletion == False
+        ]
+
+        if self_id is not None:
+            cid, oid = self_id
+            dbFilter.extend([
+                dbModel.client_id == cid,
+                dbModel.object_id == oid
+            ])
+        else:
+            cid, oid = parent_id
+            dbFilter.extend([
+                dbModel.parent_client_id == cid,
+                dbModel.parent_object_id == oid
+            ])
+
+        db_objects = (
+            DBSession
+                .query(dbModel)
+                .filter(*dbFilter)
+                .all()
+        ) or []
+
+        for obj in db_objects:
+            add_to_result(obj, key)
+
+        return db_objects
+
+    hidden = none = []
+
+    # Tuples: (dbModel, parents, children)
+    tree = {
+        'parserresult': (dbParserResult, ['entity'], none),
+        'publishing': (dbPublishingEntity, hidden, none),
+        'entity': (dbEntity, ['entity', 'field', 'publishing'], none),  # cycle
+        'lexical': (dbLexicalEntry, hidden, ['entity']),
+        'field': (dbFields, ['gist'], none),
+        'perstofield': (dbDictionaryPerspectiveToField, ['perstofield', 'field'], none),  # cycle
+        'perspective': (dbDictionaryPerspective, ['dictionary', 'gist'], ['perstofield', 'lexical']),
+        'dictionary': (dbDictionary, ['language', 'gist'], hidden),
+        'language': (dbLanguage, ['language', 'gist'], hidden),  # cycle
+        'atom': (dbTranslationAtom, hidden, none),
+        'gist': (dbTranslationGist, hidden, ['atom'])
+    }
+
+    def process_db_objects(key, ids):
+        dbModel, parents, children = tree[key]
+        objects = get_db_objects(dbModel, key, **ids)
+
+        for obj in objects:
+            for p_key in parents:
+                p_ids = (
+                    {'self_id': (obj.self_client_id, obj.self_object_id)}
+                    if key == p_key == 'perstofield' or key == p_key == 'entity' else
+
+                    {'self_id': (obj.entity_client_id, obj.entity_object_id)}
+                    if p_key == 'entity' else
+
+                    {'self_id': (obj.field_client_id, obj.field_object_id)}
+                    if p_key == 'field' else
+
+                    {'self_id': (obj.translation_gist_client_id, obj.translation_gist_object_id)}
+                    if p_key == 'gist' else
+
+                    {'self_id': (obj.client_id, obj.object_id)}
+                    if p_key == 'publishing' else
+
+                    {'self_id': (obj.parent_client_id, obj.parent_object_id)}
+                )
+                if any(x is None for x in p_ids['self_id']):
+                    continue
+
+                process_db_objects(p_key, p_ids)
+
+            for c_key in children:
+                c_ids = {'parent_id': (obj.client_id, obj.object_id)}
+                process_db_objects(c_key, c_ids)
+
+    process_db_objects('perspective', {'self_id': id})
+    #A()
+    return changes

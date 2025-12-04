@@ -323,6 +323,9 @@ from lingvodoc.schema.gql_markups import (
     Markup,
     MarkupGroup)
 
+from lingvodoc.schema.gql_sync_xal import (
+    ListChanges)
+
 from lingvodoc.schema.gql_twins_diff import DiffEntities
 
 from lingvodoc.scripts import elan_parser
@@ -711,6 +714,12 @@ class Query(graphene.ObjectType):
             twin_ids = graphene.List(graphene.List(LingvodocID), required = True),
             entry_ids = graphene.List(LingvodocID, required = True),
             field_names = graphene.List(graphene.String, required = True)))
+
+    list_changes = (
+        graphene.Field(
+            ObjectVal,
+            host = graphene.String(required = True),
+            id = LingvodocID(required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -5383,6 +5392,9 @@ class Query(graphene.ObjectType):
 
     def resolve_twins_diff(self, info, **args):
         return DiffEntities(info, **args, debug_flag=True)
+
+    def resolve_list_changes(self, info, **args):
+        return ListChanges(info, **args, debug_flag=True)
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()

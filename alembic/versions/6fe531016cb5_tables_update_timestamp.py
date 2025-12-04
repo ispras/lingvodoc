@@ -25,6 +25,11 @@ def tables():
 
 
 def upgrade():
+    op.execute(f'''
+        -- Adding 'additional_metadata' column
+        ALTER TABLE translationgist 
+          ADD COLUMN additional_metadata JSONB;
+    ''')
 
     for table in tables():
         if table == 'parserresult':
@@ -44,6 +49,11 @@ def upgrade():
 
 
 def downgrade():
+    op.execute(f'''
+        -- Removing 'additional_metadata' column
+        ALTER TABLE translationgist
+          DROP COLUMN additional_metadata;
+    ''')
 
     for table in tables():
         if table == 'parserresult':
