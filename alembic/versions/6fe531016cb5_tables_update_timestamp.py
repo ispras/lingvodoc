@@ -27,7 +27,14 @@ def tables():
 def upgrade():
     op.execute(f'''
         -- Adding 'additional_metadata' column
+
         ALTER TABLE translationgist 
+          ADD COLUMN additional_metadata JSONB;
+        
+        ALTER TABLE dictionaryperspectivetofield 
+          ADD COLUMN additional_metadata JSONB;
+          
+        ALTER TABLE publishingentity
           ADD COLUMN additional_metadata JSONB;
     ''')
 
@@ -51,7 +58,14 @@ def upgrade():
 def downgrade():
     op.execute(f'''
         -- Removing 'additional_metadata' column
+        
         ALTER TABLE translationgist
+          DROP COLUMN additional_metadata;
+          
+        ALTER TABLE dictionaryperspectivetofield
+          DROP COLUMN additional_metadata;
+                    
+        ALTER TABLE publishingentity
           DROP COLUMN additional_metadata;
     ''')
 
@@ -61,7 +75,7 @@ def downgrade():
 
         op.execute(f'''
             -- Removing trigger
-            DROP TRIGGER set_timestamp ON public.{table};
+            DROP TRIGGER {table}_set_timestamp ON public.{table};
     
             -- Removing 'updated_at'
             ALTER TABLE public.{table}

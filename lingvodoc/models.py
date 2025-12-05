@@ -1523,6 +1523,7 @@ class DictionaryPerspectiveToField(
     FieldMixin,
     LinkMixin,
     MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
     Base):
     """
     """
@@ -1958,6 +1959,7 @@ class Entity(
 class PublishingEntity(
     TableNameMixin,
     ModifiedAtMixin,
+    AdditionalMetadataMixin,
     Base):
 
     # NOTE:

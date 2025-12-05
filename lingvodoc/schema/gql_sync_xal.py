@@ -75,14 +75,14 @@ def ListChanges(info, id, host, debug_flag=False):
     def add_to_result(dbObject, key):
         if dbObject is None:
             return None
-        A()
+
         updated_at = dbObject.updated_at
-        metadata = dbObject.additional_metadata
+        metadata = dbObject.additional_metadata or {}
         synced_at = metadata.get('xal_synced_at', 0)
 
         if updated_at > synced_at:
             changes[key].append([synced_at, updated_at, dbObject])
-            metadata['xal_synced_at'] = updated_at  # debugging
+            dbObject.additional_metadata = {**metadata, 'xal_synced_at': updated_at}
             return True
         else:
             return False
@@ -95,7 +95,7 @@ def ListChanges(info, id, host, debug_flag=False):
 
         dbFilter = [
             dbModel.marked_for_deletion == False
-        ]
+        ] if key != 'publishing' else []
 
         if self_id is not None:
             cid, oid = self_id
