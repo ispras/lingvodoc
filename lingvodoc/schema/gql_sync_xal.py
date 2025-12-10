@@ -3,12 +3,13 @@ import collections
 import minio
 import tempfile
 from time import time as now
-import os
+import sys
 import re
 
 import graphene
 import logging
-
+import traceback
+from datetime import datetime
 from sqlalchemy import func, literal, tuple_, and_
 from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus
@@ -27,7 +28,6 @@ from lingvodoc.models import (
     DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
     DictionaryPerspective as dbDictionaryPerspective,
     PublishingEntity as dbPublishingEntity,
-    Parser as dbParser,
     ParserResult as dbParserResult
 )
 
@@ -43,13 +43,17 @@ from lingvodoc.schema.gql_holders import (
 
 from lingvodoc.utils.proxy import try_proxy
 
-from sqlalchemy.orm import aliased
+from sqlalchemy import FLOAT
 from pdb import set_trace as A
 
 log = logging.getLogger(__name__)
+min_date = '1735689600.0'  # 2025-01-01 00:00:00
 
 
 def ListChanges(info, id, host, debug_flag=False):
+
+    if host != 'isp':
+        return ResponseError("Exception: only 'isp' host is supported for now")
 
     print('locking client')
     log.error('locking client')
@@ -71,23 +75,10 @@ def ListChanges(info, id, host, debug_flag=False):
     task.set(1, 1, "Started", "")
 
     changes = collections.defaultdict(list)
-
-    def add_to_result(dbObject, key):
-        if dbObject is None:
-            return None
-
-        updated_at = dbObject.updated_at
-        metadata = dbObject.additional_metadata or {}
-        synced_at = metadata.get('xal_synced_at', 0)
-
-        if updated_at > synced_at:
-            changes[key].append([synced_at, updated_at, dbObject])
-            dbObject.additional_metadata = {**metadata, 'xal_synced_at': updated_at}
-            return True
-        else:
-            return False
+    error = None
 
     def get_db_objects(dbModel, key, self_id=None, parent_id=None):
+        nonlocal error
 
         if (dbModel is None or
                 (self_id is None and parent_id is None)):
@@ -113,12 +104,36 @@ def ListChanges(info, id, host, debug_flag=False):
         db_objects = (
             DBSession
                 .query(dbModel)
-                .filter(*dbFilter)
-                .all()
-        ) or []
+                .filter(*dbFilter,
+                        func.coalesce(dbModel.additional_metadata['xal_synced_at'].astext, min_date).cast(FLOAT)
+                        < func.date_part('EPOCH', dbModel.updated_at)
+                        + 100)  # for debugging
+                .all())
 
-        for obj in db_objects:
-            add_to_result(obj, key)
+        try:
+            for obj in db_objects:
+                # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
+                changes[key].append({**obj.__dict__, '_sa_instance_state': None})
+                metadata = obj.additional_metadata or {}
+                # if it's syncing we add some delta to now() because after the transaction ends
+                # the field 'updated_at' will be automatically set to current time
+                # so the changing of 'xal_synced_at' field should be "before" the stored syncing time
+                '''
+                if now() - metadata.get('xal_synced_at', 0) > 60:
+                    obj.additional_metadata = {**metadata, 'xal_synced_at': now() + 60}
+                else:
+                    return (
+                        ResponseError("Not enough time from previous synchronization, wait a minute"))
+                '''
+        except Exception:
+            traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
+
+            log.warning('saving_xal_synced_at: exception')
+            log.warning(traceback_string)
+
+            error = ResponseError('Exception:\n' + traceback_string)
+
+            return []
 
         return db_objects
 
@@ -173,5 +188,4 @@ def ListChanges(info, id, host, debug_flag=False):
                 process_db_objects(c_key, c_ids)
 
     process_db_objects('perspective', {'self_id': id})
-    #A()
-    return changes
+    return error or changes
