@@ -69,11 +69,10 @@ from zope.sqlalchemy import ZopeTransactionExtension
 import lingvodoc.cache.caching as caching
 from pdb import set_trace as A
 
+
 # Setting up logging.
 log = logging.getLogger(__name__)
 
-RUSSIAN_LOCALE = 1
-ENGLISH_LOCALE = 2
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
@@ -81,6 +80,22 @@ Base = declarative_base()
 
 categories = {0: 'lingvodoc.ispras.ru/dictionary',
               1: 'lingvodoc.ispras.ru/corpora'}
+
+# See 'locale' DB table.
+
+RUSSIAN_LOCALE = 1
+ENGLISH_LOCALE = 2
+FINNISH_LOCALE = 3
+FRENCH_LOCALE = 4
+GERMAN_LOCALE = 5
+
+LOCALE_DICT = {
+    'ru': RUSSIAN_LOCALE,
+    'en': ENGLISH_LOCALE,
+    'fi': FINNISH_LOCALE,
+    'fr': FRENCH_LOCALE,
+    'de': GERMAN_LOCALE
+}
 
 
 class SLBigInteger(BigInteger):
@@ -2017,6 +2032,7 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 
 
 class User(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
+
     login = Column(UnicodeText, unique=True, nullable=False)
     name = Column(UnicodeText)
     # this stands for name in English
@@ -2025,6 +2041,8 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixi
     birthday = Column(EpochTypeForDate)
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean, default=True, nullable=False)
+    id_v1 = Column(SLBigInteger())
+
     password = relationship("Passhash", uselist=False)
     # dictionaries = relationship("Dictionary",
     #                             secondary=user_to_dictionary_association, backref=backref("participated"))

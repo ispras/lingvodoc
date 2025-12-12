@@ -32,3 +32,6 @@ docker/dbdump/*
 docker/frontend/*
 
 lingvodoc/version.py
+/__run__/
+/lingvodoc/assets/
+/.eggs/
