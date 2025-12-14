@@ -1,0 +1,9 @@
+{
+  "policies": [
+    {
+      "name": "urn:lingvodoc:policies:acl",
+      "fileName": "resource-acl.js",
+      "description": "urn:lingvodoc:policies:acl"
+    }
+  ]
+}

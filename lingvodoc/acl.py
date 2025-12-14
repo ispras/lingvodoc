@@ -38,7 +38,13 @@ def get_effective_client_id(client_id, request):
     Returns client id to be used for permission checking.
     """
 
-    if request.registry.settings.get("desktop") and request.registry.settings["desktop"].get("desktop"):
+    if request is None:
+        return client_id
+
+    elif (
+        request.registry.settings.get("desktop") and
+        request.registry.settings["desktop"].get("desktop")
+    ):
         return request.cookies.get('client_id')
 
     else:
@@ -189,7 +195,7 @@ def check(client_id, request, action, subject, subject_id):
     return False
 
 
-def check_direct(client_id, request, action, subject, subject_id):
+def check_direct(client_id, request, action, subject, subject_id, session = DBSession):
     """
     Checks if a given action on a given subject is permitted for the specified client, accesses DB directly,
     so should be faster.
@@ -213,7 +219,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         subject_client_id, subject_object_id = subject_id[:2]
 
-        perspective = DBSession.query(DictionaryPerspective).filter_by(
+        perspective = session.query(DictionaryPerspective).filter_by(
             client_id = subject_client_id, object_id = subject_object_id).first()
 
         return (perspective and
@@ -249,7 +255,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         user_query = (
 
-            DBSession
+            session
 
                 .query(literal(1))
 
@@ -266,7 +272,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         user_exists = (
 
-            DBSession
+            session
                 .query(user_query.exists())
                 .scalar())
 
@@ -277,7 +283,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         organization_query = (
 
-            DBSession
+            session
 
                 .query(literal(1))
 
@@ -296,7 +302,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         return (
 
-            DBSession
+            session
                 .query(organization_query.exists())
                 .scalar())
 
@@ -315,7 +321,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         user_query = (
 
-            DBSession
+            session
 
                 .query(literal(1))
 
@@ -332,7 +338,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         user_exists = (
 
-            DBSession
+            session
                 .query(user_query.exists())
                 .scalar())
 
@@ -343,7 +349,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         organization_query = (
 
-            DBSession
+            session
 
                 .query(literal(1))
 
@@ -362,7 +368,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         return (
 
-            DBSession
+            session
                 .query(organization_query.exists())
                 .scalar())
 
@@ -378,7 +384,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         user_query = (
 
-            DBSession.
+            session.
 
                 query(literal(1))
 
@@ -395,7 +401,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         return (
 
-            DBSession
+            session
                 .query(user_query.exists())
                 .scalar())
 
