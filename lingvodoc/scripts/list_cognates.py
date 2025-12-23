@@ -28,6 +28,32 @@ from lingvodoc.models import (
 from sqlalchemy.orm import aliased
 from pdb import set_trace as A
 
+group_field_id_default = (66, 25)
+months = 'Jun|Jul|Aug|Sep|Oct|Nov|Dec'
+year = '2025'
+period_regexp = (r'^\w{3} ('
+                 + re.sub(r'\s+', '', months) +
+                 r') [\d: ]{11} '
+                 + re.sub(r'\s+', '', year) +
+                 r'\w{10}$')
+
+# setting 'None' to disable filtering by date
+#period_regexp = None
+
+def entity_of_fields(*fields):
+    return [
+        LexicalEntry.marked_for_deletion == False,
+
+        PublishingEntity.published == True,
+        PublishingEntity.accepted == True,
+
+        Entity.parent_id == LexicalEntry.id,
+        Entity.id == PublishingEntity.id,
+
+        Entity.marked_for_deletion == False,
+
+        Entity.field_id._in(fields)
+    ]
 
 @celery.task
 def async_get_json_tree(
@@ -78,6 +104,9 @@ def async_get_json_tree(
     # Getting perspective_id and etymology fields ids and names in cycle
     i = -1
     j = 0
+    included = 0
+    excluded = 0
+
     for i, current_perspective in enumerate(fields_getter(field_query)):
 
         if task_status:
@@ -186,6 +215,33 @@ def async_get_json_tree(
             linked_group
 
         ) in entities_getter(perspective_id, xcript_fid, xlat_fid):
+
+            # Checking that current lexical entry is not alone in linked_group
+            if len(linked_group) < 2:
+                continue
+
+            # Checking that there are recently added cognates in linked_group
+            within_period = True
+            if period_regexp is not None:
+                within_period = (
+                    DBSession
+                        .query(
+                            DBSession
+                                .query(literal(1))
+                                .filter(
+                                    LexicalEntry.id.in_(linked_group),
+                                    *entity_of_fields(group_field_id_default),
+                                    Entity.content.op('~*')(period_regexp))
+                                .exists())
+                        .scalar())
+
+            if not within_period:
+                excluded += 1
+                #print(f'Filtered out {excluded} groups')
+                continue
+
+            included += 1
+            print(f'Reported {included} groups')
 
             pers_slot['__entities__'][id2str(lex_id)] = (
                 xcript_text, xlat_text, linked_group
@@ -566,7 +622,12 @@ def fields_getter(field_query):
             yield None
 
 
-def entities_getter(perspective_id, xcript_fid, xlat_fid, get_linked_group=True, group_field_id=(66, 25)):
+def entities_getter(
+        perspective_id,
+        xcript_fid,
+        xlat_fid,
+        get_linked_group=True,
+        group_field_id=group_field_id_default):
 
     xcript_text = None
     xlat_text = None
@@ -581,14 +642,7 @@ def entities_getter(perspective_id, xcript_fid, xlat_fid, get_linked_group=True,
 
             .filter(
                 LexicalEntry.parent_id == perspective_id,
-                LexicalEntry.marked_for_deletion == False,
-                Entity.parent_id == LexicalEntry.id,
-                Entity.field_id.in_([xcript_fid, xlat_fid]),
-                Entity.marked_for_deletion == False,
-                Entity.client_id == PublishingEntity.client_id,
-                Entity.object_id == PublishingEntity.object_id,
-                PublishingEntity.published == True,
-                PublishingEntity.accepted == True)
+                *entity_of_fields(xcript_fid, xlat_fid))
 
             .yield_per(100))
 
