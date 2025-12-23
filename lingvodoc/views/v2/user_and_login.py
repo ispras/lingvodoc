@@ -57,6 +57,7 @@ from lingvodoc.views.v2.utils import (
     get_user_by_client_id
 )
 from lingvodoc.utils.creation import add_user_to_group
+from pdb import set_trace as A
 
 
 # Setting up logging.
@@ -380,14 +381,14 @@ def desk_signin(request):
     req['desktop'] = True
     settings = request.registry.settings
     try:
-        path = settings['desktop']['central_server'] + 'signin'
+        path = settings['desktop']['central_server'] + 'api/signin'
         session = requests.Session()
         session.headers.update({'Connection': 'Keep-Alive'})
         adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
         session.mount('http://', adapter)
         status = session.post(path, json=req)
         client_id = status.json()['client_id']
-        cookies = status.cookies.get_dict()
+        cookies = status.cookies.get_dict()  # tested
 
         response = Response()
         headers = remember(request, userid=client_id, max_age=315360000)
@@ -399,20 +400,14 @@ def desk_signin(request):
         sub_headers = response.headers
         sub_headers = dict(sub_headers)
         sub_headers['Cookie'] = sub_headers['Set-Cookie']
-        # with open('authentication_data.json', 'w') as f:
-        #     f.write(json.dumps(cookies))
+
         if status.status_code == 200:
-            path = request.route_url('basic_sync')
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            # sub_cookies = request.headers['Cookie']
-            # print(sub_cookies)
-            # sub_cookies += '; server_cookies=\'%s\'' % json.dumps(cookies)
-            # print('subcookies:', sub_cookies)
-            # sub_headers = {'Cookie': sub_cookies}
-            subreq.headers = sub_headers
-            print('headers', subreq.headers)
-            resp = request.invoke_subrequest(subreq)
+            with open('authentication_data.json', 'w') as f:
+                f.write(json.dumps(cookies))
+
+            path = settings['desktop']['central_server'] + 'api/user'
+            resp = session.get(path)
+
             if resp.status_code == 200:
                 headers = remember(request, userid=client_id, max_age=315360000)
                 response = Response()
@@ -426,12 +421,13 @@ def desk_signin(request):
                 request.response.status = HTTPOk.code
                 # request.response.headers = headers
                 # return response
+                #A()
                 return HTTPOk(headers=response.headers, json_body=result)
             # return result
     except HTTPUnauthorized:
         return HTTPUnauthorized(json_body={'error': 'Login or password is wrong, please retry'})
-    # except Exception:
-    #     return HTTPServiceUnavailable(json_body={'error': 'You have no internet connection or Lingvodoc server is unavailable; please retry later.'})
+    except Exception:
+        return HTTPInternalServerError(json_body={'error': 'You have no internet connection or Lingvodoc server is unavailable; please retry later.'})
 
 
 @view_config(route_name='new_client_server', renderer='json', request_method='POST')
@@ -603,6 +599,7 @@ def get_user_info(request):  # tested
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
     else:
+        #A()
         client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
         if not client:
             request.response.status = HTTPNotFound.code

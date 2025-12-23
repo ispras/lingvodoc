@@ -3,7 +3,10 @@ import collections
 import minio
 import tempfile
 from time import time as now
+import pickle
+import gzip
 import sys
+import os
 import re
 
 import graphene
@@ -50,6 +53,10 @@ log = logging.getLogger(__name__)
 min_date = '1735689600.0'  # 2025-01-01 00:00:00
 
 
+def key2str(*key):
+    return ','.join([str(k) for k in key])
+
+
 def ListChanges(info, id, host, debug_flag=False):
 
     if host != 'isp':
@@ -75,6 +82,7 @@ def ListChanges(info, id, host, debug_flag=False):
     task.set(1, 1, "Started", "")
 
     changes = collections.defaultdict(list)
+    changes_for_sync = {}
     error = None
 
     def get_db_objects(dbModel, key, self_id=None, parent_id=None):
@@ -85,21 +93,12 @@ def ListChanges(info, id, host, debug_flag=False):
             return []
 
         dbFilter = [
-            dbModel.marked_for_deletion == False
-        ] if key != 'publishing' else []
-
-        if self_id is not None:
-            cid, oid = self_id
-            dbFilter.extend([
-                dbModel.client_id == cid,
-                dbModel.object_id == oid
-            ])
-        else:
-            cid, oid = parent_id
-            dbFilter.extend([
-                dbModel.parent_client_id == cid,
-                dbModel.parent_object_id == oid
-            ])
+            dbModel.client_id == self_id[0],
+            dbModel.object_id == self_id[1]
+        ] if self_id is not None else [
+            dbModel.parent_client_id == parent_id[0],
+            dbModel.parent_object_id == parent_id[1]
+        ]
 
         db_objects = (
             DBSession
@@ -115,6 +114,17 @@ def ListChanges(info, id, host, debug_flag=False):
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
                 changes[key].append({**obj.__dict__, '_sa_instance_state': None})
                 metadata = obj.additional_metadata or {}
+                '''
+                if hasattr(obj, 'content'):
+                    changes[key].append({
+                        'content': obj.content,
+                        'metadata': metadata,
+                        'marked_for_deletion': obj.marked_for_deletion,
+                        'updated_at': obj.updated_at
+                    })
+                '''
+                changes_for_sync[(obj.client_id, obj.object_id)] = obj
+
                 # if it's syncing we add some delta to now() because after the transaction ends
                 # the field 'updated_at' will be automatically set to current time
                 # so the changing of 'xal_synced_at' field should be "before" the stored syncing time
@@ -128,7 +138,7 @@ def ListChanges(info, id, host, debug_flag=False):
         except Exception:
             traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
 
-            log.warning('saving_xal_synced_at: exception')
+            log.warning('xal_synced_at: exception')
             log.warning(traceback_string)
 
             error = ResponseError('Exception:\n' + traceback_string)
@@ -188,4 +198,41 @@ def ListChanges(info, id, host, debug_flag=False):
                 process_db_objects(c_key, c_ids)
 
     process_db_objects('perspective', {'self_id': id})
+
+    pickle_path = None
+
+    # Pickling by perspective id
+    try:
+        storage = request.registry.settings['storage']
+        storage_dir = os.path.join(storage['path'], 'xal_sync')
+        pickle_path = os.path.join(storage_dir, key2str(*id))
+        os.makedirs(storage_dir, exist_ok=True)
+
+        with gzip.open(pickle_path, 'wb') as f:
+            pickle.dump(changes_for_sync, f)
+
+        if debug_flag:
+            print(f'{pickle_path=}')
+
+    except Exception as e:
+        return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
+
     return error or changes
+
+
+def ApplySync(id, debug_flag=False):
+
+    pickle_path = None
+    # Getting pickle file from xal by id
+    pass
+
+    changes_for_sync = None
+
+    try:
+        with gzip.open(pickle_path, 'rb') as f:
+            changes_for_sync = pickle.load(f)
+
+        os.remove(pickle_path)
+
+    except Exception as e:
+        return ResponseError(f"Cannot read file '{pickle_path}': {e}")
