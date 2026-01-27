@@ -36,7 +36,7 @@ from pyramid_mailer.message import Message
 
 import requests
 
-from sqlalchemy import or_
+from sqlalchemy import or_, literal
 import sqlalchemy.exc
 
 # Project imports.
@@ -349,11 +349,11 @@ def signin(request):
             locale_id = 1
         response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
         response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
-        result = dict()
-        result['client_id'] = client.id
+        # result = dict()
+        result = client.__dict__
+        result.update({'client_id': client.id})
         request.response.status = HTTPOk.code
-
-        return HTTPOk(headers=response.headers, json_body=result)
+        return HTTPOk(headers=response.headers, json_body=json.dumps(result, default=str))
 
     return HTTPUnauthorized(location=request.route_url('login'))
 
@@ -377,53 +377,82 @@ def sync_signin(request):
 @view_config(route_name='desk_signin', renderer='json', request_method='POST')
 def desk_signin(request):
     import requests
-    req = request.json_body
-    req['desktop'] = True
-    settings = request.registry.settings
+
+    def response(cookies):
+        client_id = cookies['client_id']
+        locale_id = cookies['locale_id']
+
+        common_args = {'max_age': datetime.timedelta(days=3650), 'samesite': 'lax'}
+        resp = Response()
+
+        resp.headers = remember(request, userid=client_id, max_age=315360000)
+        resp.set_cookie('locale_id', value=str(locale_id), **common_args)
+        resp.set_cookie('client_id', value=str(client_id), **common_args)
+        resp.set_cookie('server_cookies', value=json.dumps(cookies), **common_args)
+
+        return resp
+
+    def subdict(source, *keys):
+        return dict((k, source[k]) for k in keys if k in source)
+
+    def new_in_base(*filters):
+        exists = (
+            DBSession
+                .query(
+                    DBSession
+                        .query(literal(1))
+                        .filter(*filters)
+                        .exists())
+                    .scalar())
+
+        return not exists
+
     try:
-        path = settings['desktop']['central_server'] + 'api/signin'
+        settings = request.registry.settings
+        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+
+        # Get and set session
         session = requests.Session()
         session.headers.update({'Connection': 'Keep-Alive'})
-        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
         session.mount('http://', adapter)
-        status = session.post(path, json=req)
-        client_id = status.json()['client_id']
-        cookies = status.cookies.get_dict()  # tested
 
-        response = Response()
-        headers = remember(request, userid=client_id, max_age=315360000)
-        response.headers = headers
-        locale_id = cookies['locale_id']
-        response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-        response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-        response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
-        sub_headers = response.headers
-        sub_headers = dict(sub_headers)
-        sub_headers['Cookie'] = sub_headers['Set-Cookie']
+        # Get client info and auth_tokens
+        client_req = {**request.json_body, 'desktop': True}
+        client_path = settings['desktop']['central_server'] + 'api/signin'
+        client_resp = session.post(client_path, json=client_req)  # request
+        client_json = client_resp.json()
+        client_dict = client_json if type(client_json) is dict else json.loads(client_json)
 
-        if status.status_code == 200:
+        resp_status = client_resp.status_code
+        resp_cookies = client_resp.cookies.get_dict()
+
+        if resp_status == 200:
             with open('authentication_data.json', 'w') as f:
-                f.write(json.dumps(cookies))
+                f.write(json.dumps(resp_cookies))
 
-            path = settings['desktop']['central_server'] + 'api/user'
-            resp = session.get(path)
+            # Storing to database co-named values from client_dict
+            if new_in_base(Client.id == client_dict['id']):
+                DBSession.add(
+                    Client(
+                        **subdict(
+                            client_dict, 'id', 'user_id', 'is_browser_client')))
 
-            if resp.status_code == 200:
-                headers = remember(request, userid=client_id, max_age=315360000)
-                response = Response()
-                response.headers = headers
-                locale_id = cookies['locale_id']
-                response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-                response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-                response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
-                result = dict()
-                result['client_id'] = client_id
-                request.response.status = HTTPOk.code
-                # request.response.headers = headers
-                # return response
-                #A()
-                return HTTPOk(headers=response.headers, json_body=result)
-            # return result
+            user_path = settings['desktop']['central_server'] + 'api/user'
+            user_json = session.get(user_path).json()
+            user_dict = user_json if type(user_json) is dict else json.loads(user_json)
+
+            # Storing to database co-named values from user_dict
+            if new_in_base(User.id == user_dict['id']):
+                DBSession.add(
+                    User(
+                        **subdict(
+                            user_dict, 'id', 'login', 'name', 'intl_name', 'birthday', 'is_active', 'default_locale_id')))
+
+            DBSession.flush()
+
+            request.response.status = HTTPOk.code
+            return HTTPOk(headers=response(resp_cookies).headers, json_body=client_json)
+
     except HTTPUnauthorized:
         return HTTPUnauthorized(json_body={'error': 'Login or password is wrong, please retry'})
     except Exception:
@@ -599,7 +628,6 @@ def get_user_info(request):  # tested
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
     else:
-        #A()
         client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
         if not client:
             request.response.status = HTTPNotFound.code

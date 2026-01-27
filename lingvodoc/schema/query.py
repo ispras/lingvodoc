@@ -327,6 +327,7 @@ from lingvodoc.schema.gql_sync_xal import (
     ListChanges)
 
 from lingvodoc.schema.gql_twins_diff import DiffEntities
+from lingvodoc.schema.gql_sync_xal import merge_changes
 
 from lingvodoc.scripts import elan_parser
 
@@ -385,6 +386,7 @@ from lingvodoc.views.v2.utils import (
 from operator import attrgetter
 
 from lingvodoc.scripts.list_cognates import entities_getter
+from lingvodoc.utils.proxy import ProxyPass
 
 from pdb import set_trace as A
 
@@ -718,8 +720,8 @@ class Query(graphene.ObjectType):
     list_changes = (
         graphene.Field(
             ObjectVal,
-            host = graphene.String(required = True),
-            id = LingvodocID(required = True)))
+            remote = graphene.String(required = True),
+            perspective_id = LingvodocID(required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -1810,8 +1812,15 @@ class Query(graphene.ObjectType):
 
     def resolve_permission_lists(self, info, proxy):
         request = info.context.request
-        if proxy:
-            try_proxy(request)
+
+        try:
+            if proxy:
+                return try_proxy(request)
+        except ProxyPass as e:
+            pass
+            #print(e.response_body)
+            #A()
+
         client_id = info.context.client_id
 
         subreq = Request.blank('/translation_service_search')
@@ -2162,8 +2171,14 @@ class Query(graphene.ObjectType):
         }
         """
         request = info.context.request
-        if proxy:
-            try_proxy(request)
+
+        try:
+            if proxy:
+                try_proxy(request)
+        except ProxyPass as e:
+            pass
+            #print(e.response_body)
+            #A()
 
         client_id = info.context.client_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -5403,6 +5418,43 @@ class PerspectivesAndFields(graphene.InputObjectType):
 class StarlingEtymologyObject(graphene.InputObjectType):
     starling_perspective_id = LingvodocID()
     perspectives_and_fields = graphene.List(PerspectivesAndFields)
+
+
+class ApplySync(graphene.Mutation):
+    class Arguments:
+
+        perspective_id = LingvodocID(required=True)
+        foreign_changes = ObjectVal(required=True)
+        remote = graphene.String()
+        debug_flag = graphene.Boolean()
+
+    message = graphene.String()
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        client_id = info.context.client_id
+
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if not client:
+            raise ResponseError('Only registered users can apply synchronization.')
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        if not user:
+            raise ResponseError("This client id is orphaned. Try to logout and then login once more.")
+        if not (user.additional_metadata or {}).get('allowed_sync'):
+            raise ResponseError("This client has no permissions to apply synchronization.")
+
+        '''
+        remote = args['remote']
+        perspective_id = args['perspective_id']
+        changes_for_sync = args['changes_for_sync']
+        debug_flag = args['debug_flag']
+        '''
+
+        merge_changes(info, **args)
+
 
 class StarlingEtymology(graphene.Mutation):
 
@@ -9191,6 +9243,7 @@ class MyMutations(graphene.ObjectType):
     create_field = gql_field.CreateField.Field()
     for more beautiful imports
     """
+    apply_sync = ApplySync.Field()
     convert_starling = starling_converter.GqlStarling.Field()
     convert_plain_text = plain_text_converter.GqlParallelCorpora.Field()
     convert_dialeqt = ConvertDictionary.Field()

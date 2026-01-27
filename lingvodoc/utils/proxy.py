@@ -1,13 +1,14 @@
 __author__ = 'student'
 import requests
 import json
+from pdb import set_trace as A
 
 class ProxyPass(Exception):
     def __init__(self, message, request):
         super().__init__(message)
         self.message = str(message)
         settings = request.registry.settings
-        path = settings['desktop']['central_server'] + request.path[1:]
+        path = settings['desktop']['central_server'] + 'api' + request.path
         server_cookies = request.cookies.get('server_cookies')
         if server_cookies:
             cookies = json.loads(request.cookies.get('server_cookies'))
@@ -21,8 +22,8 @@ class ProxyPass(Exception):
             session.headers.update(
                 {
                     "Cookie": "auth_tkt=%s; locale_id=%s; client_id=%s" % (cookies["auth_tkt"],
-                                                                                            cookies["locale_id"],
-                                                                                            cookies["client_id"])
+                                                                           cookies["locale_id"],
+                                                                           cookies["client_id"])
                 })
         adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
         session.mount('http://', adapter)

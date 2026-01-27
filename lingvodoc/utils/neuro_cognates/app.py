@@ -8,6 +8,7 @@ from time import sleep, time as now
 from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus, initialize_cache
 import tritonclient.grpc as grpcclient
+from tritonclient.utils import InferenceServerException
 import numpy as np
 import requests
 import re
@@ -168,102 +169,113 @@ def load_fasttext_model(path: str):
 
 
 def process_batch(args):
-    self, ft_model, input_word, input_tran, input_id, input_links = args
-    similarities = []
-    inferring_duration = 0
-    rerank_duration = 0
 
-    base_word_tensor = self._process_text(input_word)
-    base_tran_tensor = self._process_text(input_tran)
+    try:
+        self, ft_model, input_word, input_tran, input_id, input_links = args
+        similarities = []
+        inferring_duration = 0
+        rerank_duration = 0
 
-    with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
-    #with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
+        base_word_tensor = self._process_text(input_word)
+        base_tran_tensor = self._process_text(input_tran)
 
-        for i, compare_list in enumerate(self.compare_lists):
-            if not compare_list:
-                continue
+        with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
+        #with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
 
-            (compare_words, compare_trans, compare_ids, _), links = (
-                self.split_items(compare_list, input_links))
+            for i, compare_list in enumerate(self.compare_lists):
+                if not compare_list:
+                    continue
 
-            # Batch creation
-            batch_size = len(compare_words)
-            batch = {
-                'word1': base_word_tensor.repeat(batch_size, 1),
-                'trans1': base_tran_tensor.repeat(batch_size, 1),
-                'word2': torch.stack([self._process_text(w) for w in compare_words]),
-                'trans2': torch.stack([self._process_text(t) for t in compare_trans])
-            }
+                (compare_words, compare_trans, compare_ids, _), links = (
+                    self.split_items(compare_list, input_links))
 
-            inputs = []
+                # Batch creation
+                batch_size = len(compare_words)
 
-            for field, tensor in batch.items():
-                inputs.append(grpcclient.InferInput(field, [batch_size, self.max_len], "INT32"))
-                inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
+                print(f"{batch_size=}")
 
-            # Prediction
-            #print(f"{'':<15}{'Inferring...':<15}", end="", flush=True)
-            inferring_start = now()
-            with torch.no_grad():
-                outputs = triton_client.infer("neuro_cognates", inputs)
-                #probs = torch.sigmoid(outputs).squeeze()
-                probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
-            inferring_duration += now() - inferring_start
-            #print("DONE", flush=True)
+                batch = {
+                    'word1': base_word_tensor.repeat(batch_size, 1),
+                    'trans1': base_tran_tensor.repeat(batch_size, 1),
+                    'word2': torch.stack([self._process_text(w) for w in compare_words]),
+                    'trans2': torch.stack([self._process_text(t) for t in compare_trans])
+                }
 
-            outputs = []
+                inputs = []
 
-            for word, trans, ids, prob in zip(compare_words, compare_trans, compare_ids, [p.item() for p in probs]):
-                if prob > self.truth_threshold:
-                    outputs.append({
-                        'word': word,
-                        'trans': trans,
-                        'ids': ids,
-                        'prob': prob
-                    })
+                for field, tensor in batch.items():
+                    inputs.append(grpcclient.InferInput(field, [batch_size, self.max_len], "INT32"))
+                    inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
 
-            """
-            # Init reranker
-            #print(f"{'':<15}{'Init reranker':<15}", end="", flush=True)
-            rerank_start = now()
-            reranker = RerankerSingleWord(
-                ft_model,
-                self.language_name_list[self.input_index],
-                self.language_name_list[i]
-            )
-            #print("DONE", flush=True)
+                # Prediction
+                #print(f"{'':<15}{'Inferring...':<15}", end="", flush=True)
+                inferring_start = now()
+                with torch.no_grad():
+                    outputs = triton_client.infer("neuro_cognates", inputs)
+                    #probs = torch.sigmoid(outputs).squeeze()
+                    probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
+                inferring_duration += now() - inferring_start
+                #print("DONE", flush=True)
 
-            # Compute rerank value
-            #print(f"{'':<15}{'Reranking...':<15}", flush=True)
-            ranks = reranker.rerank(
-                f"{input_word}:{input_tran}",
-                [f"{outputs[j]['word']}:{outputs[j]['trans']}" for j in range(len(outputs))]
-            )
-            rerank_duration += now() - rerank_start
-            #print(f"{'':<30}Reranked!", flush=True)
-            """
-            # Dirty hack
-            ranks = [[0, 0, 0, 0]] * len(outputs)
+                outputs = []
 
-            for n in range(len(outputs)):
-                similarities.append((
-                    i,
-                    [outputs[n]['word'], outputs[n]['trans']],
-                    outputs[n]['ids'],
-                    f"{(outputs[n]['prob'] + ranks[n][3]):.4f}"
-                ))
+                for word, trans, ids, prob in zip(compare_words, compare_trans, compare_ids, [p.item() for p in probs]):
+                    if prob > self.truth_threshold:
+                        outputs.append({
+                            'word': word,
+                            'trans': trans,
+                            'ids': ids,
+                            'prob': prob
+                        })
 
-    similarities.sort(key=lambda s: s[3], reverse=True)
+                """
+                # Init reranker
+                #print(f"{'':<15}{'Init reranker':<15}", end="", flush=True)
+                rerank_start = now()
+                reranker = RerankerSingleWord(
+                    ft_model,
+                    self.language_name_list[self.input_index],
+                    self.language_name_list[i]
+                )
+                #print("DONE", flush=True)
+    
+                # Compute rerank value
+                #print(f"{'':<15}{'Reranking...':<15}", flush=True)
+                ranks = reranker.rerank(
+                    f"{input_word}:{input_tran}",
+                    [f"{outputs[j]['word']}:{outputs[j]['trans']}" for j in range(len(outputs))]
+                )
+                rerank_duration += now() - rerank_start
+                #print(f"{'':<30}Reranked!", flush=True)
+                """
+                # Dirty hack
+                ranks = [[0, 0, 0, 0]] * len(outputs)
 
-    return (
-        [(
-            self.input_index,
-            f"{input_word} '{input_tran}'",
-            input_id,
-            None,
-            similarities[:5],
-            []
-        )] if similarities else [], links, inferring_duration, rerank_duration)
+                for n in range(len(outputs)):
+                    similarities.append((
+                        i,
+                        [outputs[n]['word'], outputs[n]['trans']],
+                        outputs[n]['ids'],
+                        f"{(outputs[n]['prob'] + ranks[n][3]):.4f}"
+                    ))
+
+        similarities.sort(key=lambda s: s[3], reverse=True)
+
+        return (
+            [(
+                self.input_index,
+                f"{input_word} '{input_tran}'",
+                input_id,
+                None,
+                similarities[:5],
+                []
+            )] if similarities else [], links, inferring_duration, rerank_duration)
+
+    except InferenceServerException as e:
+        import traceback
+        import sys
+        print("!!!Triton worker exception ", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
 
 
 class NeuroCognates:

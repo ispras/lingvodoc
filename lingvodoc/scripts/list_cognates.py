@@ -52,7 +52,7 @@ def entity_of_fields(*fields):
 
         Entity.marked_for_deletion == False,
 
-        Entity.field_id._in(fields)
+        Entity.field_id.in_(fields)
     ]
 
 @celery.task

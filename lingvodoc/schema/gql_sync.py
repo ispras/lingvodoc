@@ -328,9 +328,7 @@ class Synchronize(graphene.Mutation):
         client_id = request.authenticated_userid
         user_id = Client.get_user_by_client_id(client_id).id
 
-        is_admin = False
-        if user_id == 1:
-            is_admin = True
+        is_admin = (user_id == 1)
 
         task = TaskStatus(user_id, "Synchronisation with server", '', 16)
         task.set(1, 10, "Started", "")
