@@ -324,10 +324,10 @@ from lingvodoc.schema.gql_markups import (
     MarkupGroup)
 
 from lingvodoc.schema.gql_sync_xal import (
-    ListChanges)
+    ListChanges,
+    merge_changes)
 
 from lingvodoc.schema.gql_twins_diff import DiffEntities
-from lingvodoc.schema.gql_sync_xal import merge_changes
 
 from lingvodoc.scripts import elan_parser
 
@@ -5443,15 +5443,8 @@ class ApplySync(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
             raise ResponseError("This client id is orphaned. Try to logout and then login once more.")
-        if not (user.additional_metadata or {}).get('allowed_sync'):
+        if user.id != 1 and not (user.additional_metadata or {}).get('allowed_sync'):
             raise ResponseError("This client has no permissions to apply synchronization.")
-
-        '''
-        remote = args['remote']
-        perspective_id = args['perspective_id']
-        changes_for_sync = args['changes_for_sync']
-        debug_flag = args['debug_flag']
-        '''
 
         merge_changes(info, **args)
 

@@ -1,20 +1,20 @@
-import collections
+#import collections
 
-import minio
-import tempfile
+#import minio
+#import tempfile
 from time import time as now
 import pickle
 import gzip
 import sys
 import os
-import re
+#import re
 
-import graphene
+#import graphene
 import logging
 import traceback
-from datetime import datetime
-from sqlalchemy import func, literal, tuple_, and_
-from lingvodoc.queue.celery import celery
+#from datetime import datetime
+from sqlalchemy import func #, literal, tuple_, and_
+#from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus
 from pyramid.security import authenticated_userid
 
@@ -35,13 +35,13 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.schema.gql_holders import (
-    fetch_object,
-    client_id_check,
-    del_object,
-    acl_check_by_id,
     ResponseError,
-    LingvodocID,
-    ObjectVal
+    #fetch_object,
+    #client_id_check,
+    #del_object,
+    #acl_check_by_id,
+    #LingvodocID,
+    #ObjectVal
 )
 
 from lingvodoc.utils.proxy import try_proxy
@@ -60,15 +60,14 @@ def key2str(*key):
 
 def ListChanges(info, perspective_id, remote, debug_flag=False):
 
-    if remote != 'isp':
-        return ResponseError("Exception: only 'isp' host is supported for now")
-
-    print('locking client')
-    log.error('locking client')
-
     request = info.context.request
-    try_proxy(request)  # ??
-    DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")  # ??
+
+    if remote != 'isp':
+        print('locking client')
+        #log.warning('locking client')
+        try_proxy(request)  # ??
+        DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")  # ??
+
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
 
     if not client:
@@ -90,26 +89,46 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
                 (self_id is None and parent_id is None)):
             return []
 
-        dbFilter = [
-            dbModel.client_id == self_id[0],
-            dbModel.object_id == self_id[1]
-        ] if self_id is not None else [
-            dbModel.parent_client_id == parent_id[0],
-            dbModel.parent_object_id == parent_id[1]
-        ]
+        if self_id is not None:
+            composite_id = key2str(self_id[0], self_id[1])
 
-        db_objects = (
+            # Checking before request to database
+            if composite_id in id_pool:
+                result['errors'].append(f"Objects double: {table=} and {composite_id=}")
+                return []
+
+            dbFilter = [
+                dbModel.client_id == self_id[0],
+                dbModel.object_id == self_id[1]]
+        else:
+            dbFilter = [
+                dbModel.parent_client_id == parent_id[0],
+                dbModel.parent_object_id == parent_id[1]]
+
+        relatives_cte = (
             DBSession
                 .query(dbModel)
-                .filter(*dbFilter,
-                        func.coalesce(dbModel.additional_metadata['xal_synced_at'].astext, min_date).cast(FLOAT)
-                        < func.date_part('EPOCH', dbModel.updated_at))
-                        #+ 100)  # for debugging
+                .filter(*dbFilter)
+                .cte())
+
+        changed_objects = (
+            DBSession
+                .query(relatives_cte)
+                .filter(func.coalesce(relatives_cte.c.additional_metadata['xal_synced_at'].astext, min_date)
+                        .cast(FLOAT) < func.date_part('EPOCH', relatives_cte.c.updated_at))
                 .all())
 
+        relatives = (
+            DBSession
+                .query(relatives_cte)
+                .all())
+
+        if len(changed_objects):
+            print(f"Changed elements: {table=} {changed_objects=}")
+
         try:
-            for obj in db_objects:
-                composite_id = (obj.client_id, obj.object_id)
+            for obj in changed_objects:
+                composite_id = key2str(obj.client_id, obj.object_id)
 
                 if composite_id not in id_pool:
                     id_pool.add(composite_id)
@@ -117,9 +136,9 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
                     result['errors'].append(f"Objects double: {table=} and {composite_id=}")
                     continue
 
-                columns = vars(obj)
+                columns = obj._asdict()
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
-                columns.pop('_sa_instance_state')
+                columns.pop('_sa_instance_state', None)
                 result[composite_id] = {'table': table, **columns}
 
         except Exception:
@@ -131,7 +150,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
             result['errors'].append('Exception:\n' + traceback_string)
             return []
 
-        return db_objects
+        return relatives
 
     hidden = none = []
 
@@ -203,7 +222,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
             pickle.dump(result, f)
 
         if debug_flag:
-            print(f'{pickle_path=}')
+            print(f'{remote=} {pickle_path=}')
 
     except Exception as e:
         return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
