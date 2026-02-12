@@ -66,12 +66,10 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
     request = info.context.request
     settings = request.registry.settings
     local = settings['desktop']['remote']
-    desktop = settings['desktop']['desktop']
+    # desktop = settings['desktop']['desktop']
 
     # Get client_id from security data or from json_body (set manually)
-    if not (client_id :=
-          request.authenticated_userid or
-          request.json_body.get('client_id')):
+    if not (client_id := request.authenticated_userid):
         raise ResponseError('no client_id is in request')
     client = DBSession.query(Client).filter_by(id=client_id).first()
 
@@ -113,8 +111,8 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         session.mount('http://', adapter)
 
         # Get client info and auth_tokens
-        client_req = {**request.json_body, 'desktop': desktop, 'user_id': user_id, 'client_id': client_id}
-        client_resp = session.post(client_path, json=client_req)  # request
+        client_req = {**request.json_body, 'user_id': user_id}
+        client_resp = session.post(client_path, json=client_req, cookies=request.cookies)  # request
         client_json = client_resp.json()
         resp_status = client_resp.status_code
         #client_dict = client_json if type(client_json) is dict else json.loads(client_json)
@@ -133,7 +131,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         '''
     else:
         print(f'debugging: {now()=} {local=} {remote=} {user_id=} {client_id=}')
-        return result
+        #return result
 
     task = TaskStatus(user_id, "Synchronisation with server", '', 5)
     task.set(1, 1, "Started", "")
@@ -177,10 +175,10 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
             DBSession
                 .query(relatives_cte)
                 .all())
-
+        '''
         if len(changed_objects):
             print(f"Changed {remote=} {table=} {changed_objects=}")
-
+        '''
         try:
             for obj in changed_objects:
                 composite_id = key2str(obj.client_id, obj.object_id)

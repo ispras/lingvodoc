@@ -1339,7 +1339,8 @@ class UpdateEntityContent(graphene.Mutation):
                         additional_metadata=dbentity_old.additional_metadata,
                         parent=dbentity_old.parent)
 
-        dbentity.publishingentity.accepted = getattr(dbentity_old.publishingentity, 'accepted', False)
+        # TODO: check why publishingentity may be None
+        dbentity.publishingentity.accepted = getattr(dbentity_old.publishingentity, 'accepted', True)
         dbentity.content = content
 
         DBSession.add(dbentity)
@@ -1434,7 +1435,8 @@ class BulkUpdateEntityContent(graphene.Mutation):
                                 additional_metadata=dbentities_old[i].additional_metadata,
                                 parent=dbentities_old[i].parent)
 
-            dbentity.publishingentity.accepted = getattr(dbentities_old[i].publishingentity, 'accepted', False)
+            # TODO: check why publishingentity may be None
+            dbentity.publishingentity.accepted = getattr(dbentities_old[i].publishingentity, 'accepted', True)
             dbentity.content = content
             # if args.get('is_translatable', None): # TODO: fix it
             #     field.is_translatable = bool(args['is_translatable'])
