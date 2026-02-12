@@ -50,6 +50,9 @@ from psycopg2.extensions import AsIs
 from sqlalchemy import FLOAT
 from pdb import set_trace as A
 
+import requests
+import json
+
 log = logging.getLogger(__name__)
 min_date = '1735689600.0'  # 2025-01-01 00:00:00
 
@@ -61,27 +64,79 @@ def key2str(*key):
 def ListChanges(info, perspective_id, remote, debug_flag=False):
 
     request = info.context.request
+    settings = request.registry.settings
+    local = settings['desktop']['remote']
+    desktop = settings['desktop']['desktop']
 
-    if remote != 'isp':
-        print('locking client')
-        #log.warning('locking client')
-        try_proxy(request)  # ??
-        DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")  # ??
-
-    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    # Get client_id from security data or from json_body (set manually)
+    if not (client_id :=
+          request.authenticated_userid or
+          request.json_body.get('client_id')):
+        raise ResponseError('no client_id is in request')
+    client = DBSession.query(Client).filter_by(id=client_id).first()
 
     if not client:
-        raise ResponseError('try to login again')
+        if local == 'isp':
+            raise ResponseError('try to login again')
+        else:
+            user_id = request.json_body.get('user_id')
+            if not user_id:
+                raise ResponseError('no user id is in request')
+            # new client
+            client = Client(id=client_id, user_id=user_id)
+            DBSession.add(client)
+            DBSession.flush()
+    else:
+        user_id = Client.get_user_by_client_id(client_id).id
 
-    client_id = request.authenticated_userid
-    user_id = Client.get_user_by_client_id(client_id).id
+    if not user_id:
+        raise ResponseError(f'no any user for this {client_id=}')
+
+    is_admin = (user_id == 1)
+    result = {'errors': []}
+    id_pool = set()
+
+    if local != remote:
+        if (
+          remote == 'xal' and (remote_server := settings['desktop']['xal_server']) or
+          remote == 'isp' and (remote_server := settings['desktop']['central_server'])):
+
+            client_path = remote_server + 'api' + request.path
+        else:
+            raise NotImplementedError
+
+        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+
+        # Get and set session
+        session = requests.Session()
+        session.headers.update({'Connection': 'Keep-Alive'})
+        session.mount('http://', adapter)
+
+        # Get client info and auth_tokens
+        client_req = {**request.json_body, 'desktop': desktop, 'user_id': user_id, 'client_id': client_id}
+        client_resp = session.post(client_path, json=client_req)  # request
+        client_json = client_resp.json()
+        resp_status = client_resp.status_code
+        #client_dict = client_json if type(client_json) is dict else json.loads(client_json)
+        #resp_cookies = client_resp.cookies.get_dict()
+
+        if resp_status == 200:
+            print(f'debugging: {now()=} {local=} {remote=} {user_id=} {client_id=} {client_json=}')
+            return client_json
+        else:
+            raise ResponseError(f'{resp_status=} from {remote=}')
+
+        '''
+        print('locking client')
+        try_proxy(request)
+        DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")
+        '''
+    else:
+        print(f'debugging: {now()=} {local=} {remote=} {user_id=} {client_id=}')
+        return result
 
     task = TaskStatus(user_id, "Synchronisation with server", '', 5)
     task.set(1, 1, "Started", "")
-
-    is_admin = (user_id == 1)
-    id_pool = set()
-    result = {'errors': []}
 
     def get_db_objects(dbModel, table, self_id=None, parent_id=None):
 
@@ -124,7 +179,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
                 .all())
 
         if len(changed_objects):
-            print(f"Changed elements: {table=} {changed_objects=}")
+            print(f"Changed {remote=} {table=} {changed_objects=}")
 
         try:
             for obj in changed_objects:
