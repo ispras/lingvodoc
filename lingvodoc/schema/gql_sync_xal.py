@@ -57,6 +57,8 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
     if not (client_id := request.authenticated_userid):
         raise ResponseError('no client_id is in request')
 
+    ### Create client if it absents on remote server ###
+
     if not (client := DBSession.query(Client).filter_by(id=client_id).first()):
         if local == 'isp':
             raise ResponseError('try to login again')
@@ -66,8 +68,14 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
             if not (user := DBSession.query(User).filter_by(id=user_id).first()):
                 raise ResponseError('no such user is in db')
 
-            # new client
-            client = Client(id=client_id, user_id=user_id, is_browser_client=not desktop)
+            # Add new client
+            client_args = {
+                'id': client_id,
+                'user_id': user_id,
+                'is_browser_client': not desktop
+            }
+
+            client = Client(**client_args)
             user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
@@ -75,9 +83,28 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         if not (user_id := Client.get_user_by_client_id(client_id).id):
             raise ResponseError(f'no any user for this {client_id=}')
 
-    is_admin = (user_id == 1)
+    #is_admin = (user_id == 1)
     result = {'errors': []}
     id_pool = set()
+
+    def store_data(side, data):
+        pickle_path = None
+
+        try:
+            storage = settings['storage']
+            storage_dir = os.path.join(storage['path'], f'{side}_sync')
+            pickle_path = os.path.join(storage_dir, key2str(*perspective_id))
+            os.makedirs(storage_dir, exist_ok=True)
+
+            with gzip.open(pickle_path, 'wb') as f:
+                pickle.dump(data, f)
+
+        except Exception as e:
+            return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
+
+        return pickle_path
+
+    ##### Cross-server query #####
 
     if local != remote:
         if remote_server := settings['desktop'].get(f'{remote}_server'):
@@ -93,23 +120,27 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         session.mount('http://', adapter)
 
         # Get client info and auth_tokens
-        client_req = {**request.json_body, 'user_id': user_id}
-        # query
-        client_resp = session.post(client_path, json=client_req, cookies=request.cookies)
+        req_args = {
+            'json': {**request.json_body, 'user_id': user_id},
+            'cookies': request.cookies
+        }
+
+        # Query
+        client_resp = session.post(client_path, **req_args)
         client_json = client_resp.json()
         resp_status = client_resp.status_code
 
         if resp_status == 200:
-            print(f'debugging: {now()=} {local=} {remote=} {user_id=} {client_id=} {client_json=}')
+            pickle_path = store_data(remote, result)
+
+            if debug_flag:
+                print(f'\nFOREIGN ({pickle_path} <- {remote}): {now()=} {str(client_json)[-500:]=}')
+
             return client_json
         else:
             raise ResponseError(f'{resp_status=} from {remote=}')
-    else:
-        print(f'debugging: {now()=} {local=} {remote=} {user_id=} {client_id=}')
-        #return result
 
-    task = TaskStatus(user_id, "Synchronisation with server", '', 5)
-    task.set(1, 1, "Started", "")
+    ##### End of cross-server query #####
 
     def get_db_objects(dbModel, table, self_id=None, parent_id=None):
 
@@ -150,10 +181,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
             DBSession
                 .query(relatives_cte)
                 .all())
-        '''
-        if len(changed_objects):
-            print(f"Changed {remote=} {table=} {changed_objects=}")
-        '''
+
         try:
             for obj in changed_objects:
                 composite_id = key2str(obj.client_id, obj.object_id)
@@ -172,7 +200,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         except Exception:
             traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
 
-            log.warning('xal_synced_at: exception')
+            log.warning(f'{local}_synced_at: exception')
             log.warning(traceback_string)
 
             result['errors'].append('Exception:\n' + traceback_string)
@@ -233,27 +261,20 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
 
         except Exception as e:
             print(str(e))
-            A()
+            #A()
+
+    '''
+    task = TaskStatus(user_id, "Synchronisation with server", '', 5)
+    task.set(1, 1, "Started", "")
+    '''
 
     process_db_objects('perspective', {'self_id': perspective_id})
 
-    pickle_path = None
-
     # Pickling by perspective id
-    try:
-        storage = request.registry.settings['storage']
-        storage_dir = os.path.join(storage['path'], 'xal_sync')
-        pickle_path = os.path.join(storage_dir, key2str(*perspective_id))
-        os.makedirs(storage_dir, exist_ok=True)
+    pickle_path = store_data(local, result)
 
-        with gzip.open(pickle_path, 'wb') as f:
-            pickle.dump(result, f)
-
-        if debug_flag:
-            print(f'{remote=} {pickle_path=}')
-
-    except Exception as e:
-        return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
+    if debug_flag:
+        print(f'\nLOCAL ({local} -> {pickle_path}): {now()=} {str(result)[-500:]=}')
 
     return result
 
