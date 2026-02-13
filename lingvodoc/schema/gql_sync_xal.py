@@ -1,26 +1,19 @@
-#import collections
-
-#import minio
-#import tempfile
 from time import time as now
 import pickle
 import gzip
 import sys
 import os
-#import re
-
-#import graphene
 import logging
 import traceback
-#from datetime import datetime
 from sqlalchemy import func #, literal, tuple_, and_
-#from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.queue.celery import celery
 from pyramid.security import authenticated_userid
 
 from lingvodoc.models import (
     DBSession,
     Client,
+    User,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     Field as dbFields,
@@ -34,15 +27,7 @@ from lingvodoc.models import (
     ParserResult as dbParserResult
 )
 
-from lingvodoc.schema.gql_holders import (
-    ResponseError,
-    #fetch_object,
-    #client_id_check,
-    #del_object,
-    #acl_check_by_id,
-    #LingvodocID,
-    #ObjectVal
-)
+from lingvodoc.schema.gql_holders import ResponseError
 
 from lingvodoc.utils.proxy import try_proxy
 from psycopg2.extensions import AsIs
@@ -65,40 +50,37 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
 
     request = info.context.request
     settings = request.registry.settings
-    local = settings['desktop']['remote']
-    # desktop = settings['desktop']['desktop']
+    local = settings['desktop']['local']
+    desktop = settings['desktop']['desktop']
 
     # Get client_id from security data or from json_body (set manually)
     if not (client_id := request.authenticated_userid):
         raise ResponseError('no client_id is in request')
-    client = DBSession.query(Client).filter_by(id=client_id).first()
 
-    if not client:
+    if not (client := DBSession.query(Client).filter_by(id=client_id).first()):
         if local == 'isp':
             raise ResponseError('try to login again')
         else:
-            user_id = request.json_body.get('user_id')
-            if not user_id:
+            if not (user_id := request.json_body.get('user_id')):
                 raise ResponseError('no user id is in request')
+            if not (user := DBSession.query(User).filter_by(id=user_id).first()):
+                raise ResponseError('no such user is in db')
+
             # new client
-            client = Client(id=client_id, user_id=user_id)
+            client = Client(id=client_id, user_id=user_id, is_browser_client=not desktop)
+            user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
     else:
-        user_id = Client.get_user_by_client_id(client_id).id
-
-    if not user_id:
-        raise ResponseError(f'no any user for this {client_id=}')
+        if not (user_id := Client.get_user_by_client_id(client_id).id):
+            raise ResponseError(f'no any user for this {client_id=}')
 
     is_admin = (user_id == 1)
     result = {'errors': []}
     id_pool = set()
 
     if local != remote:
-        if (
-          remote == 'xal' and (remote_server := settings['desktop']['xal_server']) or
-          remote == 'isp' and (remote_server := settings['desktop']['central_server'])):
-
+        if remote_server := settings['desktop'].get(f'{remote}_server'):
             client_path = remote_server + 'api' + request.path
         else:
             raise NotImplementedError
@@ -112,23 +94,16 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
 
         # Get client info and auth_tokens
         client_req = {**request.json_body, 'user_id': user_id}
-        client_resp = session.post(client_path, json=client_req, cookies=request.cookies)  # request
+        # query
+        client_resp = session.post(client_path, json=client_req, cookies=request.cookies)
         client_json = client_resp.json()
         resp_status = client_resp.status_code
-        #client_dict = client_json if type(client_json) is dict else json.loads(client_json)
-        #resp_cookies = client_resp.cookies.get_dict()
 
         if resp_status == 200:
             print(f'debugging: {now()=} {local=} {remote=} {user_id=} {client_id=} {client_json=}')
             return client_json
         else:
             raise ResponseError(f'{resp_status=} from {remote=}')
-
-        '''
-        print('locking client')
-        try_proxy(request)
-        DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")
-        '''
     else:
         print(f'debugging: {now()=} {local=} {remote=} {user_id=} {client_id=}')
         #return result
