@@ -131,7 +131,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         resp_status = client_resp.status_code
 
         if resp_status == 200:
-            pickle_path = store_data(remote, result)
+            pickle_path = store_data(remote, client_json)
 
             if debug_flag:
                 print(f'\nFOREIGN ({pickle_path} <- {remote}): {now()=} {str(client_json)[-500:]=}')
