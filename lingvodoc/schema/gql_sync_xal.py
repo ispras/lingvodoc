@@ -341,7 +341,7 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                         object_id=object_id)
                     .first()
             )
-
+            A()
             adding_flag = False
             updating_flag = False
 
@@ -364,12 +364,16 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                         f"Not enough time from previous synchronization, wait a minute: {table=}, {composite_id=}")
                     continue
 
-                local_dict = local_changes.get(composite_id, {})
-                local_update = local_dict.pop('updated_at', min_date)
-                foreign_update = foreign_dict.pop('updated_at')
-
-                if foreign_update > local_update:
+                local_update = (
+                    local_changes
+                        .get(composite_id, {})
+                        .get('updated_at', min_date))
+                A()
+                # Preparing foreign_dict for db updating
+                if foreign_dict.pop('updated_at') > local_update:
                     updating_flag = True
+                    foreign_dict.pop('client_id')
+                    foreign_dict.pop('object_id')
                     foreign_dict['additional_metadata'] = {
                         **foreign_metadata,
                         synced_at_key: shifted_time
@@ -384,9 +388,6 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 print(f"Added {table=}, {composite_id=}")
 
             elif updating_flag:
-                foreign_dict.pop('client_id')
-                foreign_dict.pop('object_id')
-
                 A()
 
                 '''
@@ -401,5 +402,12 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
         #os.remove(local_pickle_path)
         #os.remove(foreign_pickle_path)
 
+        return {'triumph': True, 'message': message}
+
     except Exception as e:
-        return ResponseError(f"Something wrong with changes merging: {e}")
+        message.append('Something wrong with changes merging')
+        print(f'{message[-1]}: {e}')
+        return {
+            'triumph': False,
+            'message': message
+        }

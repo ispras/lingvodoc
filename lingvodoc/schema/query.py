@@ -721,7 +721,8 @@ class Query(graphene.ObjectType):
         graphene.Field(
             ObjectVal,
             remote = graphene.String(required = True),
-            perspective_id = LingvodocID(required = True)))
+            perspective_id = LingvodocID(required = True),
+            debug_flag = graphene.Boolean()))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -5427,7 +5428,7 @@ class ApplySync(graphene.Mutation):
         remote = graphene.String()
         debug_flag = graphene.Boolean()
 
-    message = graphene.String()
+    message = graphene.List(graphene.String)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -5442,10 +5443,12 @@ class ApplySync(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
             raise ResponseError("This client id is orphaned. Try to logout and then login once more.")
+
         if user.id != 1 and not (user.additional_metadata or {}).get('allowed_sync'):
             raise ResponseError("This client has no permissions to apply synchronization.")
 
-        MergeChanges(info, **args)
+        result = MergeChanges(info, **args)
+        return ApplySync(**result)
 
 
 class StarlingEtymology(graphene.Mutation):
