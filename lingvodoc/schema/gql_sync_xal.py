@@ -341,7 +341,7 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                         object_id=object_id)
                     .first()
             )
-            A()
+
             adding_flag = False
             updating_flag = False
 
@@ -356,7 +356,7 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 # the field 'updated_at' will be automatically set to current time
                 # so the changing of 'xal_synced_at' field should be "before" the stored syncing time
                 delta = 60
-                time_to_sync = now() - synced_at > delta
+                time_to_sync = now() - float(synced_at) > delta
                 shifted_time = now() + delta
 
                 if not time_to_sync:
@@ -364,13 +364,15 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                         f"Not enough time from previous synchronization, wait a minute: {table=}, {composite_id=}")
                     continue
 
-                local_update = (
+                local_update = float(
                     local_changes
                         .get(composite_id, {})
                         .get('updated_at', min_date))
-                A()
+
+                foreign_update = float(foreign_dict.pop('updated_at'))
+
                 # Preparing foreign_dict for db updating
-                if foreign_dict.pop('updated_at') > local_update:
+                if foreign_update > local_update:
                     updating_flag = True
                     foreign_dict.pop('client_id')
                     foreign_dict.pop('object_id')
