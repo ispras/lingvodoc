@@ -325,7 +325,7 @@ from lingvodoc.schema.gql_markups import (
 
 from lingvodoc.schema.gql_sync_xal import (
     ListChanges,
-    merge_changes)
+    MergeChanges)
 
 from lingvodoc.schema.gql_twins_diff import DiffEntities
 
@@ -5424,7 +5424,6 @@ class ApplySync(graphene.Mutation):
     class Arguments:
 
         perspective_id = LingvodocID(required=True)
-        foreign_changes = ObjectVal(required=True)
         remote = graphene.String()
         debug_flag = graphene.Boolean()
 
@@ -5446,7 +5445,7 @@ class ApplySync(graphene.Mutation):
         if user.id != 1 and not (user.additional_metadata or {}).get('allowed_sync'):
             raise ResponseError("This client has no permissions to apply synchronization.")
 
-        merge_changes(info, **args)
+        MergeChanges(info, **args)
 
 
 class StarlingEtymology(graphene.Mutation):
