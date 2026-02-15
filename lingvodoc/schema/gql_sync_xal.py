@@ -41,9 +41,133 @@ import json
 log = logging.getLogger(__name__)
 min_date = '1735689600.0'  # 2025-01-01 00:00:00
 
+result = {'errors': []}
+id_pool = set()
+hidden = none = []
+
+# Tuples: (dbModel, parents, children)
+tree = {
+    'parserresult': (dbParserResult, ['entity'], none),
+    'publishing': (dbPublishingEntity, hidden, none),
+    'entity': (dbEntity, ['entity', 'field', 'publishing'], none),  # cycle
+    'lexical': (dbLexicalEntry, hidden, ['entity']),
+    'field': (dbFields, ['gist'], none),
+    'perstofield': (dbDictionaryPerspectiveToField, ['perstofield', 'field'], none),  # cycle
+    'perspective': (dbDictionaryPerspective, ['dictionary', 'gist'], ['perstofield', 'lexical']),
+    'dictionary': (dbDictionary, ['language', 'gist'], hidden),
+    'language': (dbLanguage, ['language', 'gist'], hidden),  # cycle
+    'atom': (dbTranslationAtom, hidden, none),
+    'gist': (dbTranslationGist, hidden, ['atom'])
+}
+
 
 def key2str(*key):
     return ','.join([str(k) for k in key])
+
+
+def get_db_objects(dbModel, table, self_id=None, parent_id=None, remote='xal'):
+
+    if (dbModel is None or
+            (self_id is None and parent_id is None)):
+        return []
+
+    if self_id is not None:
+        composite_id = key2str(self_id[0], self_id[1])
+
+        # Checking before request to database
+        if composite_id in id_pool:
+            result['errors'].append(f"Objects double: {table=} and {composite_id=}")
+            return []
+
+        dbFilter = [
+            dbModel.client_id == self_id[0],
+            dbModel.object_id == self_id[1]]
+    else:
+        dbFilter = [
+            dbModel.parent_client_id == parent_id[0],
+            dbModel.parent_object_id == parent_id[1]]
+
+    relatives_cte = (
+        DBSession
+            .query(dbModel)
+            .filter(*dbFilter)
+            .cte())
+
+    changed_objects = (
+        DBSession
+            .query(relatives_cte)
+            .filter(func.coalesce(relatives_cte.c.additional_metadata[f'{remote}_synced_at'].astext, min_date)
+                    .cast(FLOAT) < func.date_part('EPOCH', relatives_cte.c.updated_at))
+            .all())
+
+    relatives = (
+        DBSession
+            .query(relatives_cte)
+            .all())
+
+    try:
+        for obj in changed_objects:
+            composite_id = key2str(obj.client_id, obj.object_id)
+
+            if composite_id not in id_pool:
+                id_pool.add(composite_id)
+            else:
+                result['errors'].append(f"Objects double: {table=} and {composite_id=}")
+                continue
+
+            columns = obj._asdict()
+            # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
+            columns.pop('_sa_instance_state', None)
+            result[composite_id] = {'table': table, **columns}
+
+    except Exception:
+        traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
+
+        log.warning(f'{remote}_synced_at: exception')
+        log.warning(traceback_string)
+
+        result['errors'].append('Exception:\n' + traceback_string)
+        return []
+
+    return relatives
+
+
+def process_db_objects(table, ids):
+    try:
+        dbModel, parents, children = tree[table]
+        objects = get_db_objects(dbModel, table, **ids)
+
+        for obj in objects:
+            for p_table in parents:
+                p_ids = (
+                    {'self_id': (obj.self_client_id, obj.self_object_id)}
+                    if table == p_table == 'perstofield' or table == p_table == 'entity' else
+
+                    {'self_id': (obj.entity_client_id, obj.entity_object_id)}
+                    if p_table == 'entity' else
+
+                    {'self_id': (obj.field_client_id, obj.field_object_id)}
+                    if p_table == 'field' else
+
+                    {'self_id': (obj.translation_gist_client_id, obj.translation_gist_object_id)}
+                    if p_table == 'gist' else
+
+                    {'self_id': (obj.client_id, obj.object_id)}
+                    if p_table == 'publishing' else
+
+                    {'self_id': (obj.parent_client_id, obj.parent_object_id)}
+                )
+                if any(x is None for x in p_ids['self_id']):
+                    continue
+
+                process_db_objects(p_table, p_ids)
+
+            for c_table in children:
+                c_ids = {'parent_id': (obj.client_id, obj.object_id)}
+                process_db_objects(c_table, c_ids)
+
+    except Exception as e:
+        print(str(e))
 
 
 def ListChanges(info, perspective_id, remote, debug_flag=False):
@@ -52,6 +176,26 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
     settings = request.registry.settings
     local = settings['desktop']['local']
     desktop = settings['desktop']['desktop']
+
+    def store_data(side, data):
+        pickle_path = 'no_store'
+
+        if request.json_body.get('no_local_store'):
+            return pickle_path
+
+        try:
+            storage = settings['storage']
+            storage_dir = os.path.join(storage['path'], f'{side}_sync')
+            pickle_path = os.path.join(storage_dir, key2str(*perspective_id))
+            os.makedirs(storage_dir, exist_ok=True)
+
+            with gzip.open(pickle_path, 'wb') as f:
+                pickle.dump(data, f)
+
+        except Exception as e:
+            return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
+
+        return pickle_path
 
     # Get client_id from security data or from json_body (set manually)
     if not (client_id := request.authenticated_userid):
@@ -83,45 +227,27 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         if not (user_id := Client.get_user_by_client_id(client_id).id):
             raise ResponseError(f'no any user for this {client_id=}')
 
-    #is_admin = (user_id == 1)
-    result = {'errors': []}
-    id_pool = set()
-
-    def store_data(side, data):
-        pickle_path = None
-
-        try:
-            storage = settings['storage']
-            storage_dir = os.path.join(storage['path'], f'{side}_sync')
-            pickle_path = os.path.join(storage_dir, key2str(*perspective_id))
-            os.makedirs(storage_dir, exist_ok=True)
-
-            with gzip.open(pickle_path, 'wb') as f:
-                pickle.dump(data, f)
-
-        except Exception as e:
-            return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
-
-        return pickle_path
-
     ##### Cross-server query #####
 
     if local != remote:
+        # Changing req_path and req_data to query from remote server
         if remote_server := settings['desktop'].get(f'{remote}_server'):
             client_path = remote_server + 'api' + request.path
         else:
             raise NotImplementedError
 
-        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
-
         # Get and set session
+        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
         session = requests.Session()
         session.headers.update({'Connection': 'Keep-Alive'})
         session.mount('http://', adapter)
 
-        # Get client info and auth_tokens
         req_args = {
-            'json': {**request.json_body, 'user_id': user_id},
+            'json': {
+                **request.json_body,
+                'user_id': user_id,
+                'no_local_store': True
+            },
             'cookies': request.cookies
         }
 
@@ -142,127 +268,6 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
 
     ##### End of cross-server query #####
 
-    def get_db_objects(dbModel, table, self_id=None, parent_id=None):
-
-        if (dbModel is None or
-                (self_id is None and parent_id is None)):
-            return []
-
-        if self_id is not None:
-            composite_id = key2str(self_id[0], self_id[1])
-
-            # Checking before request to database
-            if composite_id in id_pool:
-                result['errors'].append(f"Objects double: {table=} and {composite_id=}")
-                return []
-
-            dbFilter = [
-                dbModel.client_id == self_id[0],
-                dbModel.object_id == self_id[1]]
-        else:
-            dbFilter = [
-                dbModel.parent_client_id == parent_id[0],
-                dbModel.parent_object_id == parent_id[1]]
-
-        relatives_cte = (
-            DBSession
-                .query(dbModel)
-                .filter(*dbFilter)
-                .cte())
-
-        changed_objects = (
-            DBSession
-                .query(relatives_cte)
-                .filter(func.coalesce(relatives_cte.c.additional_metadata['xal_synced_at'].astext, min_date)
-                        .cast(FLOAT) < func.date_part('EPOCH', relatives_cte.c.updated_at))
-                .all())
-
-        relatives = (
-            DBSession
-                .query(relatives_cte)
-                .all())
-
-        try:
-            for obj in changed_objects:
-                composite_id = key2str(obj.client_id, obj.object_id)
-
-                if composite_id not in id_pool:
-                    id_pool.add(composite_id)
-                else:
-                    result['errors'].append(f"Objects double: {table=} and {composite_id=}")
-                    continue
-
-                columns = obj._asdict()
-                # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
-                columns.pop('_sa_instance_state', None)
-                result[composite_id] = {'table': table, **columns}
-
-        except Exception:
-            traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
-
-            log.warning(f'{local}_synced_at: exception')
-            log.warning(traceback_string)
-
-            result['errors'].append('Exception:\n' + traceback_string)
-            return []
-
-        return relatives
-
-    hidden = none = []
-
-    # Tuples: (dbModel, parents, children)
-    tree = {
-        'parserresult': (dbParserResult, ['entity'], none),
-        'publishing': (dbPublishingEntity, hidden, none),
-        'entity': (dbEntity, ['entity', 'field', 'publishing'], none),  # cycle
-        'lexical': (dbLexicalEntry, hidden, ['entity']),
-        'field': (dbFields, ['gist'], none),
-        'perstofield': (dbDictionaryPerspectiveToField, ['perstofield', 'field'], none),  # cycle
-        'perspective': (dbDictionaryPerspective, ['dictionary', 'gist'], ['perstofield', 'lexical']),
-        'dictionary': (dbDictionary, ['language', 'gist'], hidden),
-        'language': (dbLanguage, ['language', 'gist'], hidden),  # cycle
-        'atom': (dbTranslationAtom, hidden, none),
-        'gist': (dbTranslationGist, hidden, ['atom'])
-    }
-
-    def process_db_objects(table, ids):
-        try:
-            dbModel, parents, children = tree[table]
-            objects = get_db_objects(dbModel, table, **ids)
-
-            for obj in objects:
-                for p_table in parents:
-                    p_ids = (
-                        {'self_id': (obj.self_client_id, obj.self_object_id)}
-                        if table == p_table == 'perstofield' or table == p_table == 'entity' else
-
-                        {'self_id': (obj.entity_client_id, obj.entity_object_id)}
-                        if p_table == 'entity' else
-
-                        {'self_id': (obj.field_client_id, obj.field_object_id)}
-                        if p_table == 'field' else
-
-                        {'self_id': (obj.translation_gist_client_id, obj.translation_gist_object_id)}
-                        if p_table == 'gist' else
-
-                        {'self_id': (obj.client_id, obj.object_id)}
-                        if p_table == 'publishing' else
-
-                        {'self_id': (obj.parent_client_id, obj.parent_object_id)}
-                    )
-                    if any(x is None for x in p_ids['self_id']):
-                        continue
-
-                    process_db_objects(p_table, p_ids)
-
-                for c_table in children:
-                    c_ids = {'parent_id': (obj.client_id, obj.object_id)}
-                    process_db_objects(c_table, c_ids)
-
-        except Exception as e:
-            print(str(e))
-            #A()
-
     '''
     task = TaskStatus(user_id, "Synchronisation with server", '', 5)
     task.set(1, 1, "Started", "")
@@ -279,21 +284,43 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
     return result
 
 
-def merge_changes(info, perspective_id, remote, foreign_changes, debug_flag=False):
+def MergeChanges(info, perspective_id, remote, debug_flag=False):
 
     message = []
     request = info.context.request
-    storage = request.registry.settings['storage']
-    storage_dir = os.path.join(storage['path'], f'{remote}_sync')
-    pickle_path = os.path.join(storage_dir, key2str(*perspective_id))
+    settings = request.registry.settings
+    local = settings['desktop']['local']
+    storage_path = settings['storage']['path']
 
-    # Getting pickle file from xal by id
+    local_pickle_path = os.path.join(
+        storage_path,
+        f'{local}_sync',
+        key2str(*perspective_id)
+    )
+    foreign_pickle_path = os.path.join(
+        storage_path,
+        f'{remote}_sync',
+        key2str(*perspective_id)
+    )
+
+    # Reading pickle files
     try:
-        with gzip.open(pickle_path, 'rb') as f:
+        with gzip.open(local_pickle_path, 'rb') as f:
             local_changes = pickle.load(f)
 
+    except Exception as e:
+        return ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
+
+    try:
+        with gzip.open(foreign_pickle_path, 'rb') as f:
+            foreign_changes = pickle.load(f)
+
+    except Exception as e:
+        return ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
+
+    try:
         for composite_id, foreign_dict in foreign_changes.items():
-            # Service keys
+            # Service keys e.g. 'errors'
             if composite_id in ['errors']:
                 continue
 
@@ -349,7 +376,8 @@ def merge_changes(info, perspective_id, remote, foreign_changes, debug_flag=Fals
                 print(f"Updated {table=}, {composite_id=}")
 
         DBSession.flush()
-        os.remove(pickle_path)
+        #os.remove(local_pickle_path)
+        #os.remove(foreign_pickle_path)
 
     except Exception as e:
-        return ResponseError(f"Cannot read file '{pickle_path}': {e}")
+        return ResponseError(f"Something wrong with changes merging: {e}")
