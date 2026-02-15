@@ -306,14 +306,14 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
     # Reading pickle files
     try:
         with gzip.open(local_pickle_path, 'rb') as f:
-            local_changes = pickle.load(f)
+            local_changes = pickle.load(f).get('data', {}).get('list_changes', {})
 
     except Exception as e:
         return ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
 
     try:
         with gzip.open(foreign_pickle_path, 'rb') as f:
-            foreign_changes = pickle.load(f)
+            foreign_changes = pickle.load(f).get('data', {}).get('list_changes', {})
 
     except Exception as e:
         return ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
@@ -330,10 +330,22 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 print(f"No foreign table is set for {composite_id=}")
                 continue
 
+            client_id, object_id = composite_id.split(',')
+            model, _, _ = tree[table]
+
+            object_to_change = (
+                DBSession
+                    .query(model)
+                    .filter_by(
+                        client_id=client_id,
+                        object_id=object_id)
+                    .first()
+            )
+
             adding_flag = False
             updating_flag = False
 
-            if (local_dict := local_changes.get(composite_id)) is None:
+            if object_to_change is None:
                 adding_flag = True
             else:
                 foreign_metadata = foreign_dict.get('additional_metadata') or {}
@@ -343,20 +355,25 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 # if it's syncing we add some delta to now() because after the transaction ends
                 # the field 'updated_at' will be automatically set to current time
                 # so the changing of 'xal_synced_at' field should be "before" the stored syncing time
-                if now() - synced_at > 60:
-                    foreign_dict['additional_metadata'] = {**foreign_metadata, synced_at_key: now() + 60}
-                else:
+                delta = 60
+                time_to_sync = now() - synced_at > delta
+                shifted_time = now() + delta
+
+                if not time_to_sync:
                     message.append(
                         f"Not enough time from previous synchronization, wait a minute: {table=}, {composite_id=}")
                     continue
 
-                local_update = local_dict.pop('updated_at')
+                local_dict = local_changes.get(composite_id, {})
+                local_update = local_dict.pop('updated_at', min_date)
                 foreign_update = foreign_dict.pop('updated_at')
 
-                if foreign_update > max(synced_at, local_update):
+                if foreign_update > local_update:
                     updating_flag = True
-                else:
-                    continue
+                    foreign_dict['additional_metadata'] = {
+                        **foreign_metadata,
+                        synced_at_key: shifted_time
+                    }
 
             if adding_flag:
                 columns = AsIs(','.join(foreign_dict))
@@ -367,11 +384,16 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 print(f"Added {table=}, {composite_id=}")
 
             elif updating_flag:
-                client_id = foreign_dict.pop('client_id')
-                object_id = foreign_dict.pop('object_id')
+                foreign_dict.pop('client_id')
+                foreign_dict.pop('object_id')
+
+                A()
+
+                '''
                 settings = AsIs(','.join(f'{k} = {v}' for k, v in foreign_dict.items()))
                 DBSession.execute(
                     f"update {table} set {settings} where client_id = {client_id} and object_id = {object_id};")
+                '''
                 # Debug
                 print(f"Updated {table=}, {composite_id=}")
 

@@ -5409,7 +5409,7 @@ class Query(graphene.ObjectType):
         return DiffEntities(info, **args, debug_flag=True)
 
     def resolve_list_changes(self, info, **args):
-        return ListChanges(info, **args, debug_flag=True)
+        return ListChanges(info, **args)
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
