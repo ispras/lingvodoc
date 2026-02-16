@@ -5,10 +5,7 @@ import sys
 import os
 import logging
 import traceback
-from sqlalchemy import func #, literal, tuple_, and_
-from lingvodoc.cache.caching import TaskStatus
-from lingvodoc.queue.celery import celery
-from pyramid.security import authenticated_userid
+from sqlalchemy import func
 
 from lingvodoc.models import (
     DBSession,
@@ -27,21 +24,21 @@ from lingvodoc.models import (
     ParserResult as dbParserResult
 )
 
+import requests
 from lingvodoc.schema.gql_holders import ResponseError
 
+from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.queue.celery import celery
+from pyramid.security import authenticated_userid
 from lingvodoc.utils.proxy import try_proxy
 from psycopg2.extensions import AsIs
-
 from sqlalchemy import FLOAT
 from pdb import set_trace as A
-
-import requests
 import json
 
 log = logging.getLogger(__name__)
 min_date = '1735689600.0'  # 2025-01-01 00:00:00
-
-local_result = {'errors': []}
+local_result = {'warns': []}
 id_pool = set()
 hidden = none = []
 
@@ -67,55 +64,55 @@ def key2str(*key):
 
 def get_db_objects(dbModel, table, self_id=None, parent_id=None):
 
-    if (dbModel is None or
-            (self_id is None and parent_id is None)):
-        return []
-
-    if self_id is not None:
-        composite_id = key2str(self_id[0], self_id[1])
-
-        # Checking before request to database
-        if composite_id in id_pool:
-            local_result['errors'].append(
-                f"Objects double: {table=} and {composite_id=}")
+    try:
+        if (dbModel is None or
+                (self_id is None and parent_id is None)):
             return []
 
-        dbFilter = [
-            dbModel.client_id == self_id[0],
-            dbModel.object_id == self_id[1]]
-    else:
-        dbFilter = [
-            dbModel.parent_client_id == parent_id[0],
-            dbModel.parent_object_id == parent_id[1]]
+        if self_id is not None:
+            composite_id = key2str(self_id[0], self_id[1])
 
-    relatives_cte = (
-        DBSession
-            .query(dbModel)
-            .filter(*dbFilter)
-            .cte())
+            # Checking before request to database
+            if composite_id in id_pool:
+                local_result['warns'].append(
+                    f"Objects double: {table=} and {composite_id=}")
+                return []
 
-    # Getting related objects which are updated
-    # after 'target_synced_at' date
-    changed_objects = (
-        DBSession
-            .query(relatives_cte)
-            .filter(float(local_result['target_synced_at']) < func.date_part('EPOCH', relatives_cte.c.updated_at))
-            .all())
+            dbFilter = [
+                dbModel.client_id == self_id[0],
+                dbModel.object_id == self_id[1]]
+        else:
+            dbFilter = [
+                dbModel.parent_client_id == parent_id[0],
+                dbModel.parent_object_id == parent_id[1]]
 
-    # Getting all related objects to get next relations
-    relatives = (
-        DBSession
-            .query(relatives_cte)
-            .all())
+        relatives_cte = (
+            DBSession
+                .query(dbModel)
+                .filter(*dbFilter)
+                .cte())
 
-    try:
+        # Getting related objects which are updated
+        # after 'target_synced_at' date
+        changed_objects = (
+            DBSession
+                .query(relatives_cte)
+                .filter(float(local_result['target_synced_at']) < func.date_part('EPOCH', relatives_cte.c.updated_at))
+                .all())
+
+        # Getting all related objects to get next relations
+        relatives = (
+            DBSession
+                .query(relatives_cte)
+                .all())
+
         for obj in changed_objects:
             composite_id = key2str(obj.client_id, obj.object_id)
 
             if composite_id not in id_pool:
                 id_pool.add(composite_id)
             else:
-                local_result['errors'].append(
+                local_result['warns'].append(
                     f"Objects double: {table=} and {composite_id=}")
                 continue
 
@@ -130,7 +127,7 @@ def get_db_objects(dbModel, table, self_id=None, parent_id=None):
         log.warning('get_db_objects: exception')
         log.warning(traceback_string)
 
-        local_result['errors'].append('Exception:\n' + traceback_string)
+        local_result['warns'].append('Exception:\n' + traceback_string)
         return []
 
     return relatives
@@ -212,7 +209,7 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
                     client_id = perspective_id[0],
                     object_id = perspective_id[1])
                 .one()
-        ) or {}
+        )[0] or {}
 
         return perspective_metadata.get(f'{remote}_synced_at', min_date)
 
@@ -306,6 +303,22 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
 
 def MergeChanges(info, perspective_id, remote, debug_flag=False):
 
+    def set_synced_at(synced_at):
+        db_perspective = (
+            DBSession
+                .query(
+                    dbDictionaryPerspective)
+                .filter_by(
+                    client_id = perspective_id[0],
+                    object_id = perspective_id[1])
+                .one()
+        )
+
+        perspective_metadata = db_perspective.additional_metadata or {}
+        db_perspective.additional_metadata = {
+            **perspective_metadata,
+            f'{remote}_synced_at': synced_at}
+
     message = []
     request = info.context.request
     settings = request.registry.settings
@@ -339,9 +352,21 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
         return ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
 
     try:
+        delta = 60
+        target_synced_at = local_changes['target_synced_at']
+        time_to_sync = now() - float(target_synced_at) > delta
+
+        if not time_to_sync:
+            message.append(
+                "Not enough time from previous synchronization, wait a minute")
+            return {
+                'triumph': False,
+                'message': message
+            }
+
         for composite_id, foreign_dict in foreign_changes.items():
-            # Service keys e.g. 'errors'
-            if composite_id in ['errors', 'target_synced_at']:
+            # Service keys e.g. 'warns'
+            if composite_id in ['warns', 'target_synced_at']:
                 continue
 
             # Get table name and delete it from the dict
@@ -350,10 +375,14 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 print(f"No foreign table is set for {composite_id=}")
                 continue
 
-            client_id, object_id = composite_id.split(',')
-            model, _, _ = tree[table]
+            local_dict = local_changes.get(composite_id, {})
+            local_update = float(local_dict.get('updated_at', min_date))
+            foreign_update = float(foreign_dict.get('updated_at'))
 
-            object_to_change = (
+            model, _, _ = tree[table]
+            client_id, object_id = composite_id.split(',')
+
+            db_object = (
                 DBSession
                     .query(model)
                     .filter_by(
@@ -362,72 +391,56 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                     .first()
             )
 
-            adding_flag = False
-            updating_flag = False
+            if db_object is None:
+                # Add new object
+                db_object = model(**foreign_dict)
+                DBSession.add(db_object)
 
-            if object_to_change is None:
-                adding_flag = True
-            else:
-                foreign_metadata = foreign_dict.get('additional_metadata') or {}
-                synced_at_key = f'{remote}_synced_at'
-                synced_at = foreign_metadata.get(synced_at_key, min_date)
+                if debug_flag:
+                    print(f"Added {table=}, {composite_id=}")
 
-                # if it's syncing we add some delta to now() because after the transaction ends
-                # the field 'updated_at' will be automatically set to current time
-                # so the changing of 'xal_synced_at' field should be "before" the stored syncing time
-                delta = 60
-                time_to_sync = now() - float(synced_at) > delta
-                shifted_time = now() + delta
+            elif foreign_update > max(target_synced_at, local_update):
+                # Delete client_id and object_id
+                # from dict to avoid collision
+                foreign_dict.pop('client_id')
+                foreign_dict.pop('object_id')
 
-                if not time_to_sync:
-                    message.append(
-                        f"Not enough time from previous synchronization, wait a minute: {table=}, {composite_id=}")
-                    continue
+                for k, v in foreign_dict.items():
+                    setattr(db_object, k, v)
 
-                local_update = float(
-                    local_changes
-                        .get(composite_id, {})
-                        .get('updated_at', min_date))
+                if debug_flag:
+                    print(f"Updated {table=}, {composite_id=}")
 
-                foreign_update = float(foreign_dict.pop('updated_at'))
-
-                # Preparing foreign_dict for db updating
-                if foreign_update > local_update:
-                    A()
-                    updating_flag = True
-                    foreign_dict.pop('client_id')
-                    foreign_dict.pop('object_id')
-                    foreign_dict['additional_metadata'] = {
-                        **foreign_metadata,
-                        synced_at_key: shifted_time
-                    }
-
-            if adding_flag:
+            '''         
+            if adding_flag:    
                 columns = AsIs(','.join(foreign_dict))
                 values = tuple(foreign_dict.values())
                 DBSession.execute(
                     f"insert into {table} ({columns}) values {values};")
-                # Debug
-                print(f"Added {table=}, {composite_id=}")
 
             elif updating_flag:
-                '''
                 settings = AsIs(','.join(f'{k} = {v}' for k, v in foreign_dict.items()))
                 DBSession.execute(
                     f"update {table} set {settings} where client_id = {client_id} and object_id = {object_id};")
-                '''
-                # Debug
-                print(f"Updated {table=}, {composite_id=}")
+            '''
+
+        # we add some delta to now() because after the transaction ends
+        # the field 'updated_at' will be automatically set to current time
+        # so the changing of 'xal_synced_at' field should be "before" the stored syncing time
+        set_synced_at(now() + delta)
 
         DBSession.flush()
-        #os.remove(local_pickle_path)
-        #os.remove(foreign_pickle_path)
+        os.remove(local_pickle_path)
+        os.remove(foreign_pickle_path)
 
         return {'triumph': True, 'message': message}
 
-    except Exception as e:
+    except Exception:
         message.append('Something wrong with changes merging')
-        print(f'{message[-1]}: {e}')
+        traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
+        log.warning(message[-1])
+        log.warning(traceback_string)
+
         return {
             'triumph': False,
             'message': message
