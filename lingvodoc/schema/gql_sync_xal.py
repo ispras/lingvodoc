@@ -41,7 +41,7 @@ import json
 log = logging.getLogger(__name__)
 min_date = '1735689600.0'  # 2025-01-01 00:00:00
 
-result = {'errors': []}
+local_result = {'errors': []}
 id_pool = set()
 hidden = none = []
 
@@ -65,7 +65,7 @@ def key2str(*key):
     return ','.join([str(k) for k in key])
 
 
-def get_db_objects(dbModel, table, self_id=None, parent_id=None, remote='xal'):
+def get_db_objects(dbModel, table, self_id=None, parent_id=None):
 
     if (dbModel is None or
             (self_id is None and parent_id is None)):
@@ -76,7 +76,8 @@ def get_db_objects(dbModel, table, self_id=None, parent_id=None, remote='xal'):
 
         # Checking before request to database
         if composite_id in id_pool:
-            result['errors'].append(f"Objects double: {table=} and {composite_id=}")
+            local_result['errors'].append(
+                f"Objects double: {table=} and {composite_id=}")
             return []
 
         dbFilter = [
@@ -93,13 +94,15 @@ def get_db_objects(dbModel, table, self_id=None, parent_id=None, remote='xal'):
             .filter(*dbFilter)
             .cte())
 
+    # Getting related objects which are updated
+    # after 'target_synced_at' date
     changed_objects = (
         DBSession
             .query(relatives_cte)
-            .filter(func.coalesce(relatives_cte.c.additional_metadata[f'{remote}_synced_at'].astext, min_date)
-                    .cast(FLOAT) < func.date_part('EPOCH', relatives_cte.c.updated_at))
+            .filter(float(local_result['target_synced_at']) < func.date_part('EPOCH', relatives_cte.c.updated_at))
             .all())
 
+    # Getting all related objects to get next relations
     relatives = (
         DBSession
             .query(relatives_cte)
@@ -112,21 +115,22 @@ def get_db_objects(dbModel, table, self_id=None, parent_id=None, remote='xal'):
             if composite_id not in id_pool:
                 id_pool.add(composite_id)
             else:
-                result['errors'].append(f"Objects double: {table=} and {composite_id=}")
+                local_result['errors'].append(
+                    f"Objects double: {table=} and {composite_id=}")
                 continue
 
             columns = obj._asdict()
             # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
             columns.pop('_sa_instance_state', None)
-            result[composite_id] = {'table': table, **columns}
+            local_result[composite_id] = {'table': table, **columns}
 
     except Exception:
         traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
 
-        log.warning(f'{remote}_synced_at: exception')
+        log.warning('get_db_objects: exception')
         log.warning(traceback_string)
 
-        result['errors'].append('Exception:\n' + traceback_string)
+        local_result['errors'].append('Exception:\n' + traceback_string)
         return []
 
     return relatives
@@ -180,7 +184,9 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
     def store_data(side, data):
         pickle_path = 'no_store'
 
-        if request.json_body.get('no_local_store'):
+        # Don't store result locally
+        # if query went from remote server
+        if request.json_body.get('target_synced_at'):
             return pickle_path
 
         try:
@@ -196,6 +202,19 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
             return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
 
         return pickle_path
+
+    def target_synced_at():
+        perspective_metadata = (
+            DBSession
+                .query(
+                    dbDictionaryPerspective.additional_metadata)
+                .filter_by(
+                    client_id = perspective_id[0],
+                    object_id = perspective_id[1])
+                .one()
+        ) or {}
+
+        return perspective_metadata.get(f'{remote}_synced_at', min_date)
 
     # Get client_id from security data or from json_body (set manually)
     if not (client_id := request.authenticated_userid):
@@ -246,23 +265,23 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
             'json': {
                 **request.json_body,
                 'user_id': user_id,
-                'no_local_store': True
+                'target_synced_at': target_synced_at()
             },
             'cookies': request.cookies
         }
 
         # Query
-        client_resp = session.post(client_path, **req_args)
-        client_json = client_resp.json()
-        resp_status = client_resp.status_code
+        remote_resp = session.post(client_path, **req_args)
+        resp_status = remote_resp.status_code
+        remote_result = remote_resp.json()
 
         if resp_status == 200:
-            pickle_path = store_data(remote, client_json)
+            pickle_path = store_data(remote, remote_result)
 
             if debug_flag:
-                print(f'\nFOREIGN ({pickle_path} <- {remote}): {now()=} {str(client_json)[-500:]=}')
+                print(f'\nFOREIGN ({pickle_path} <- {remote}): {now()=} {str(remote_result)[-500:]=}')
 
-            return client_json
+            return remote_result
         else:
             raise ResponseError(f'{resp_status=} from {remote=}')
 
@@ -273,15 +292,16 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
     task.set(1, 1, "Started", "")
     '''
 
+    local_result['target_synced_at'] = target_synced_at()
     process_db_objects('perspective', {'self_id': perspective_id})
 
     # Pickling by perspective id
-    pickle_path = store_data(local, result)
+    pickle_path = store_data(local, local_result)
 
     if debug_flag:
-        print(f'\nLOCAL ({local} -> {pickle_path}): {now()=} {str(result)[-500:]=}')
+        print(f'\nLOCAL ({local} -> {pickle_path}): {now()=} {str(local_result)[-500:]=}')
 
-    return result
+    return local_result
 
 
 def MergeChanges(info, perspective_id, remote, debug_flag=False):
@@ -321,7 +341,7 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
     try:
         for composite_id, foreign_dict in foreign_changes.items():
             # Service keys e.g. 'errors'
-            if composite_id in ['errors']:
+            if composite_id in ['errors', 'target_synced_at']:
                 continue
 
             # Get table name and delete it from the dict
@@ -373,6 +393,7 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
 
                 # Preparing foreign_dict for db updating
                 if foreign_update > local_update:
+                    A()
                     updating_flag = True
                     foreign_dict.pop('client_id')
                     foreign_dict.pop('object_id')
@@ -390,8 +411,6 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 print(f"Added {table=}, {composite_id=}")
 
             elif updating_flag:
-                A()
-
                 '''
                 settings = AsIs(','.join(f'{k} = {v}' for k, v in foreign_dict.items()))
                 DBSession.execute(
