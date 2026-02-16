@@ -270,7 +270,9 @@ def ListChanges(info, perspective_id, remote, debug_flag=False):
         # Query
         remote_resp = session.post(client_path, **req_args)
         resp_status = remote_resp.status_code
-        remote_result = remote_resp.json()
+        remote_result = (remote_resp.json()
+                         .get('data', {})
+                         .get('list_changes', {}))
 
         if resp_status == 200:
             pickle_path = store_data(remote, remote_result)
@@ -339,14 +341,14 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
     # Reading pickle files
     try:
         with gzip.open(local_pickle_path, 'rb') as f:
-            local_changes = pickle.load(f).get('data', {}).get('list_changes', {})
+            local_changes = pickle.load(f)
 
     except Exception as e:
         return ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
 
     try:
         with gzip.open(foreign_pickle_path, 'rb') as f:
-            foreign_changes = pickle.load(f).get('data', {}).get('list_changes', {})
+            foreign_changes = pickle.load(f)
 
     except Exception as e:
         return ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
