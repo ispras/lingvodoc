@@ -27,17 +27,20 @@ from lingvodoc.models import (
 import requests
 from lingvodoc.schema.gql_holders import ResponseError
 
+'''
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.queue.celery import celery
 from pyramid.security import authenticated_userid
 from lingvodoc.utils.proxy import try_proxy
 from psycopg2.extensions import AsIs
 from sqlalchemy import FLOAT
-from pdb import set_trace as A
 import json
+'''
+
+from pdb import set_trace as A
 
 log = logging.getLogger(__name__)
-min_date = '1735689600.0'  # 2025-01-01 00:00:00
+min_date = 1735689600.0  # 2025-01-01 00:00:00
 local_result = {'warns': []}
 id_pool = set()
 hidden = none = []
@@ -97,7 +100,8 @@ def get_db_objects(dbModel, table, self_id=None, parent_id=None):
         changed_objects = (
             DBSession
                 .query(relatives_cte)
-                .filter(float(local_result['target_synced_at']) < func.date_part('EPOCH', relatives_cte.c.updated_at))
+                .filter(local_result['target_synced_at']
+                        < func.date_part('EPOCH', relatives_cte.c.updated_at))
                 .all())
 
         # Getting all related objects to get next relations
@@ -321,6 +325,8 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
             **perspective_metadata,
             f'{remote}_synced_at': synced_at}
 
+        db_perspective.updated_at = synced_at
+
     message = []
     request = info.context.request
     settings = request.registry.settings
@@ -354,10 +360,12 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
         return ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
 
     try:
-        delta = 60
-        target_synced_at = local_changes['target_synced_at']
-        time_to_sync = now() - float(target_synced_at) > delta
+        current_synced_at = local_changes['target_synced_at']
+        next_synced_at = current_synced_at
 
+        '''
+        delta = 60
+        time_to_sync = (now() - target_synced_at > delta)
         if not time_to_sync:
             message.append(
                 "Not enough time from previous synchronization, wait a minute")
@@ -365,6 +373,7 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 'triumph': False,
                 'message': message
             }
+        '''
 
         for composite_id, foreign_dict in foreign_changes.items():
             # Service keys e.g. 'warns'
@@ -378,8 +387,8 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 continue
 
             local_dict = local_changes.get(composite_id, {})
-            local_update = float(local_dict.get('updated_at', min_date))
-            foreign_update = float(foreign_dict.get('updated_at'))
+            local_update = local_dict.get('updated_at', min_date)
+            foreign_update = foreign_dict.get('updated_at')
 
             model, _, _ = tree[table]
             client_id, object_id = composite_id.split(',')
@@ -390,8 +399,7 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                     .filter_by(
                         client_id=client_id,
                         object_id=object_id)
-                    .first()
-            )
+                    .first())
 
             if db_object is None:
                 # Add new object
@@ -399,19 +407,21 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                 DBSession.add(db_object)
 
                 if debug_flag:
-                    print(f"Added {table=}, {composite_id=}")
+                    print(f"Added {table=}, {composite_id=}, {foreign_dict.get('content')=}")
 
-            elif foreign_update > max(target_synced_at, local_update):
+            elif foreign_update > max(current_synced_at, local_update):
                 # Delete client_id and object_id
                 # from dict to avoid collision
-                foreign_dict.pop('client_id')
-                foreign_dict.pop('object_id')
+                foreign_dict.pop('client_id', None)
+                foreign_dict.pop('object_id', None)
 
                 for k, v in foreign_dict.items():
                     setattr(db_object, k, v)
 
                 if debug_flag:
-                    print(f"Updated {table=}, {composite_id=}")
+                    print(f"Updated {table=}, {composite_id=}, {foreign_dict.get('content')=}")
+
+            next_synced_at = max(next_synced_at, local_update, foreign_update)
 
             '''         
             if adding_flag:    
@@ -426,14 +436,14 @@ def MergeChanges(info, perspective_id, remote, debug_flag=False):
                     f"update {table} set {settings} where client_id = {client_id} and object_id = {object_id};")
             '''
 
-        # we add some delta to now() because after the transaction ends
-        # the field 'updated_at' will be automatically set to current time
-        # so the changing of 'xal_synced_at' field should be "before" the stored syncing time
-        set_synced_at(now() + delta)
+        set_synced_at(next_synced_at)
 
         DBSession.flush()
         os.remove(local_pickle_path)
         os.remove(foreign_pickle_path)
+
+        if debug_flag:
+            print("=" * 20 + "\n")
 
         return {'triumph': True, 'message': message}
 
