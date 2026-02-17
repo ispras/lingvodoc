@@ -721,6 +721,7 @@ class Query(graphene.ObjectType):
         graphene.Field(
             ObjectVal,
             remote = graphene.String(required = True),
+            sync_for = graphene.String(required = True),
             perspective_id = LingvodocID(required = True),
             target_synced_at = graphene.Float(),
             debug_flag = graphene.Boolean()))
@@ -5426,7 +5427,7 @@ class ApplySync(graphene.Mutation):
     class Arguments:
 
         perspective_id = LingvodocID(required=True)
-        remote = graphene.String()
+        sync_between = graphene.List(graphene.String, required=True)
         debug_flag = graphene.Boolean()
 
     message = graphene.List(graphene.String)
