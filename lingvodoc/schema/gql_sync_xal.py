@@ -68,17 +68,17 @@ def key2str(*key):
 
 # For debugging
 def whats_time(**epoch_times):
-    print('\n' + ' || '.join(map(lambda k: f"{k:<30}", epoch_times.keys())))
+    print('\n' + ' || '.join(map(lambda k: f"{k[:19]:<19}", epoch_times.keys())))
     for v1, v2 in zipp(list(epoch_times.values()), list(epoch_times.values())[1:]):
         value = datetime.fromtimestamp(v1) if isinstance(v1, numbers.Number) else v1
         sign = (
             '\n' if v2 is None else
             ' || ' if not isinstance(v2, numbers.Number) else
             ' == ' if v1 == v2 else ' << ' if v1 < v2 else ' >> ')
-        print(f"{str(value):<30}", end=sign)
+        print(f"{str(value)[:19]:<19}", end=sign)
 
 
-def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
+def ListChanges(info, perspective_id, remote, sync_for, user_id=None, sync_point=None, debug_flag=False):
 
     request = info.context.request
     settings = request.registry.settings
@@ -92,7 +92,7 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
 
         # Don't store result locally
         # if query went from remote server
-        if request.json_body.get('target_synced_at'):
+        if sync_point is not None:
             return pickle_path
 
         try:
@@ -109,7 +109,7 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
 
         return pickle_path
 
-    def target_synced_at():
+    def get_sync_point():
         perspective_metadata = (
             DBSession
                 .query(
@@ -153,11 +153,11 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
                     .cte())
 
             # Getting related objects which are updated
-            # after 'target_synced_at' date
+            # after 'sync_point' date
             changed_objects = (
                 DBSession
                     .query(relatives_cte)
-                    .filter(local_result['target_synced_at']
+                    .filter(local_result['sync_point']
                             < func.date_part('EPOCH', relatives_cte.c.updated_at))
                     .all())
 
@@ -178,6 +178,14 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
                     continue
 
                 columns = obj._asdict()
+
+                whats_time(**{
+                    'Sync point': local_result['sync_point'],
+                    'Updated at': obj.updated_at,
+                    'Table': table,
+                    'Content': columns.get('content', '')
+                })
+
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
                 columns.pop('_sa_instance_state', None)
                 local_result[composite_id] = {'table': table, **columns}
@@ -240,7 +248,7 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
         if local == 'isp':
             raise ResponseError('try to login again')
         else:
-            if not (user_id := request.json_body.get('user_id')):
+            if user_id is None:
                 raise ResponseError('no user id is in request')
             if not (user := DBSession.query(User).filter_by(id=user_id).first()):
                 raise ResponseError('no such user is in db')
@@ -263,6 +271,7 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
     ##### Cross-server query #####
 
     if local != remote:
+        A()
         # Changing req_path and req_data to query from remote server
         if remote_server := settings['desktop'].get(f'{remote}_server'):
             client_path = remote_server + 'api' + request.path
@@ -275,11 +284,16 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
         session.headers.update({'Connection': 'Keep-Alive'})
         session.mount('http://', adapter)
 
+        variables = {
+            **request.json_body['variables'],
+            'user_id': user_id,
+            'sync_point': get_sync_point()
+        }
+
         req_args = {
             'json': {
                 **request.json_body,
-                'user_id': user_id,
-                'target_synced_at': target_synced_at()
+                'variables': variables
             },
             'cookies': request.cookies
         }
@@ -308,10 +322,9 @@ def ListChanges(info, perspective_id, remote, sync_for, debug_flag=False):
     task.set(1, 1, "Started", "")
     '''
 
-    # For remote query get 'target_synced_at' from request json
+    # For remote query get 'sync_point' from request json
     # for local query get it from database
-    local_result['target_synced_at'] = (
-            request.json_body.get('target_synced_at') or target_synced_at())
+    local_result['sync_point'] = sync_point or get_sync_point()
     process_db_objects('perspective', {'self_id': perspective_id})
 
     # Pickling by perspective id
@@ -378,12 +391,12 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
         return ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
 
     try:
-        current_synced_at = local_changes['target_synced_at']
+        current_synced_at = local_changes['sync_point']
         next_synced_at = current_synced_at
 
         '''
         delta = 60
-        time_to_sync = (now() - target_synced_at > delta)
+        time_to_sync = (now() - sync_point > delta)
         if not time_to_sync:
             message.append(
                 "Not enough time from previous synchronization, wait a minute")
@@ -395,7 +408,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
         for composite_id, foreign_dict in foreign_changes.items():
             # Service keys e.g. 'warns'
-            if composite_id in ['warns', 'target_synced_at']:
+            if composite_id in ['warns', 'sync_point']:
                 continue
 
             # Get table name and delete it from the dict

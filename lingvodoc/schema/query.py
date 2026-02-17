@@ -723,7 +723,8 @@ class Query(graphene.ObjectType):
             remote = graphene.String(required = True),
             sync_for = graphene.String(required = True),
             perspective_id = LingvodocID(required = True),
-            target_synced_at = graphene.Float(),
+            user_id = graphene.Int(),
+            sync_point = graphene.Float(),
             debug_flag = graphene.Boolean()))
 
     def resolve_fill_logs(self, info, worker=1):
