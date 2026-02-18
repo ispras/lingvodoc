@@ -132,8 +132,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 .one()
         )[0] or {}
 
-        #return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
-        return perspective_metadata[f'{sync_for}_synced_at']
+        return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
 
     def get_db_objects(dbModel, table, self_id=None, parent_id=None):
 
@@ -192,12 +191,13 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
                 columns = obj._asdict()
 
-                whats_time(**{
-                    'Sync point': local_result['sync_point'],
-                    'Updated at': obj.updated_at,
-                    'Table': table,
-                    'Content': columns.get('content', '')
-                })
+                if debug_flag:
+                    whats_time(**{
+                        'Sync point': local_result['sync_point'],
+                        'Updated at': obj.updated_at,
+                        'Table': table,
+                        'Content': columns.get('content', '')
+                    })
 
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
                 columns.pop('_sa_instance_state', None)
@@ -315,7 +315,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         resp_status = remote_resp.status_code
         remote_result = ((remote_resp.json()
                          .get('data') or {})
-                         .get('list_changes') or {})
+                         .get('list_changes'))
 
         if resp_status == 200:
             pickle_path = store_data(remote, remote_result)
@@ -406,17 +406,15 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
         current_synced_at = local_changes['sync_point']
         next_synced_at = current_synced_at
 
-        '''
-        delta = 60
-        time_to_sync = (now() - sync_point > delta)
-        if not time_to_sync:
-            message.append(
-                "Not enough time from previous synchronization, wait a minute")
-            return {
-                'triumph': False,
-                'message': message
-            }
-        '''
+        # Iterate by local changes to get maximal updating point
+        # this time will be new sync_point (not real time)
+        for composite_id, local_dict in local_changes.items():
+            # Service keys e.g. 'warns'
+            if re.match(r'^[\d,]+$', composite_id) is None:
+                continue
+
+            local_update = local_dict.get('updated_at')
+            next_synced_at = max(next_synced_at, local_update)
 
         for composite_id, foreign_dict in foreign_changes.items():
             # Service keys e.g. 'warns'
@@ -447,7 +445,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                     .first())
 
 
-            if debug_flag and foreign_dict['client_id'] == 12435:
+            if debug_flag:
                 whats_time(**{
                     'Sync time': current_synced_at,
                     'Foreign update': foreign_update,
@@ -475,12 +473,12 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                 if debug_flag:
                     print(f"Updated {table=}, {composite_id=}, {foreign_content=}")
 
-            next_synced_at = max(next_synced_at, local_update, foreign_update)
+            next_synced_at = max(next_synced_at, foreign_update)
 
         set_synced_at(next_synced_at)
         DBSession.flush()
-        #os.remove(local_pickle_path)
-        #os.remove(foreign_pickle_path)
+        os.remove(local_pickle_path)
+        os.remove(foreign_pickle_path)
 
         if debug_flag:
             print("=" * 20 + "\n")
