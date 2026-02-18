@@ -6,6 +6,7 @@ import pickle
 import gzip
 import sys
 import os
+import re
 import logging
 import traceback
 from sqlalchemy import func
@@ -78,12 +79,23 @@ def whats_time(**epoch_times):
         print(f"{str(value)[:19]:<19}", end=sign)
 
 
-def ListChanges(info, perspective_id, remote, sync_for, user_id=None, sync_point=None, debug_flag=False):
+def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     request = info.context.request
+
+    # The next variables are added manually but unavailable by graphql
+    variables = request.json_body.get('variables', {})
+    user_id = variables.get('user_id')
+    sync_point = variables.get('sync_point')
+
     settings = request.registry.settings
-    local = settings['desktop']['local']
     desktop = settings['desktop']['desktop']
+    local = settings['desktop']['local']
+
+    # Get not local suffix from sync_between
+    sync_between.remove(local)
+    sync_for = sync_between[0]
+
     local_result = {'warns': []}
     id_pool = set()
 
@@ -102,7 +114,7 @@ def ListChanges(info, perspective_id, remote, sync_for, user_id=None, sync_point
             os.makedirs(storage_dir, exist_ok=True)
 
             with gzip.open(pickle_path, 'wb') as f:
-                pickle.dump(data, f)
+                pickle.dump({'stamp': now(), **data}, f)
 
         except Exception as e:
             return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
@@ -120,7 +132,8 @@ def ListChanges(info, perspective_id, remote, sync_for, user_id=None, sync_point
                 .one()
         )[0] or {}
 
-        return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
+        #return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
+        return perspective_metadata[f'{sync_for}_synced_at']
 
     def get_db_objects(dbModel, table, self_id=None, parent_id=None):
 
@@ -271,7 +284,6 @@ def ListChanges(info, perspective_id, remote, sync_for, user_id=None, sync_point
     ##### Cross-server query #####
 
     if local != remote:
-        A()
         # Changing req_path and req_data to query from remote server
         if remote_server := settings['desktop'].get(f'{remote}_server'):
             client_path = remote_server + 'api' + request.path
@@ -301,9 +313,9 @@ def ListChanges(info, perspective_id, remote, sync_for, user_id=None, sync_point
         # Query
         remote_resp = session.post(client_path, **req_args)
         resp_status = remote_resp.status_code
-        remote_result = (remote_resp.json()
-                         .get('data', {})
-                         .get('list_changes', {}))
+        remote_result = ((remote_resp.json()
+                         .get('data') or {})
+                         .get('list_changes') or {})
 
         if resp_status == 200:
             pickle_path = store_data(remote, remote_result)
@@ -408,7 +420,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
         for composite_id, foreign_dict in foreign_changes.items():
             # Service keys e.g. 'warns'
-            if composite_id in ['warns', 'sync_point']:
+            if re.match(r'^[\d,]+$', composite_id) is None:
                 continue
 
             # Get table name and delete it from the dict
@@ -467,8 +479,8 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
         set_synced_at(next_synced_at)
         DBSession.flush()
-        os.remove(local_pickle_path)
-        os.remove(foreign_pickle_path)
+        #os.remove(local_pickle_path)
+        #os.remove(foreign_pickle_path)
 
         if debug_flag:
             print("=" * 20 + "\n")

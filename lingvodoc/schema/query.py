@@ -721,7 +721,7 @@ class Query(graphene.ObjectType):
         graphene.Field(
             ObjectVal,
             remote = graphene.String(required = True),
-            sync_for = graphene.String(required = True),
+            sync_between = graphene.List(graphene.String, required = True),
             perspective_id = LingvodocID(required = True),
             user_id = graphene.Int(),
             sync_point = graphene.Float(),
