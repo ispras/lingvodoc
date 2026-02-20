@@ -1,7 +1,6 @@
 from time import time as now
 from datetime import datetime
 from itertools import zip_longest as zipp
-import numbers
 import pickle
 import gzip
 import sys
@@ -68,13 +67,14 @@ def key2str(*key):
 
 
 # For debugging
-def whats_time(**epoch_times):
-    print('\n' + ' || '.join(map(lambda k: f"{k[:19]:<19}", epoch_times.keys())))
+def whats_time(no_caption=False, **epoch_times):
+    if not no_caption:
+        print('\n' + ' || '.join(map(lambda k: f"{k[:19]:<19}", epoch_times.keys())))
     for v1, v2 in zipp(list(epoch_times.values()), list(epoch_times.values())[1:]):
-        value = datetime.fromtimestamp(v1) if isinstance(v1, numbers.Number) else v1
+        value = datetime.fromtimestamp(v1) if isinstance(v1, float) else v1
         sign = (
             '\n' if v2 is None else
-            ' || ' if not isinstance(v2, numbers.Number) else
+            ' || ' if not isinstance(v2, float) else
             ' == ' if v1 == v2 else ' << ' if v1 < v2 else ' >> ')
         print(f"{str(value)[:19]:<19}", end=sign)
 
@@ -97,6 +97,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     local_result = {'warns': []}
     id_pool = set()
+    count = 0
 
     def store_data(side, data):
         pickle_path = 'no_store'
@@ -134,7 +135,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
 
     def get_db_objects(dbModel, table, self_id=None, parent_id=None):
-
+        nonlocal count
         try:
             if (dbModel is None or
                     (self_id is None and parent_id is None)):
@@ -178,6 +179,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                     .query(relatives_cte)
                     .all())
 
+            if table == 'publishing' and composite_id == '12435,22' and local == 'xal':
+                A()
+
             for obj in changed_objects:
                 composite_id = key2str(obj.client_id, obj.object_id)
 
@@ -191,12 +195,16 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 columns = obj._asdict()
 
                 if debug_flag or True:
-                    whats_time(**{
+                    whats_time(no_caption=bool(count), **{
                         'Sync point': local_result['sync_point'],
                         'Updated at': obj.updated_at,
                         'Table': table,
+                        'Composite id': composite_id,
+                        'Deleted':
+                            obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'N/A',
                         'Content': columns.get('content', '')
                     })
+                    count += 1
 
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
                 columns.pop('_sa_instance_state', None)
@@ -415,7 +423,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             local_update = local_dict.get('updated_at')
             next_synced_at = max(next_synced_at, local_update)
 
-        for composite_id, foreign_dict in foreign_changes.items():
+        for i, (composite_id, foreign_dict) in enumerate(foreign_changes.items()):
             # Service keys e.g. 'warns'
             if re.match(r'^[\d,]+$', composite_id) is None:
                 continue
@@ -443,9 +451,8 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                         object_id=object_id)
                     .first())
 
-
             if debug_flag:
-                whats_time(**{
+                whats_time(no_caption=bool(i), **{
                     'Sync time': current_synced_at,
                     'Foreign update': foreign_update,
                     'Local update': local_update,
