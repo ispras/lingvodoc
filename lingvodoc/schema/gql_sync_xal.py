@@ -89,8 +89,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     sync_point = variables.get('sync_point')
 
     settings = request.registry.settings
-    desktop = settings['desktop']['desktop']
-    local = settings['desktop']['local']
+    local = settings['proxy']['local']
 
     # Get not local suffix from sync_between
     sync_between.remove(local)
@@ -191,7 +190,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
                 columns = obj._asdict()
 
-                if debug_flag:
+                if debug_flag or True:
                     whats_time(**{
                         'Sync point': local_result['sync_point'],
                         'Updated at': obj.updated_at,
@@ -270,7 +269,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             client_args = {
                 'id': client_id,
                 'user_id': user_id,
-                'is_browser_client': not desktop
+                'is_browser_client': True
             }
 
             client = Client(**client_args)
@@ -285,7 +284,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     if local != remote:
         # Changing req_path and req_data to query from remote server
-        if remote_server := settings['desktop'].get(f'{remote}_server'):
+        if remote_server := settings['proxy'].get(f'{remote}_server'):
             client_path = remote_server + 'api' + request.path
         else:
             raise NotImplementedError
@@ -353,7 +352,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
     message = []
     request = info.context.request
     settings = request.registry.settings
-    local = settings['desktop']['local']
+    local = settings['proxy']['local']
     sync_between.remove(local)
     remote = sync_between[0]
     storage_path = settings['storage']['path']
