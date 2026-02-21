@@ -276,9 +276,12 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
         return relatives
 
-    def process_db_objects(model, coid, suff):
+    def process_db_objects(*args):
+
+        model, _, _ = args
+
         try:
-            objects = get_db_objects(model, coid, suff)
+            objects = get_db_objects(*args)
             relatives = db_tree[model]
 
             def get_id(obj, suff):
