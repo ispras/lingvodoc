@@ -1,6 +1,5 @@
 from time import time as now
 from datetime import datetime
-from itertools import zip_longest as zipp
 import pickle
 import gzip
 import sys
@@ -8,7 +7,10 @@ import os
 import re
 import logging
 import traceback
+import requests
 from sqlalchemy import func
+from itertools import zip_longest, starmap
+from lingvodoc.schema.gql_holders import ResponseError
 
 from lingvodoc.models import (
     DBSession,
@@ -26,9 +28,6 @@ from lingvodoc.models import (
     PublishingEntity as dbPublishingEntity,
     ParserResult as dbParserResult
 )
-
-import requests
-from lingvodoc.schema.gql_holders import ResponseError
 
 '''
 from lingvodoc.cache.caching import TaskStatus
@@ -67,16 +66,28 @@ def key2str(*key):
 
 
 # For debugging
-def whats_time(no_caption=False, **epoch_times):
+def whats_time(epoch_times, no_caption=False):
+    headers = list(epoch_times.keys())
+    values = list(epoch_times.values())
+    next_values = list(epoch_times.values())[1:]
+
+    def cell(value, width):
+        return f"{str(value)[:width]:<{width}}"
+
+    def is_stamp(value):
+        return isinstance(value, float)
+
     if not no_caption:
-        print('\n' + ' || '.join(map(lambda k: f"{k[:19]:<19}", epoch_times.keys())))
-    for v1, v2 in zipp(list(epoch_times.values()), list(epoch_times.values())[1:]):
-        value = datetime.fromtimestamp(v1) if isinstance(v1, float) else v1
+        caption = ' || '.join(starmap(cell, headers))
+        print(f"\n{caption}")
+
+    for (_, w), v1, v2 in zip_longest(headers, values, next_values):
+        v = datetime.fromtimestamp(v1) if is_stamp(v1) else v1
         sign = (
             '\n' if v2 is None else
-            ' || ' if not isinstance(v2, float) else
+            ' || ' if not is_stamp(v2) else
             ' == ' if v1 == v2 else ' << ' if v1 < v2 else ' >> ')
-        print(f"{str(value)[:19]:<19}", end=sign)
+        print(cell(v, w), end=sign)
 
 
 def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
@@ -195,15 +206,15 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 columns = obj._asdict()
 
                 if debug_flag or True:
-                    whats_time(no_caption=bool(count), **{
-                        'Sync point': local_result['sync_point'],
-                        'Updated at': obj.updated_at,
-                        'Table': table,
-                        'Composite id': composite_id,
-                        'Deleted':
+                    whats_time({
+                        ('Sync point', 20): local_result['sync_point'],
+                        ('Updated at', 20): obj.updated_at,
+                        ('Table', 12): table,
+                        ('Id', 12): composite_id,
+                        ('Deleted', 12):
                             obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'N/A',
-                        'Content': columns.get('content', '')
-                    })
+                        ('Content', 20): columns.get('content', '')
+                    }, no_caption=bool(count))
                     count += 1
 
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
@@ -452,12 +463,13 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                     .first())
 
             if debug_flag:
-                whats_time(no_caption=bool(i), **{
-                    'Sync time': current_synced_at,
-                    'Foreign update': foreign_update,
-                    'Local update': local_update,
-                    'Table': table,
-                    'Foreign content': foreign_content})
+                whats_time({
+                    ('Sync time', 20): current_synced_at,
+                    ('Foreign update', 20): foreign_update,
+                    ('Local update', 20): local_update,
+                    ('Table', 12): table,
+                    ('Foreign content', 20): foreign_content
+                }, no_caption=bool(i))
 
             if db_object is None:
                 # Add new object
