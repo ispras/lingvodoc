@@ -239,21 +239,20 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                     .all())
 
             for obj in changed_objects:
-                composite_id = key2str(obj.client_id, obj.object_id)
+                composite_id = key2str(obj.client_id, obj.object_id, table)
 
                 if composite_id not in id_pool:
                     id_pool.add(composite_id)
                 else:
                     local_result['warns'].append(
-                        f"Objects double: {table=} and {composite_id=}")
+                        f"Object double: {composite_id=}")
                     continue
 
                 if debug_flag or True:
                     whats_time({
                         ('Sync point', 20): local_result['sync_point'],
                         ('Updated at', 20): obj.updated_at,
-                        ('Table', 12): table,
-                        ('Id', 12): composite_id,
+                        ('Composite id', 20): composite_id,
                         ('Deleted', 12):
                             obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'n/a',
                         ('Content', 20): getattr(obj, 'content', 'n/a')
@@ -263,7 +262,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 columns = obj._asdict()
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
                 columns.pop('_sa_instance_state', None)
-                local_result[composite_id] = {'table': table, **columns}
+                local_result[composite_id] = columns
 
         except Exception:
             traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
@@ -421,6 +420,9 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
         #db_perspective.updated_at = synced_at
 
+    def is_comp_id(comp_id):
+        return bool(re.match(r'^\d+,\d+,\w+$', comp_id))
+
     local_pickle_path = os.path.join(
         storage_path,
         f'{local}_sync',
@@ -455,7 +457,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
         # this time will be new sync_point (not real time)
         for composite_id, local_dict in local_changes.items():
             # Service keys e.g. 'warns'
-            if re.match(r'^[\d,]+$', composite_id) is None:
+            if not is_comp_id(composite_id):
                 continue
 
             local_update = local_dict.get('updated_at')
@@ -463,13 +465,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
         for i, (composite_id, foreign_dict) in enumerate(foreign_changes.items()):
             # Service keys e.g. 'warns'
-            if re.match(r'^[\d,]+$', composite_id) is None:
-                continue
-
-            # Get table name and delete it from the dict
-            # for further inserting of dict items into database
-            if (table := foreign_dict.pop('table', None)) is None:
-                print(f"No foreign table is set for {composite_id=}")
+            if not is_comp_id(composite_id):
                 continue
 
             local_dict = local_changes.get(composite_id, {})
@@ -478,8 +474,8 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             foreign_update = foreign_dict.get('updated_at')
             foreign_content = foreign_dict.get('content', '')
 
+            client_id, object_id, table = composite_id.split(',')
             model = db_model[table]
-            client_id, object_id = composite_id.split(',')
 
             db_object = (
                 DBSession
@@ -494,7 +490,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                     ('Sync time', 20): current_synced_at,
                     ('Foreign update', 20): foreign_update,
                     ('Local update', 20): local_update,
-                    ('Table', 12): table,
+                    ('Composite id', 20): composite_id,
                     ('Foreign content', 20): foreign_content
                 }, no_caption=bool(i))
 
@@ -504,7 +500,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                 DBSession.add(db_object)
 
                 if debug_flag:
-                    print(f"Added {table=}, {composite_id=}, {foreign_content=}")
+                    print(f"Added {composite_id=}, {foreign_content=}")
 
             elif foreign_update > local_update:
                 # Delete client_id and object_id
@@ -516,7 +512,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                     setattr(db_object, k, v)
 
                 if debug_flag:
-                    print(f"Updated {table=}, {composite_id=}, {foreign_content=}")
+                    print(f"Updated {composite_id=}, {foreign_content=}")
 
             next_synced_at = max(next_synced_at, foreign_update)
 
