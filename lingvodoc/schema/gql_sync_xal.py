@@ -18,7 +18,7 @@ from lingvodoc.models import (
     User,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
-    Field as dbFields,
+    Field as dbField,
     Entity as dbEntity,
     LexicalEntry as dbLexicalEntry,
     Dictionary as dbDictionary,
@@ -26,7 +26,8 @@ from lingvodoc.models import (
     DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
     DictionaryPerspective as dbDictionaryPerspective,
     PublishingEntity as dbPublishingEntity,
-    ParserResult as dbParserResult
+    ParserResult as dbParserResult,
+    Parser as dbParser
 )
 
 '''
@@ -43,21 +44,81 @@ from pdb import set_trace as A
 
 log = logging.getLogger(__name__)
 min_date = 1735689600.0  # 2025-01-01 00:00:00
-hidden = none = []
+none = ''
 
-# Tuples: (dbModel, parents, children)
-tree = {
-    'parserresult': (dbParserResult, ['entity'], none),
-    'publishing': (dbPublishingEntity, hidden, none),
-    'entity': (dbEntity, ['entity', 'field', 'publishing'], none),  # cycle
-    'lexical': (dbLexicalEntry, hidden, ['entity']),
-    'field': (dbFields, ['gist'], none),
-    'perstofield': (dbDictionaryPerspectiveToField, ['perstofield', 'field'], none),  # cycle
-    'perspective': (dbDictionaryPerspective, ['dictionary', 'gist'], ['perstofield', 'lexical']),
-    'dictionary': (dbDictionary, ['language', 'gist'], hidden),
-    'language': (dbLanguage, ['language', 'gist'], hidden),  # cycle
-    'atom': (dbTranslationAtom, hidden, none),
-    'gist': (dbTranslationGist, hidden, ['atom'])
+db_model = {
+    'Parser': dbParser,
+    'ParserResult': dbParserResult,
+    'PublishingEntity': dbPublishingEntity,
+    'Field': dbField,
+    'Entity': dbEntity,
+    'LexicalEntry': dbLexicalEntry,
+    'DictionaryPerspectiveToField': dbDictionaryPerspectiveToField,
+    'DictionaryPerspective': dbDictionaryPerspective,
+    'Dictionary': dbDictionary,
+    'Language': dbLanguage,
+    'TranslationGist': dbTranslationGist,
+    'TranslationAtom': dbTranslationAtom
+}
+
+# Tuple means relative: (his_dbModel, my_suffix, his_suffix)
+db_tree = {
+    dbParser: [],
+
+    dbParserResult: [
+        (dbParser, 'parser_', none)
+    ],
+
+    dbPublishingEntity: [],
+
+    dbField: [
+        (dbTranslationGist, 'translation_gist_', none),
+        (dbTranslationGist, 'data_type_translation_gist_', none)
+    ],
+
+    dbEntity: [
+        (dbPublishingEntity, none, none),
+        (dbField, 'field_', none),
+        (dbEntity, 'self_', none),
+        (dbLexicalEntry, 'link_', none),
+        (dbParserResult, none, 'entity_')
+    ],
+
+    dbLexicalEntry: [
+        (dbEntity, none, 'parent_')
+    ],
+
+    dbDictionaryPerspectiveToField: [
+        (dbDictionaryPerspective, 'link_', none),
+        (dbDictionaryPerspectiveToField, 'self_', none),
+        (dbField, 'field_', none)
+    ],
+
+    # Entry point
+    dbDictionaryPerspective: [
+        (dbDictionary, 'parent_', none),
+        (dbTranslationGist, 'translation_gist_', none),
+        (dbTranslationGist, 'state_translation_gist_', none),
+        (dbDictionaryPerspectiveToField, none, 'parent_'),
+        (dbLexicalEntry, none, 'parent_')
+    ],
+
+    dbDictionary: [
+        (dbLanguage, 'parent_', none),
+        (dbTranslationGist, 'translation_gist_', none),
+        (dbTranslationGist, 'state_translation_gist_', none)
+    ],
+
+    dbLanguage: [
+        (dbLanguage, 'parent_', none),
+        (dbTranslationGist, 'translation_gist_', none)
+    ],
+
+    dbTranslationGist: [
+        (dbTranslationAtom, none, 'parent_')
+    ],
+
+    dbTranslationAtom: []
 }
 
 
@@ -145,33 +206,20 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
         return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
 
-    def get_db_objects(dbModel, table, self_id=None, parent_id=None):
+    def get_db_objects(model, coid, suff):
+
         nonlocal count
+        table = model.__name__
+
         try:
-            if (dbModel is None or
-                    (self_id is None and parent_id is None)):
-                return []
-
-            if self_id is not None:
-                composite_id = key2str(self_id[0], self_id[1])
-
-                # Checking before request to database
-                if composite_id in id_pool:
-                    local_result['warns'].append(
-                        f"Objects double: {table=} and {composite_id=}")
-                    return []
-
-                dbFilter = [
-                    dbModel.client_id == self_id[0],
-                    dbModel.object_id == self_id[1]]
-            else:
-                dbFilter = [
-                    dbModel.parent_client_id == parent_id[0],
-                    dbModel.parent_object_id == parent_id[1]]
+            dbFilter = [
+                getattr(model, f'{suff}client_id') == coid[0],
+                getattr(model, f'{suff}object_id') == coid[1]
+            ]
 
             relatives_cte = (
                 DBSession
-                    .query(dbModel)
+                    .query(model)
                     .filter(*dbFilter)
                     .cte())
 
@@ -190,9 +238,6 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                     .query(relatives_cte)
                     .all())
 
-            if table == 'publishing' and composite_id == '12435,22' and local == 'xal':
-                A()
-
             for obj in changed_objects:
                 composite_id = key2str(obj.client_id, obj.object_id)
 
@@ -203,8 +248,6 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                         f"Objects double: {table=} and {composite_id=}")
                     continue
 
-                columns = obj._asdict()
-
                 if debug_flag or True:
                     whats_time({
                         ('Sync point', 20): local_result['sync_point'],
@@ -212,11 +255,12 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                         ('Table', 12): table,
                         ('Id', 12): composite_id,
                         ('Deleted', 12):
-                            obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'N/A',
-                        ('Content', 20): columns.get('content', '')
+                            obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'n/a',
+                        ('Content', 20): getattr(obj, 'content', 'n/a')
                     }, no_caption=bool(count))
                     count += 1
 
+                columns = obj._asdict()
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
                 columns.pop('_sa_instance_state', None)
                 local_result[composite_id] = {'table': table, **columns}
@@ -232,39 +276,19 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
         return relatives
 
-    def process_db_objects(table, ids):
+    def process_db_objects(model, coid, suff):
         try:
-            dbModel, parents, children = tree[table]
-            objects = get_db_objects(dbModel, table, **ids)
+            objects = get_db_objects(model, coid, suff)
+            relatives = db_tree[model]
+
+            def get_id(obj, suff):
+                return [
+                    getattr(obj, f"{suff}client_id"),
+                    getattr(obj, f"{suff}object_id")]
 
             for obj in objects:
-                for p_table in parents:
-                    p_ids = (
-                        {'self_id': (obj.self_client_id, obj.self_object_id)}
-                        if table == p_table == 'perstofield' or table == p_table == 'entity' else
-
-                        {'self_id': (obj.entity_client_id, obj.entity_object_id)}
-                        if p_table == 'entity' else
-
-                        {'self_id': (obj.field_client_id, obj.field_object_id)}
-                        if p_table == 'field' else
-
-                        {'self_id': (obj.translation_gist_client_id, obj.translation_gist_object_id)}
-                        if p_table == 'gist' else
-
-                        {'self_id': (obj.client_id, obj.object_id)}
-                        if p_table == 'publishing' else
-
-                        {'self_id': (obj.parent_client_id, obj.parent_object_id)}
-                    )
-                    if any(x is None for x in p_ids['self_id']):
-                        continue
-
-                    process_db_objects(p_table, p_ids)
-
-                for c_table in children:
-                    c_ids = {'parent_id': (obj.client_id, obj.object_id)}
-                    process_db_objects(c_table, c_ids)
+                for model, our_suff, his_suff in relatives:
+                    process_db_objects(model, get_id(obj, our_suff), his_suff)
 
         except Exception as e:
             print(str(e))
@@ -355,7 +379,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     # For remote query get 'sync_point' from request json
     # for local query get it from database
     local_result['sync_point'] = sync_point or get_sync_point()
-    process_db_objects('perspective', {'self_id': perspective_id})
+    process_db_objects(dbDictionaryPerspective, perspective_id, none)
 
     # Pickling by perspective id
     pickle_path = store_data(local, local_result)
@@ -392,7 +416,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             **perspective_metadata,
             f'{remote}_synced_at': synced_at}
 
-        db_perspective.updated_at = synced_at
+        #db_perspective.updated_at = synced_at
 
     local_pickle_path = os.path.join(
         storage_path,
@@ -451,7 +475,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             foreign_update = foreign_dict.get('updated_at')
             foreign_content = foreign_dict.get('content', '')
 
-            model, _, _ = tree[table]
+            model = db_model[table]
             client_id, object_id = composite_id.split(',')
 
             db_object = (
