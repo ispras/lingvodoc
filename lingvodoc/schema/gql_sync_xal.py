@@ -30,15 +30,8 @@ from lingvodoc.models import (
     Parser as dbParser
 )
 
-'''
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.queue.celery import celery
-from pyramid.security import authenticated_userid
-from lingvodoc.utils.proxy import try_proxy
-from psycopg2.extensions import AsIs
-from sqlalchemy import FLOAT
-import json
-'''
 
 from pdb import set_trace as A
 
@@ -140,7 +133,7 @@ def whats_time(epoch_times, no_caption=False):
 
     if not no_caption:
         caption = ' || '.join(starmap(cell, headers))
-        print(f"\n{caption}")
+        print(f"\n{caption}", flush=True)
 
     for (_, w), v1, v2 in zip_longest(headers, values, next_values):
         v = datetime.fromtimestamp(v1) if is_stamp(v1) else v1
@@ -170,6 +163,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     local_result = {'warns': []}
     id_pool = set()
     count = 0
+    repeats = 0
 
     def store_data(side, data):
         pickle_path = 'no_store'
@@ -209,7 +203,15 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     def get_db_objects(model, coid, suff):
 
         nonlocal count
+        nonlocal repeats
         table = model.__name__
+
+        # Controlling already processed elements
+        pool_item = key2str(*coid, table, suff)
+        if pool_item in id_pool:
+            repeats += 1
+            return []
+        id_pool.add(pool_item)
 
         try:
             dbFilter = [
@@ -241,14 +243,12 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             for obj in changed_objects:
                 composite_id = key2str(obj.client_id, obj.object_id, table)
 
-                if composite_id not in id_pool:
-                    id_pool.add(composite_id)
-                else:
-                    local_result['warns'].append(
-                        f"Object double: {composite_id=}")
-                    continue
+                columns = obj._asdict()
+                # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
+                columns.pop('_sa_instance_state', None)
+                local_result[composite_id] = columns
 
-                if debug_flag or True:
+                if debug_flag:
                     whats_time({
                         ('Sync point', 20): local_result['sync_point'],
                         ('Updated at', 20): obj.updated_at,
@@ -257,12 +257,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                             obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'n/a',
                         ('Content', 20): getattr(obj, 'content', 'n/a')
                     }, no_caption=bool(count))
-                    count += 1
 
-                columns = obj._asdict()
-                # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
-                columns.pop('_sa_instance_state', None)
-                local_result[composite_id] = columns
+                count += 1
 
         except Exception:
             traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
@@ -365,7 +361,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             pickle_path = store_data(remote, remote_result)
 
             if debug_flag:
-                print(f'\nFOREIGN ({pickle_path} <- {remote}): {now()=} {str(remote_result)[-500:]=}')
+                print(f'Foreign stored: {pickle_path} <- {remote}')
 
             return remote_result
         else:
@@ -378,6 +374,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     task.set(1, 1, "Started", "")
     '''
 
+    if debug_flag:
+        print('\nPreparing sync...')
+
     # For remote query get 'sync_point' from request json
     # for local query get it from database
     local_result['sync_point'] = sync_point or get_sync_point()
@@ -387,7 +386,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     pickle_path = store_data(local, local_result)
 
     if debug_flag:
-        print(f'\nLOCAL ({local} -> {pickle_path}): {now()=} {str(local_result)[-500:]=}')
+        print(f'\nSkipped repeats: {repeats}')
+        print(f'Local stored: {local} -> {pickle_path}')
 
     return local_result
 
@@ -463,7 +463,12 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             local_update = local_dict.get('updated_at')
             next_synced_at = max(next_synced_at, local_update)
 
-        for i, (composite_id, foreign_dict) in enumerate(foreign_changes.items()):
+        if debug_flag:
+            print('\nApplying sync...')
+
+        count = 0
+
+        for composite_id, foreign_dict in foreign_changes.items():
             # Service keys e.g. 'warns'
             if not is_comp_id(composite_id):
                 continue
@@ -485,22 +490,14 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                         object_id=object_id)
                     .first())
 
-            if debug_flag:
-                whats_time({
-                    ('Sync time', 20): current_synced_at,
-                    ('Foreign update', 20): foreign_update,
-                    ('Local update', 20): local_update,
-                    ('Composite id', 20): composite_id,
-                    ('Foreign content', 20): foreign_content
-                }, no_caption=bool(i))
+            action = 'n/a'
 
             if db_object is None:
                 # Add new object
                 db_object = model(**foreign_dict)
                 DBSession.add(db_object)
 
-                if debug_flag:
-                    print(f"Added {composite_id=}, {foreign_content=}")
+                action = 'added'
 
             elif foreign_update > local_update:
                 # Delete client_id and object_id
@@ -511,18 +508,31 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                 for k, v in foreign_dict.items():
                     setattr(db_object, k, v)
 
-                if debug_flag:
-                    print(f"Updated {composite_id=}, {foreign_content=}")
+                action = 'updated'
 
             next_synced_at = max(next_synced_at, foreign_update)
 
-        set_synced_at(next_synced_at)
-        DBSession.flush()
+            if debug_flag:
+                whats_time({
+                    ('Sync time', 20): current_synced_at,
+                    ('Foreign update', 20): foreign_update,
+                    ('Local update', 20): local_update,
+                    ('Action', 8): action,
+                    ('Composite id', 20): composite_id,
+                    ('Foreign content', 20): foreign_content
+                }, no_caption=bool(count))
+
+            count += 1
+
+        if next_synced_at > current_synced_at:
+            set_synced_at(next_synced_at)
+            DBSession.flush()
+
         os.remove(local_pickle_path)
         os.remove(foreign_pickle_path)
 
         if debug_flag:
-            print("=" * 20 + "\n")
+            print('\nComplete!')
 
         return {'triumph': True, 'message': message}
 
