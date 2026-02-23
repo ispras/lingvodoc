@@ -329,6 +329,7 @@ def signin(request):
     login = req['login']
     password = req['password']
     desktop = req.get('desktop', False)
+    proxy = req.get('proxy', False)
 
     user = DBSession.query(User).filter_by(login=login).first()
 
@@ -409,6 +410,7 @@ def desk_signin(request):
 
     try:
         settings = request.registry.settings
+        isp_server = settings['proxy']['isp_server']
         adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
 
         # Get and set session
@@ -418,7 +420,7 @@ def desk_signin(request):
 
         # Get client info and auth_tokens
         client_req = {**request.json_body, 'desktop': True}
-        client_path = settings['desktop']['central_server'] + 'api/signin'
+        client_path = isp_server + 'api/signin'
         client_resp = session.post(client_path, json=client_req)  # request
         client_json = client_resp.json()
         client_dict = client_json if type(client_json) is dict else json.loads(client_json)
@@ -437,7 +439,7 @@ def desk_signin(request):
                         **subdict(
                             client_dict, 'id', 'user_id', 'is_browser_client')))
 
-            user_path = settings['desktop']['central_server'] + 'api/user'
+            user_path = isp_server + 'api/user'
             user_json = session.get(user_path).json()
             user_dict = user_json if type(user_json) is dict else json.loads(user_json)
 
@@ -495,7 +497,7 @@ def new_client_server(request):
 def new_client(request):
     settings = request.registry.settings
 
-    path = settings['desktop']['central_server'] + 'sync/client/server'
+    path = settings['proxy']['isp_server'] + 'api/sync/client/server'
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)

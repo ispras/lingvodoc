@@ -8,7 +8,7 @@ class ProxyPass(Exception):
         super().__init__(message)
         self.message = str(message)
         settings = request.registry.settings
-        path = settings['desktop']['central_server'] + 'api' + request.path
+        path = settings['proxy']['isp_server'] + 'api' + request.path
         server_cookies = request.cookies.get('server_cookies')
         if server_cookies:
             cookies = json.loads(request.cookies.get('server_cookies'))
@@ -45,5 +45,5 @@ class ProxyPass(Exception):
 
 def try_proxy(request):
     settings = request.registry.settings
-    if settings.get('desktop'):
+    if settings.get('proxy'):
         raise ProxyPass(message="", request=request)

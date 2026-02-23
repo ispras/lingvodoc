@@ -869,7 +869,7 @@ def all_locales(request):
 @view_config(route_name='all_locales_desktop', renderer='json', request_method='GET')
 def all_locales_desktop(request):
     settings = request.registry.settings
-    path = settings['desktop']['central_server'] + 'all_locales'
+    path = settings['proxy']['isp_server'] + 'all_locales'
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)

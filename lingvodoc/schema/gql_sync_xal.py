@@ -14,8 +14,8 @@ from lingvodoc.schema.gql_holders import ResponseError
 
 from lingvodoc.models import (
     DBSession,
-    Client,
-    User,
+    Client as dbClient,
+    User as dbUser,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     Field as dbField,
@@ -162,6 +162,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     local_result = {'warns': []}
     id_pool = set()
+    clients = set()
     count = 0
     repeats = 0
 
@@ -199,6 +200,19 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         )[0] or {}
 
         return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
+
+    def client_list():
+
+        result = (
+            DBSession
+                .query(
+                    dbClient.id,
+                    dbClient.user_id)
+                .filter(
+                    dbClient.id.in_(clients))
+                .distinct().all())
+
+        return result
 
     def get_db_objects(model, coid, suff):
 
@@ -241,11 +255,13 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                     .all())
 
             for obj in changed_objects:
-                composite_id = key2str(obj.client_id, obj.object_id, table)
+                clients.add(obj.client_id)
 
-                columns = obj._asdict()
                 # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
+                columns = obj._asdict()
                 columns.pop('_sa_instance_state', None)
+
+                composite_id = key2str(obj.client_id, obj.object_id, table)
                 local_result[composite_id] = columns
 
                 if debug_flag:
@@ -297,13 +313,13 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     ### Create client if it absents on remote server ###
 
-    if not (client := DBSession.query(Client).filter_by(id=client_id).first()):
+    if not (client := DBSession.query(dbClient).filter_by(id=client_id).first()):
         if local == 'isp':
             raise ResponseError('try to login again')
         else:
             if user_id is None:
                 raise ResponseError('no user id is in request')
-            if not (user := DBSession.query(User).filter_by(id=user_id).first()):
+            if not (user := DBSession.query(dbUser).filter_by(id=user_id).first()):
                 raise ResponseError('no such user is in db')
 
             # Add new client
@@ -313,12 +329,12 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 'is_browser_client': True
             }
 
-            client = Client(**client_args)
+            client = dbClient(**client_args)
             user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
     else:
-        if not (user_id := Client.get_user_by_client_id(client_id).id):
+        if not (user_id := dbClient.get_user_by_client_id(client_id).id):
             raise ResponseError(f'no any user for this {client_id=}')
 
     ##### Cross-server query #####
@@ -381,6 +397,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     # for local query get it from database
     local_result['sync_point'] = sync_point or get_sync_point()
     process_db_objects(dbDictionaryPerspective, perspective_id, none)
+
+    if local == 'isp' and sync_point is not None:
+        local_result['clients'] = client_list()
 
     # Pickling by perspective id
     pickle_path = store_data(local, local_result)
@@ -452,6 +471,22 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
     try:
         current_synced_at = local_changes['sync_point']
         next_synced_at = current_synced_at
+
+        # Adding users and clients met in perspective into remote database
+        if local != 'isp':
+            client_list = foreign_changes['clients']
+            for client_id, user_id in client_list:
+
+                if not (user := DBSession.query(dbUser).filter_by(id=user_id).first()):
+                    user = dbUser(id=user_id)
+                    DBSession.add(user)
+
+                if not DBSession.query(dbClient).filter_by(id=client_id).first():
+                    client = dbClient(id=client_id, user_id=user_id)
+                    DBSession.add(client)
+                    user.clients.append(client)
+
+            DBSession.flush()
 
         # Iterate by local changes to get maximal updating point
         # this time will be new sync_point (not real time)
