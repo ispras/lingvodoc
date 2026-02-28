@@ -56,6 +56,7 @@ import sklearn.metrics
 import sklearn.mixture
 
 import sqlalchemy
+import requests
 
 from sqlalchemy import (
     and_,
@@ -387,6 +388,7 @@ from operator import attrgetter
 
 from lingvodoc.scripts.list_cognates import entities_getter
 from lingvodoc.utils.proxy import ProxyPass
+from lingvodoc.schema.gql_sync_xal import store_data
 
 from pdb import set_trace as A
 
@@ -688,6 +690,7 @@ class Query(graphene.ObjectType):
             grant_id = graphene.Int(),
             by_organizations = graphene.Boolean(),
             organization_id = graphene.Int(),
+            proxy = graphene.Boolean(),
             debug_flag = graphene.Boolean()))
 
     fill_logs = graphene.String(worker = graphene.Int())
@@ -752,9 +755,14 @@ class Query(graphene.ObjectType):
         grant_id = None,
         by_organizations = False,
         organization_id = None,
+        proxy = False,
         debug_flag = False):
 
         try:
+            request = info.context.request
+
+            if proxy:
+                try_proxy(request)
 
             language_field_asts = []
 
@@ -983,11 +991,16 @@ class Query(graphene.ObjectType):
                     pprint.pformat(
                         tree_object, width = 144))
 
+            A()
             return (
 
                 LanguageTree(
                     tree = tree_object,
                     languages = gql_language_list))
+
+        except ProxyPass as e:
+            A()
+            return e.response_body
 
         except Exception as exception:
 
@@ -1814,129 +1827,132 @@ class Query(graphene.ObjectType):
         tasks = [Task(**task_dict) for task_dict in tasks_dicts]
         return tasks
 
-    def resolve_permission_lists(self, info, proxy):
-        request = info.context.request
+    def resolve_permission_lists(self, info, proxy, debug_flag=True):
 
         try:
+            request = info.context.request
+
             if proxy:
-                return try_proxy(request)
-        except ProxyPass as e:
-            pass
-            #print(e.response_body)
-            #A()
+                try_proxy(request)
 
-        client_id = info.context.client_id
+            client_id = info.context.client_id
 
-        subreq = Request.blank('/translation_service_search')
-        subreq.method = 'POST'
-        subreq.headers = request.headers
-        headers = dict()
-        if request.headers.get('Cookie'):
-            headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        subreq.json = {'searchstring': 'Published'}
-        resp = request.invoke_subrequest(subreq)
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            headers = dict()
+            if request.headers.get('Cookie'):
+                headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            subreq.json = {'searchstring': 'Published'}
+            resp = request.invoke_subrequest(subreq)
 
-        if 'error' not in resp.json:
-            published_gist_object_id, published_gist_client_id = resp.json['object_id'], resp.json['client_id']
-        else:
-            raise KeyError("Something wrong with the base", resp.json['error'])
+            if 'error' not in resp.json:
+                published_gist_object_id, published_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            else:
+                raise KeyError("Something wrong with the base", resp.json['error'])
 
-        subreq = Request.blank('/translation_service_search')
-        subreq.method = 'POST'
-        subreq.headers = request.headers
-        headers = dict()
-        if request.headers.get('Cookie'):
-            headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        subreq.json = {'searchstring': 'Limited access'}  # todo: fix
-        resp = request.invoke_subrequest(subreq)
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            headers = dict()
+            if request.headers.get('Cookie'):
+                headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            subreq.json = {'searchstring': 'Limited access'}  # todo: fix
+            resp = request.invoke_subrequest(subreq)
 
-        if 'error' not in resp.json:
-            limited_gist_object_id, limited_gist_client_id = resp.json['object_id'], resp.json['client_id']
-        else:
-            raise KeyError("Something wrong with the base", resp.json['error'])
+            if 'error' not in resp.json:
+                limited_gist_object_id, limited_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            else:
+                raise KeyError("Something wrong with the base", resp.json['error'])
 
 
-        dblimited = DBSession.query(dbPerspective).filter(
-            and_(dbPerspective.state_translation_gist_client_id == limited_gist_client_id,
-                 dbPerspective.state_translation_gist_object_id == limited_gist_object_id)
-        )
+            dblimited = DBSession.query(dbPerspective).filter(
+                and_(dbPerspective.state_translation_gist_client_id == limited_gist_client_id,
+                     dbPerspective.state_translation_gist_object_id == limited_gist_object_id)
+            )
 
-        # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
-        limited = list()
-        for dbperspective in dblimited.all():
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='limited'
-            limited.append(perspective)
-            # fulfill_permissions_on_perspectives(intermediate, pers, limited_perms)
+            # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
+            limited = list()
+            for dbperspective in dblimited.all():
+                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
+                perspective.dbObject = dbperspective
+                perspective.list_name='limited'
+                limited.append(perspective)
+                # fulfill_permissions_on_perspectives(intermediate, pers, limited_perms)
 
 
-        dbpublished = DBSession.query(dbPerspective).filter(
-            and_(dbPerspective.state_translation_gist_client_id == published_gist_client_id,
-                 dbPerspective.state_translation_gist_object_id == published_gist_object_id)
-        )
-        existing = list()
-        view = list()
-        for dbperspective in dbpublished.all():
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='view'
-            view.append(perspective)
-            existing.append([dbperspective.client_id, dbperspective.object_id])
-
-        if not client_id:
-            return Permissions(limited=limited, view=view, edit=list(), publish=list())
-
-        user = DBSession.query(Client).filter(client_id == Client.id).first()
-        if not user:
-            return None
-        user_id = user.user_id
-        editor_basegroup = DBSession.query(dbBaseGroup).filter(
-            and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
-        editable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
-            dbPerspective.client_id == dbGroup.subject_client_id,
-            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
-            and_(dbUser.id == user_id,
-                 dbGroup.base_group_id == editor_basegroup.id,
-                 dbPerspective.marked_for_deletion == False)).all()
-        edit = list()
-        for dbperspective in editable_perspectives:
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='edit'
-            edit.append(perspective)
-
-        reader_basegroup = DBSession.query(dbBaseGroup).filter(
-            and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
-        readable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
-            dbPerspective.client_id == dbGroup.subject_client_id,
-            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
-            and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
-
-        view = list()
-        for dbperspective in readable_perspectives:
-            if [dbperspective.client_id, dbperspective.object_id] not in existing:
+            dbpublished = DBSession.query(dbPerspective).filter(
+                and_(dbPerspective.state_translation_gist_client_id == published_gist_client_id,
+                     dbPerspective.state_translation_gist_object_id == published_gist_object_id)
+            )
+            existing = list()
+            view = list()
+            for dbperspective in dbpublished.all():
                 perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
                 perspective.dbObject = dbperspective
                 perspective.list_name='view'
                 view.append(perspective)
+                existing.append([dbperspective.client_id, dbperspective.object_id])
 
-        publisher_basegroup = DBSession.query(dbBaseGroup).filter(
-            and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
+            if not client_id:
+                return Permissions(limited=limited, view=view, edit=list(), publish=list())
 
-        approvable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
-            dbPerspective.client_id == dbGroup.subject_client_id,
-            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
-            and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
-        publish = list()
-        for dbperspective in approvable_perspectives:
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='publish'
-            publish.append(perspective)
-        return Permissions(limited=limited, view=view, edit=edit, publish=publish)
+            user = DBSession.query(Client).filter(client_id == Client.id).first()
+            if not user:
+                return None
+            user_id = user.user_id
+            editor_basegroup = DBSession.query(dbBaseGroup).filter(
+                and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
+            editable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+                dbPerspective.client_id == dbGroup.subject_client_id,
+                dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+                and_(dbUser.id == user_id,
+                     dbGroup.base_group_id == editor_basegroup.id,
+                     dbPerspective.marked_for_deletion == False)).all()
+            edit = list()
+            for dbperspective in editable_perspectives:
+                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
+                perspective.dbObject = dbperspective
+                perspective.list_name='edit'
+                edit.append(perspective)
+
+            reader_basegroup = DBSession.query(dbBaseGroup).filter(
+                and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
+            readable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+                dbPerspective.client_id == dbGroup.subject_client_id,
+                dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+                and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
+
+            view = list()
+            for dbperspective in readable_perspectives:
+                if [dbperspective.client_id, dbperspective.object_id] not in existing:
+                    perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
+                    perspective.dbObject = dbperspective
+                    perspective.list_name='view'
+                    view.append(perspective)
+
+            publisher_basegroup = DBSession.query(dbBaseGroup).filter(
+                and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
+
+            approvable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+                dbPerspective.client_id == dbGroup.subject_client_id,
+                dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+                and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
+            publish = list()
+            for dbperspective in approvable_perspectives:
+                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
+                perspective.dbObject = dbperspective
+                perspective.list_name='publish'
+                publish.append(perspective)
+            return Permissions(limited=limited, view=view, edit=edit, publish=publish)
+
+        except ProxyPass as e:
+            if debug_flag:
+                print('Getting data from response body...')
+            permission_lists = e.response_data.get('permission_lists', {})
+            return Permissions(**permission_lists)
 
 
     def resolve_advanced_search(
@@ -2176,13 +2192,8 @@ class Query(graphene.ObjectType):
         """
         request = info.context.request
 
-        try:
-            if proxy:
-                try_proxy(request)
-        except ProxyPass as e:
-            pass
-            #print(e.response_body)
-            #A()
+        if proxy:
+            try_proxy(request)
 
         client_id = info.context.client_id
         client = DBSession.query(Client).filter_by(id=client_id).first()

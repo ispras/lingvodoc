@@ -307,7 +307,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         except Exception as e:
             print(str(e))
 
-    # Get client_id from security data or from json_body (set manually)
+    # Get client_id from security data
     if not (client_id := request.authenticated_userid):
         raise ResponseError('no client_id is in request')
 
@@ -353,7 +353,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         session.mount('http://', adapter)
 
         variables = {
-            **request.json_body['variables'],
+            **request.json_body.get('variables', {}),
             'user_id': user_id,
             'sync_point': get_sync_point()
         }

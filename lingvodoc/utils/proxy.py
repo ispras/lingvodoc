@@ -1,6 +1,7 @@
 __author__ = 'student'
 import requests
 import json
+from distutils.util import strtobool
 from pdb import set_trace as A
 
 class ProxyPass(Exception):
@@ -37,13 +38,24 @@ class ProxyPass(Exception):
         #session.cookies.set("server_cookies", request.cookies.get('server_cookies'))
         # for key in cookies:
         #     session.cookies.set(key, cookies[key])
-        status = session.post(path, data=request.body, headers=session.headers, cookies=cookies)
+
+        # Changing proxy flag to false
+        json_data = {
+            **request.json_body,
+            'variables': {
+                **(request.json_body.get('variables', {})),
+                'proxy': False
+            }
+        }
+
+        status = session.post(path, json=json_data, headers=session.headers, cookies=cookies)
         #print(status.request)
 
         self.response_body = status.content
+        self.response_data = status.json().get('data', {})
 
 
 def try_proxy(request):
     settings = request.registry.settings
-    if settings.get('proxy'):
+    if strtobool(settings.get('proxy', {}).get('proxy')):
         raise ProxyPass(message="", request=request)

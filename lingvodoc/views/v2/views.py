@@ -82,7 +82,7 @@ from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
     view_field_from_object)
-
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -1399,6 +1399,7 @@ def graphql(request):
         return result
 
     except ProxyPass as e:
+        print('!!! Returning proxy response_body !!!')
         return e.response_body
 
     except KeyError as e:
