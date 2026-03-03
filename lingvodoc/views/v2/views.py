@@ -1320,7 +1320,6 @@ def graphql(request):
             # Single query.
 
             result = (
-
                 schema.execute(
                     request_string,
                     context_value = context,
@@ -1365,11 +1364,14 @@ def graphql(request):
 
                         error_list.append(error)
 
-                sp.rollback()
+                else:
+                    # The following works if no break was in the loop
 
-                result = {
-                    'data': None,
-                    'errors': [{'message': str(e)} for e in error_list]}
+                    sp.rollback()
+
+                    result = {
+                        'data': None,
+                        'errors': [{'message': str(e)} for e in error_list]}
 
             else:
 
@@ -1397,10 +1399,6 @@ def graphql(request):
         result['time_process'] = t_elapsed_process
 
         return result
-
-    except ProxyPass as e:
-        print('!!! Returning proxy response_body !!!')
-        return e.response_body
 
     except KeyError as e:
         # request.response.status = HTTPBadRequest.code

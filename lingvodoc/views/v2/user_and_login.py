@@ -64,6 +64,10 @@ from pdb import set_trace as A
 log = logging.getLogger(__name__)
 
 
+def subdict(source, *keys):
+    return dict((k, source[k]) for k in keys if k in source)
+
+
 @view_config(route_name='signup', renderer='templates/signup.pt', request_method='GET')
 def signup_get(request):
     variables = {'auth': authenticated_userid(request)}
@@ -392,9 +396,6 @@ def desk_signin(request):
         resp.set_cookie('server_cookies', value=json.dumps(cookies), **common_args)
 
         return resp
-
-    def subdict(source, *keys):
-        return dict((k, source[k]) for k in keys if k in source)
 
     def new_in_base(*filters):
         exists = (

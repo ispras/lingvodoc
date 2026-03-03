@@ -388,7 +388,7 @@ from operator import attrgetter
 
 from lingvodoc.scripts.list_cognates import entities_getter
 from lingvodoc.utils.proxy import ProxyPass
-from lingvodoc.schema.gql_sync_xal import store_data
+from lingvodoc.views.v2.user_and_login import subdict
 
 from pdb import set_trace as A
 
@@ -991,16 +991,11 @@ class Query(graphene.ObjectType):
                     pprint.pformat(
                         tree_object, width = 144))
 
-            A()
             return (
 
                 LanguageTree(
                     tree = tree_object,
                     languages = gql_language_list))
-
-        except ProxyPass as e:
-            A()
-            return e.response_body
 
         except Exception as exception:
 
@@ -1829,6 +1824,27 @@ class Query(graphene.ObjectType):
 
     def resolve_permission_lists(self, info, proxy, debug_flag=True):
 
+        permission_lists = collections.defaultdict(list)
+
+        def fill_permission_list(input_list, list_name, to_exclude=tuple()):
+            existing = list()
+
+            for dbperspective in input_list:
+                is_dbobject = type(dbperspective) is not dict
+
+                dbperspective_id = (
+                    [dbperspective.client_id, dbperspective.object_id] if is_dbobject else dbperspective['id'])
+
+                if dbperspective_id not in to_exclude:
+                    perspective = Perspective(id=dbperspective_id)
+                    if is_dbobject:
+                        perspective.dbObject = dbperspective
+                    perspective.list_name = list_name
+                    permission_lists[list_name].append(perspective)
+                    existing.append(dbperspective_id)
+
+            return tuple(existing)
+
         try:
             request = info.context.request
 
@@ -1852,13 +1868,6 @@ class Query(graphene.ObjectType):
             else:
                 raise KeyError("Something wrong with the base", resp.json['error'])
 
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            headers = dict()
-            if request.headers.get('Cookie'):
-                headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
             subreq.json = {'searchstring': 'Limited access'}  # todo: fix
             resp = request.invoke_subrequest(subreq)
 
@@ -1867,6 +1876,7 @@ class Query(graphene.ObjectType):
             else:
                 raise KeyError("Something wrong with the base", resp.json['error'])
 
+            ### Limited permissions ###
 
             dblimited = DBSession.query(dbPerspective).filter(
                 and_(dbPerspective.state_translation_gist_client_id == limited_gist_client_id,
@@ -1874,35 +1884,29 @@ class Query(graphene.ObjectType):
             )
 
             # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
-            limited = list()
-            for dbperspective in dblimited.all():
-                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-                perspective.dbObject = dbperspective
-                perspective.list_name='limited'
-                limited.append(perspective)
-                # fulfill_permissions_on_perspectives(intermediate, pers, limited_perms)
+            fill_permission_list(dblimited.all(), 'limited')
 
+            ### View permissions ###
 
             dbpublished = DBSession.query(dbPerspective).filter(
                 and_(dbPerspective.state_translation_gist_client_id == published_gist_client_id,
                      dbPerspective.state_translation_gist_object_id == published_gist_object_id)
             )
-            existing = list()
-            view = list()
-            for dbperspective in dbpublished.all():
-                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-                perspective.dbObject = dbperspective
-                perspective.list_name='view'
-                view.append(perspective)
-                existing.append([dbperspective.client_id, dbperspective.object_id])
+
+            existing = fill_permission_list(dbpublished.all(), 'view')
 
             if not client_id:
-                return Permissions(limited=limited, view=view, edit=list(), publish=list())
+                return Permissions(**permission_lists, edit=list(), publish=list())
 
             user = DBSession.query(Client).filter(client_id == Client.id).first()
+
             if not user:
                 return None
+
             user_id = user.user_id
+
+            ### Edit permissions ###
+
             editor_basegroup = DBSession.query(dbBaseGroup).filter(
                 and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
             editable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
@@ -1911,12 +1915,13 @@ class Query(graphene.ObjectType):
                 and_(dbUser.id == user_id,
                      dbGroup.base_group_id == editor_basegroup.id,
                      dbPerspective.marked_for_deletion == False)).all()
-            edit = list()
-            for dbperspective in editable_perspectives:
-                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-                perspective.dbObject = dbperspective
-                perspective.list_name='edit'
-                edit.append(perspective)
+
+            fill_permission_list(editable_perspectives, 'edit')
+
+            ### View personal permissions ###
+
+            # Cleaning up view permissions
+            permission_lists['view'] = list()
 
             reader_basegroup = DBSession.query(dbBaseGroup).filter(
                 and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
@@ -1925,13 +1930,9 @@ class Query(graphene.ObjectType):
                 dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
                 and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
 
-            view = list()
-            for dbperspective in readable_perspectives:
-                if [dbperspective.client_id, dbperspective.object_id] not in existing:
-                    perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-                    perspective.dbObject = dbperspective
-                    perspective.list_name='view'
-                    view.append(perspective)
+            fill_permission_list(readable_perspectives, 'view', existing)
+
+            ### Publish permissions ###
 
             publisher_basegroup = DBSession.query(dbBaseGroup).filter(
                 and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
@@ -1940,18 +1941,24 @@ class Query(graphene.ObjectType):
                 dbPerspective.client_id == dbGroup.subject_client_id,
                 dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
                 and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
-            publish = list()
-            for dbperspective in approvable_perspectives:
-                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-                perspective.dbObject = dbperspective
-                perspective.list_name='publish'
-                publish.append(perspective)
-            return Permissions(limited=limited, view=view, edit=edit, publish=publish)
+
+            fill_permission_list(approvable_perspectives, 'publish')
+
+            return Permissions(**permission_lists)
 
         except ProxyPass as e:
             if debug_flag:
                 print('Getting data from response body...')
-            permission_lists = e.response_data.get('permission_lists', {})
+
+            permission_lists = collections.defaultdict(list)
+
+            permissions = 'view', 'edit', 'publish', 'limited'
+            permission_lists_of_dicts = subdict(
+                e.response_data.get('permission_lists', {}), *permissions)
+
+            for list_name in permissions:
+                fill_permission_list(permission_lists_of_dicts[list_name], list_name)
+
             return Permissions(**permission_lists)
 
 
