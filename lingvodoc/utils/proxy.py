@@ -58,4 +58,5 @@ class ProxyPass(Exception):
 def try_proxy(request):
     settings = request.registry.settings
     if strtobool(settings.get('proxy', {}).get('proxy')):
-        raise ProxyPass(message="", request=request)
+        raise ProxyPass(
+            message="This exception is not an error. It is for internal purposes", request=request)

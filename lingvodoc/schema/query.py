@@ -997,6 +997,11 @@ class Query(graphene.ObjectType):
                     tree = tree_object,
                     languages = gql_language_list))
 
+        # ProxyPass exception is used to skip other computations in schema
+        # and to keep data from remote host. This exception block is important
+        except ProxyPass:
+            raise
+
         except Exception as exception:
 
             traceback_string = (
@@ -1946,6 +1951,12 @@ class Query(graphene.ObjectType):
 
             return Permissions(**permission_lists)
 
+        # ProxyPass exception is used to skip other computations in schema
+        # and to keep data from remote host. This exception block is important
+        except ProxyPass:
+            raise
+
+        '''
         except ProxyPass as e:
             if debug_flag:
                 print('Getting data from response body...')
@@ -1960,7 +1971,7 @@ class Query(graphene.ObjectType):
                 fill_permission_list(permission_lists_of_dicts[list_name], list_name)
 
             return Permissions(**permission_lists)
-
+        '''
 
     def resolve_advanced_search(
         self,

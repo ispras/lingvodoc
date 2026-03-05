@@ -1344,7 +1344,7 @@ def graphql(request):
                     # If it's a proxy error, we return it directly apparently?
 
                     if (hasattr(error, 'original_error') and
-                        type(error.original_error) == ProxyPass):
+                       type(error.original_error) == ProxyPass):
 
                         result = json.loads(error.original_error.response_body.decode("utf-8"))
                         break
