@@ -52,7 +52,7 @@ class ProxyPass(Exception):
         #print(status.request)
 
         self.response_body = status.content
-        self.response_data = status.json().get('data', {})
+        self.response_json = status.json()
 
 
 def try_proxy(request):
