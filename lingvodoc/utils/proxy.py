@@ -4,12 +4,24 @@ import json
 from distutils.util import strtobool
 from pdb import set_trace as A
 
+
 class ProxyPass(Exception):
-    def __init__(self, message, request):
+    def __init__(self, request, sync_between=('isp', 'xal'), message=None):
+        settings = request.registry.settings
+        local = settings['proxy']['local']
+        remote = sync_between[not sync_between.index(local)]  # 0'th or 1'st
+
+        if remote_server := settings['proxy'].get(f'{remote}_server'):
+            path = remote_server + 'api' + request.path
+        else:
+            raise NotImplementedError
+
+        if message is None:
+            message = f"It's not an error, just request was redirected to {remote_server=}"
+
         super().__init__(message)
         self.message = str(message)
-        settings = request.registry.settings
-        path = settings['proxy']['isp_server'] + 'api' + request.path
+
         server_cookies = request.cookies.get('server_cookies')
         if server_cookies:
             cookies = json.loads(request.cookies.get('server_cookies'))
@@ -55,8 +67,5 @@ class ProxyPass(Exception):
         self.response_json = status.json()
 
 
-def try_proxy(request):
-    settings = request.registry.settings
-    if strtobool(settings.get('proxy', {}).get('proxy')):
-        raise ProxyPass(
-            message="This exception is not an error. It is for internal purposes", request=request)
+def try_proxy(*args):
+    raise ProxyPass(*args)

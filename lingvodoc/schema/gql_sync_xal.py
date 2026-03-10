@@ -157,8 +157,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     local = settings['proxy']['local']
 
     # Get not local suffix from sync_between
-    sync_between.remove(local)
-    sync_for = sync_between[0]
+    sync_for = sync_between[not sync_between.index(local)]
 
     local_result = {'warns': []}
     id_pool = set()
@@ -417,8 +416,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
     request = info.context.request
     settings = request.registry.settings
     local = settings['proxy']['local']
-    sync_between.remove(local)
-    remote = sync_between[0]
+    remote = sync_between[not sync_between.index(local)]
     storage_path = settings['storage']['path']
 
     def set_synced_at(synced_at):
