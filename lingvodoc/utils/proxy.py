@@ -56,7 +56,7 @@ class ProxyPass(Exception):
             **request.json_body,
             'variables': {
                 **(request.json_body.get('variables', {})),
-                'proxy': False
+                'cross_request': True
             }
         }
 
