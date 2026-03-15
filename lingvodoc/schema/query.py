@@ -994,6 +994,7 @@ class Query(graphene.ObjectType):
             return (
 
                 LanguageTree(
+                    proxy = proxy,
                     tree = tree_object,
                     languages = gql_language_list))
 

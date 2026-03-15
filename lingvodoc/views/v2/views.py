@@ -1169,7 +1169,7 @@ def graphql(request):
     try:
         try:
             variables = request.json_body.get('variables', {})
-            proxy = variables.get('proxy') and not variables.get('cross_request')
+            proxy = variables.get('proxy')
 
             t_start_real, t_start_process = (
                 time.time(), time.process_time())

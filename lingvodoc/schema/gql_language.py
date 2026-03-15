@@ -965,6 +965,7 @@ class DeleteLanguage(graphene.Mutation):
 
 
 class LanguageTree(graphene.ObjectType):
+    proxy = graphene.Boolean()
     tree = ObjectVal()
     languages = graphene.List(Language)
 
