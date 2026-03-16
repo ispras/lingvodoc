@@ -690,6 +690,7 @@ class Query(graphene.ObjectType):
             grant_id = graphene.Int(),
             by_organizations = graphene.Boolean(),
             organization_id = graphene.Int(),
+            local = graphene.Boolean(),
             proxy = graphene.Boolean(),
             debug_flag = graphene.Boolean()))
 
@@ -755,14 +756,17 @@ class Query(graphene.ObjectType):
         grant_id = None,
         by_organizations = False,
         organization_id = None,
+        local = False,
         proxy = False,
         debug_flag = False):
 
         try:
+            '''
             request = info.context.request
 
             if proxy:
                 try_proxy(request)
+            '''
 
             language_field_asts = []
 
@@ -992,8 +996,8 @@ class Query(graphene.ObjectType):
                         tree_object, width = 144))
 
             return (
-
                 LanguageTree(
+                    local = local,
                     proxy = proxy,
                     tree = tree_object,
                     languages = gql_language_list))
@@ -1853,10 +1857,10 @@ class Query(graphene.ObjectType):
 
         try:
             request = info.context.request
-
+            '''
             if proxy:
                 try_proxy(request)
-
+            '''
             client_id = info.context.client_id
 
             subreq = Request.blank('/translation_service_search')
@@ -2209,11 +2213,12 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        '''
         request = info.context.request
 
         if proxy:
             try_proxy(request)
-
+        '''
         client_id = info.context.client_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
