@@ -694,6 +694,9 @@ class Query(graphene.ObjectType):
             proxy = graphene.Boolean(),
             debug_flag = graphene.Boolean()))
 
+    # This wrapper for isolating two queries from each other
+    language_tree_proxy = language_tree
+
     fill_logs = graphene.String(worker = graphene.Int())
 
     markups = (
@@ -762,6 +765,7 @@ class Query(graphene.ObjectType):
 
         try:
             '''
+            print(f"Language tree request {local=} {locals()}")
             request = info.context.request
 
             if proxy:
@@ -1021,6 +1025,10 @@ class Query(graphene.ObjectType):
             return (
                 ResponseError(
                     'Exception:\n' + traceback_string))
+
+    # This wrapper for isolating two queries from each other
+    def resolve_language_tree_proxy(*args, **kwargs):
+        return Query.resolve_language_tree(*args, **kwargs)
 
     def resolve_valency_data(
         self,

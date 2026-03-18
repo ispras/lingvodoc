@@ -1175,6 +1175,7 @@ def graphql(request):
                 time.time(), time.process_time())
 
             if proxy:
+                print('!!! >>> Calling try_proxy...')
                 try_proxy(request)
 
             batch = False
@@ -1410,6 +1411,15 @@ def graphql(request):
                         
         result['time_real'] = t_elapsed_real
         result['time_process'] = t_elapsed_process
+
+        if errors := result.get('errors'):
+            print(f'Graphql errors: ${errors}')
+
+        is_local = None
+        if (data := result['data']) and (
+                (is_local := data.get('language_tree')) or
+                 data.get('language_tree_proxy')):
+            print(f"!!! >>> Returned {'LOCAL' if is_local else 'REMOTE'} response")
 
         return result
 
