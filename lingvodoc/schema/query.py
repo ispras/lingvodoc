@@ -680,7 +680,6 @@ class Query(graphene.ObjectType):
     language_toc = graphene.List(Language)
 
     language_tree = (
-
         graphene.Field(
             LanguageTree,
             dictionary_category = graphene.Int(),
@@ -690,12 +689,8 @@ class Query(graphene.ObjectType):
             grant_id = graphene.Int(),
             by_organizations = graphene.Boolean(),
             organization_id = graphene.Int(),
-            local = graphene.Boolean(),
             proxy = graphene.Boolean(),
             debug_flag = graphene.Boolean()))
-
-    # This wrapper for isolating two queries from each other
-    language_tree_proxy = language_tree
 
     fill_logs = graphene.String(worker = graphene.Int())
 
@@ -759,7 +754,6 @@ class Query(graphene.ObjectType):
         grant_id = None,
         by_organizations = False,
         organization_id = None,
-        local = False,
         proxy = False,
         debug_flag = False):
 
@@ -1001,8 +995,6 @@ class Query(graphene.ObjectType):
 
             return (
                 LanguageTree(
-                    local = local,
-                    proxy = proxy,
                     tree = tree_object,
                     languages = gql_language_list))
 
@@ -1025,10 +1017,6 @@ class Query(graphene.ObjectType):
             return (
                 ResponseError(
                     'Exception:\n' + traceback_string))
-
-    # This wrapper for isolating two queries from each other
-    def resolve_language_tree_proxy(*args, **kwargs):
-        return Query.resolve_language_tree(*args, **kwargs)
 
     def resolve_valency_data(
         self,

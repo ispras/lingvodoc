@@ -1347,15 +1347,6 @@ def graphql(request):
                     error_list = []
 
                     for error in result.errors:
-                        '''
-                        # If it's a proxy error, we return it directly apparently?
-    
-                        if (hasattr(error, 'original_error') and
-                           type(error.original_error) == ProxyPass):
-    
-                            result = json.loads(error.original_error.response_body.decode("utf-8"))
-                            break
-                        '''
 
                         # If we had an attempt to proceed with failed transaction because of another error,
                         # we don't need its superfluous error info.
