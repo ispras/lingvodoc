@@ -1167,10 +1167,10 @@ def graphql(request):
     sp = request.tm.savepoint()
 
     try:
-        try:
-            variables = request.json_body.get('variables', {})
-            proxy = variables.get('proxy')
+        variables = request.json_body.get('variables', {})
+        proxy = variables.get('proxy')
 
+        try:
             t_start_real, t_start_process = (
                 time.time(), time.process_time())
 
@@ -1406,11 +1406,8 @@ def graphql(request):
         if errors := result.get('errors'):
             print(f'Graphql errors: ${errors}')
 
-        is_local = None
-        if (data := result['data']) and (
-                (is_local := data.get('language_tree')) or
-                 data.get('language_tree_proxy')):
-            print(f"!!! >>> Returned {'LOCAL' if is_local else 'REMOTE'} response")
+        if (result.get('data') or {}).get('language_tree'):
+            print(f"!!! >>> Returned {'REMOTE' if proxy is not None else 'LOCAL'} response")
 
         return result
 
