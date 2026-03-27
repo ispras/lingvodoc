@@ -1,3 +1,4 @@
+import collections
 from time import time as now
 from datetime import datetime
 import pickle
@@ -39,19 +40,29 @@ log = logging.getLogger(__name__)
 min_date = 1735689600.0  # 2025-01-01 00:00:00
 none = ''
 
+# Ordered (!) models to create entries from the beginning
 db_model = {
-    'Parser': dbParser,
-    'ParserResult': dbParserResult,
-    'PublishingEntity': dbPublishingEntity,
-    'Field': dbField,
-    'Entity': dbEntity,
-    'LexicalEntry': dbLexicalEntry,
-    'DictionaryPerspectiveToField': dbDictionaryPerspectiveToField,
-    'DictionaryPerspective': dbDictionaryPerspective,
-    'Dictionary': dbDictionary,
-    'Language': dbLanguage,
+    # Translations
     'TranslationGist': dbTranslationGist,
-    'TranslationAtom': dbTranslationAtom
+    'TranslationAtom': dbTranslationAtom,
+
+    # Language tree
+    'Language': dbLanguage,
+    'Dictionary': dbDictionary,
+    'DictionaryPerspective': dbDictionaryPerspective,
+
+    # Fields
+    'Field': dbField,
+    'DictionaryPerspectiveToField': dbDictionaryPerspectiveToField,
+
+    # Lexical entries
+    'LexicalEntry': dbLexicalEntry,
+    'Entity': dbEntity,
+    'PublishingEntity': dbPublishingEntity,
+
+    # Parser results
+    'Parser': dbParser,
+    'ParserResult': dbParserResult
 }
 
 # Tuple means relative: (his_dbModel, my_suffix, his_suffix)
@@ -188,15 +199,15 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         return pickle_path
 
     def get_sync_point():
-        perspective_metadata = (
+        perspective_metadata = ((
             DBSession
                 .query(
                     dbDictionaryPerspective.additional_metadata)
                 .filter_by(
                     client_id = perspective_id[0],
                     object_id = perspective_id[1])
-                .one()
-        )[0] or {}
+                .first()
+        ) or (None,))[0] or {}
 
         return perspective_metadata.get(f'{sync_for}_synced_at', min_date)
 
@@ -451,6 +462,29 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
         key2str(*perspective_id)
     )
 
+    # We should order changes according to foreign_keys between tables
+    # So an entry can't be added into 'dictionaryperspective' table
+    # before its parent is not added into 'dictionary' table and so on
+    # Tables are placed correctly in db_model dictionary in advance
+
+    def ordered(changes):
+        try:
+            changes_by_table = collections.defaultdict(dict)
+            for composite_key, value in changes.items():
+                if is_comp_id(composite_key):
+                    _, _, table = composite_key.split(',')
+                    changes_by_table[table][composite_key] = value
+
+            result = {}
+            for table in db_model:
+                result.update(changes_by_table[table])
+
+            return result
+
+        # Debugging
+        except Exception as e:
+            raise
+
     # Reading pickle files
     try:
         with gzip.open(local_pickle_path, 'rb') as f:
@@ -501,7 +535,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
         count = 0
 
-        for composite_id, foreign_dict in foreign_changes.items():
+        for composite_id, foreign_dict in ordered(foreign_changes).items():
             # Service keys e.g. 'warns'
             if not is_comp_id(composite_id):
                 continue
