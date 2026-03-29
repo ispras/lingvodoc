@@ -5482,7 +5482,7 @@ class ApplySync(graphene.Mutation):
             raise ResponseError("This client has no permissions to apply synchronization.")
 
         result = MergeChanges(info, **args)
-        return ApplySync(**result)
+        return ApplySync(**result if isinstance(result, dict) else result)
 
 
 class StarlingEtymology(graphene.Mutation):
