@@ -84,6 +84,8 @@ from lingvodoc.utils.search import (
     recursive_sort,
     translation_gist_search)
 
+from pdb import set_trace as A
+
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -3431,21 +3433,23 @@ class Language_Resolver(object):
                         aggregate_count_query.c.aggregate_count))
 
         # If we require languages in the language tree order, we establish preliminary ordering.
+        try:
+            if self.args.in_tree_order:
 
-        if self.args.in_tree_order:
+                ls.query = (
+                    ls.query
+                        .order_by(
+                            ls.c.additional_metadata['younger_siblings'],
+                            ls.c.client_id.desc(),
+                            ls.c.object_id.desc()))
 
-            ls.query = (
+            # Getting language data.
+            result_list = ls.query.all()
 
-                ls.query
-
-                    .order_by(
-                        ls.c.additional_metadata['younger_siblings'],
-                        ls.c.client_id.desc(),
-                        ls.c.object_id.desc()))
-
-        # Getting language data.
-
-        result_list = ls.query.all()
+        except Exception as e:
+            print(str(e))
+            A()
+            raise
 
         if self.debug_flag:
 
