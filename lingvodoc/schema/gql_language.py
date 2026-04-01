@@ -86,9 +86,12 @@ from lingvodoc.utils.search import (
 
 from pdb import set_trace as A
 
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
+
+from pdb import set_trace as A
 
 
 class Language(LingvodocObjectType):
@@ -1595,7 +1598,6 @@ class Language_Resolver(object):
                         deleted = None,
                         category = None,
                         published = None))
-
                 ls.dictionaries = d
 
                 for argument in field.arguments:
@@ -2705,8 +2707,8 @@ class Language_Resolver(object):
         ls.cte_flag = (
             self.args.in_tree_order and ls.translation_flag or
             self.grant_or_organization or
-            join_count > 1)
-
+            join_count > 1 or True)
+        #A()
         ls.join_flag = (
             join_count >= 1)
 
@@ -3433,23 +3435,13 @@ class Language_Resolver(object):
                         aggregate_count_query.c.aggregate_count))
 
         # If we require languages in the language tree order, we establish preliminary ordering.
-        try:
-            if self.args.in_tree_order:
+        if self.args.in_tree_order:
+            order_fields = [ls.c.additional_metadata['younger_siblings']] if ls.cte_flag else []
+            order_fields += [ls.c.client_id.desc(), ls.c.object_id.desc()]
+            ls.query = ls.query.order_by(*order_fields)
 
-                ls.query = (
-                    ls.query
-                        .order_by(
-                            ls.c.additional_metadata['younger_siblings'],
-                            ls.c.client_id.desc(),
-                            ls.c.object_id.desc()))
-
-            # Getting language data.
-            result_list = ls.query.all()
-
-        except Exception as e:
-            print(str(e))
-            A()
-            raise
+        # Getting language data.
+        result_list = ls.query.all()
 
         if self.debug_flag:
 
