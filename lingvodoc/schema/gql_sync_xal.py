@@ -155,6 +155,11 @@ def whats_time(epoch_times, no_caption=False):
         print(cell(v, w), end=sign)
 
 
+def CheckPermissions(info, perspective_id, debug_flag=False):
+    result = info.context.acl_check_if('edit', 'perspective', perspective_id)
+    return result
+
+
 def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     request = info.context.request
@@ -194,7 +199,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 pickle.dump({'stamp': now(), **data}, f)
 
         except Exception as e:
-            return ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
+            raise ResponseError(f"Cannot write pickle file {pickle_path or ''}: {e}")
 
         return pickle_path
 
@@ -423,6 +428,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
 def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
+    if not CheckPermissions(perspective_id, debug_flag):
+        raise ResponseError("You have no permissions to do sync")
+
     message = []
     request = info.context.request
     settings = request.registry.settings
@@ -491,14 +499,14 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             local_changes = pickle.load(f)
 
     except Exception as e:
-        return ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
+        raise ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
 
     try:
         with gzip.open(foreign_pickle_path, 'rb') as f:
             foreign_changes = pickle.load(f)
 
     except Exception as e:
-        return ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
+        raise ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
 
     try:
         current_synced_at = local_changes['sync_point']

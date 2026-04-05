@@ -325,6 +325,7 @@ from lingvodoc.schema.gql_markups import (
     MarkupGroup)
 
 from lingvodoc.schema.gql_sync_xal import (
+    CheckPermissions,
     ListChanges,
     MergeChanges)
 
@@ -727,6 +728,18 @@ class Query(graphene.ObjectType):
             perspective_id = LingvodocID(required = True),
             user_id = graphene.Int(),
             sync_point = graphene.Float(),
+            debug_flag = graphene.Boolean()))
+
+    check_permissions = (
+        graphene.Field(
+            graphene.Boolean,
+            perspective_id = LingvodocID(required = True),
+            debug_flag = graphene.Boolean()))
+
+    check_permissions_bulk = (
+        graphene.Field(
+            ObjectVal,
+            perspective_id_list = graphene.List(LingvodocID, required = True),
             debug_flag = graphene.Boolean()))
 
     def resolve_fill_logs(self, info, worker=1):
@@ -5446,6 +5459,21 @@ class Query(graphene.ObjectType):
     def resolve_list_changes(self, info, **args):
         return ListChanges(info, **args)
 
+    def resolve_check_permissions(self, info, **args):
+        return CheckPermissions(info, **args)
+
+    def resolve_check_permissions_bulk(
+            self, info, perspective_id_list, debug_flag=False):
+        result = {}
+        try:
+            for perspective_id in perspective_id_list:
+                perspective_id_str = ','.join(perspective_id)
+                result[perspective_id_str] = CheckPermissions(info, perspective_id, debug_flag)
+        #Debugging
+        except:
+            A()
+        return result
+
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
     field_id = LingvodocID()
@@ -5482,7 +5510,11 @@ class ApplySync(graphene.Mutation):
             raise ResponseError("This client has no permissions to apply synchronization.")
 
         result = MergeChanges(info, **args)
-        return ApplySync(**result if isinstance(result, dict) else result)
+
+        if isinstance(result, dict):
+            return ApplySync(**result)
+        else:
+            raise ResponseError("We can't perform synchronization")
 
 
 class StarlingEtymology(graphene.Mutation):
