@@ -2697,6 +2697,7 @@ class Language_Resolver(object):
         if ls.translations_flag:
             join_count += 1
 
+        '''
         # If we are returning languages in tree order and at the same time getting a translation, we have to
         # use a CTE because otherwise order by of translation's distinct on messes up tree order preliminary
         # order by.
@@ -2707,8 +2708,18 @@ class Language_Resolver(object):
         ls.cte_flag = (
             self.args.in_tree_order and ls.translation_flag or
             self.grant_or_organization or
-            join_count > 1 or True)
-        #A()
+            join_count > 1)
+        '''
+
+        # As of now always using CTE due to its simplicity, currently don't have time to fully test and
+        # debug all edge cases, one of which started cropping up in the current development.
+        #
+        # If in the future would have more time, or would need more optimization here, could return to more
+        # granular CTE usage, would need to properly accurately ensure it works in all circumstances though,
+        # in all cases without CTE too.
+
+        ls.cte_flag = True
+
         ls.join_flag = (
             join_count >= 1)
 
