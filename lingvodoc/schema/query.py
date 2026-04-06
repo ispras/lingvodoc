@@ -5465,13 +5465,9 @@ class Query(graphene.ObjectType):
     def resolve_check_permissions_bulk(
             self, info, perspective_id_list, debug_flag=False):
         result = {}
-        try:
-            for perspective_id in perspective_id_list:
-                perspective_id_str = ','.join(perspective_id)
-                result[perspective_id_str] = CheckPermissions(info, perspective_id, debug_flag)
-        #Debugging
-        except:
-            A()
+        for perspective_id in perspective_id_list:
+            perspective_id_str = ','.join(map(str, perspective_id))
+            result[perspective_id_str] = CheckPermissions(info, perspective_id, debug_flag)
         return result
 
 class PerspectivesAndFields(graphene.InputObjectType):

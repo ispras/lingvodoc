@@ -428,7 +428,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
 def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
-    if not CheckPermissions(perspective_id, debug_flag):
+    if not CheckPermissions(info, perspective_id, debug_flag):
         raise ResponseError("You have no permissions to do sync")
 
     message = []
