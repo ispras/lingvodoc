@@ -2113,6 +2113,16 @@ class Group(Base, TableNameMixin, ModifiedAtMixin):
                 cls.subject_object_id))
 
 
+class UserToGroupAssociation(Base):
+    __table__ = user_to_group_association
+    __mapper_args__ = {
+        'primary_key': [
+            __table__.c.user_id,
+            __table__.c.group_id
+        ]
+    }
+
+
 class AboutMixin(PrimeTableArgs):
 
     about_translation_gist_client_id = Column(SLBigInteger(), nullable = False)

@@ -327,7 +327,9 @@ from lingvodoc.schema.gql_markups import (
 from lingvodoc.schema.gql_sync_xal import (
     CheckPermissions,
     ListChanges,
-    MergeChanges)
+    MergeChanges,
+    ListRoles,
+    MergeRoles)
 
 from lingvodoc.schema.gql_twins_diff import DiffEntities
 
@@ -9293,6 +9295,74 @@ class Tsakorpus(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
+class SyncRoles(graphene.Mutation):
+    class Arguments:
+
+        user_id = graphene.Int(required=True)
+        proxy = graphene.Boolean()
+        debug_flag = graphene.Boolean()
+
+    roles_data = ObjectVal()
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(
+        root,
+        info,
+        user_id,
+        proxy=None,
+        debug_flag = False):
+
+        try:
+            # Run request for both hosts, merge results and perform mutation
+            if proxy is None:
+                local_roles = SyncRoles.mutate(
+                    root, info, user_id, proxy=False, debug_flag=debug_flag)
+                proxy_roles = SyncRoles.mutate(
+                    root, info, user_id, proxy=True, debug_flag=debug_flag)
+
+                MergeRoles(local_roles, proxy_roles, debug_flag)
+
+                return (
+                    SyncRoles(
+                        roles_data=None,
+                        triumph=True))
+
+            try:
+                request = info.context.request
+
+                # Call remote request
+                if proxy:
+                    try_proxy(request)
+
+                # Get data locally
+                roles_data = ListRoles(user_id, debug_flag)
+
+            except ProxyPass as e:
+                roles_data = e.response_json.get('data')
+
+        except Exception as exception:
+
+            traceback_string = (
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('sync_roles: exception')
+            log.warning(traceback_string)
+
+            return (
+                ResponseError(
+                    'Exception:\n' + traceback_string))
+
+        # Return data for further mutation
+        # This is called above for both hosts
+        return (
+            SyncRoles(
+                roles_data=roles_data,
+                triumph=True))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -9416,6 +9486,7 @@ class MyMutations(graphene.ObjectType):
     save_markup_groups = SaveMarkupGroups.Field()
     stop_mutation = StopMutation.Field()
     save_suggestions_state = SaveSuggestionsState.Field()
+    sync_roles = SyncRoles.Field()
 
 schema = graphene.Schema(
     query=Query,

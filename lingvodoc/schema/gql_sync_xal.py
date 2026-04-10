@@ -28,7 +28,10 @@ from lingvodoc.models import (
     DictionaryPerspective as dbDictionaryPerspective,
     PublishingEntity as dbPublishingEntity,
     ParserResult as dbParserResult,
-    Parser as dbParser
+    Parser as dbParser,
+    BaseGroup as dbBaseGroup,
+    Group as dbGroup,
+    UserToGroupAssociation as dbUserToGroup
 )
 
 from lingvodoc.cache.caching import TaskStatus
@@ -158,6 +161,90 @@ def whats_time(epoch_times, no_caption=False):
 def CheckPermissions(info, perspective_id, debug_flag=False):
     result = info.context.acl_check_if('edit', 'perspective', perspective_id)
     return result
+
+
+def ListRoles(user_id, debug_flag=False):
+
+    roles_data = dict()
+
+    def as_dict(res):
+        try:
+            result = list(map(
+                lambda x: x._asdict(), res))
+        except AttributeError:
+            result = list(map(
+                lambda x: {k: v for k, v in x.__dict__.items() if not k.startswith('_')}, res))
+        return result
+
+    try:
+        roles_data['UserToGroup'] = as_dict(
+            DBSession
+                .query(dbUserToGroup)
+                .filter_by(user_id=user_id)
+                .all())
+
+        group_set = map(lambda x: x['group_id'], roles_data['UserToGroup'])
+
+        roles_data['Group'] = as_dict(
+            DBSession
+                .query(dbGroup)
+                .filter(dbGroup.id.in_(group_set))
+                .all())
+
+        base_group_set = map(lambda x: x['base_group_id'], roles_data['Group'])
+
+        roles_data['BaseGroup'] = as_dict(
+            DBSession
+                .query(dbBaseGroup)
+                .filter(dbBaseGroup.id.in_(base_group_set))
+                .all())
+
+        return roles_data
+
+    # Debugging
+    except Exception as e:
+        if debug_flag:
+            A()
+        raise
+
+
+def MergeRoles(local_roles, proxy_roles, debug_flag=False):
+
+    result_entries = dict()
+
+    local_data = local_roles.__dict__['roles_data']
+    proxy_data = proxy_roles.__dict__['roles_data']
+    proxy_data = proxy_data['sync_roles']['roles_data']
+
+    db_model = {
+        'BaseGroup': dbBaseGroup,
+        'Group': dbGroup,
+        'UserToGroup': dbUserToGroup
+    }
+
+    def pkey(row):
+        return row.get('id') or (row.get('user_id'), row.get('group_id'))
+
+    try:
+        # Get new entries from proxy
+        for table in db_model:
+            local_pkeys = set(map(
+                lambda x: pkey(x), local_data[table]))
+            result_entries[table] = list(filter(
+                lambda y: pkey(y) not in local_pkeys, proxy_data[table]))
+            db_objects = list(map(
+                lambda z: db_model[table](**z), result_entries[table]))
+
+            DBSession.add_all(db_objects)
+            DBSession.flush()
+
+        print("\nAdded roles!")
+
+    # Debugging
+    except Exception as e:
+        if debug_flag:
+            A()
+        raise
 
 
 def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
