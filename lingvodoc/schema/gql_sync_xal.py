@@ -9,7 +9,7 @@ import re
 import logging
 import traceback
 import requests
-from sqlalchemy import func
+from sqlalchemy import func, tuple_
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
 
@@ -30,6 +30,7 @@ from lingvodoc.models import (
     ParserResult as dbParserResult,
     Parser as dbParser,
     BaseGroup as dbBaseGroup,
+    ObjectTOC as dbObjectTOC,
     Group as dbGroup,
     UserToGroupAssociation as dbUserToGroup
 )
@@ -191,12 +192,26 @@ def ListRoles(user_id, debug_flag=False):
                 .filter(dbGroup.id.in_(group_set))
                 .all())
 
-        base_group_set = map(lambda x: x['base_group_id'], roles_data['Group'])
+        base_group_set = map(lambda y: y['base_group_id'], roles_data['Group'])
 
         roles_data['BaseGroup'] = as_dict(
             DBSession
                 .query(dbBaseGroup)
                 .filter(dbBaseGroup.id.in_(base_group_set))
+                .all())
+
+        group_subject_set = map(lambda z: (z['subject_client_id'], z['subject_object_id']), roles_data['Group'])
+
+        if debug_flag:
+            group_subject_set = list(group_subject_set)
+
+        roles_data['ObjectTOC'] = as_dict(
+            DBSession
+                .query(dbObjectTOC)
+                .filter(tuple_(
+                    dbObjectTOC.client_id,
+                    dbObjectTOC.object_id)
+                        .in_(group_subject_set))
                 .all())
 
         return roles_data
@@ -217,13 +232,17 @@ def MergeRoles(local_roles, proxy_roles, debug_flag=False):
     proxy_data = proxy_data['sync_roles']['roles_data']
 
     db_model = {
+        'ObjectTOC': dbObjectTOC,
         'BaseGroup': dbBaseGroup,
         'Group': dbGroup,
         'UserToGroup': dbUserToGroup
     }
 
     def pkey(row):
-        return row.get('id') or (row.get('user_id'), row.get('group_id'))
+        return (
+            row.get('id') or
+            row.get('user_id') and row.get('group_id') and (row.get('user_id'), row.get('group_id')) or
+            row.get('client_id') and row.get('object_id') and (row.get('client_id'), row.get('object_id')))
 
     try:
         # Get new entries from proxy
