@@ -9314,14 +9314,12 @@ class SyncRoles(graphene.Mutation):
         debug_flag = False):
 
         try:
-            # Run request for both hosts, merge results and perform mutation
+            # Run request for remote host and perform mutation
             if proxy is None:
-                local_roles = SyncRoles.mutate(
-                    root, info, user_id, proxy=False, debug_flag=debug_flag)
                 proxy_roles = SyncRoles.mutate(
                     root, info, user_id, proxy=True, debug_flag=debug_flag)
 
-                MergeRoles(local_roles, proxy_roles, debug_flag)
+                MergeRoles(proxy_roles, debug_flag)
 
                 return (
                     SyncRoles(

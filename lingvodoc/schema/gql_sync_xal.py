@@ -10,8 +10,10 @@ import logging
 import traceback
 import requests
 from sqlalchemy import func, tuple_
+from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
+from lingvodoc.utils import ids_to_id_query
 
 from lingvodoc.models import (
     DBSession,
@@ -178,40 +180,40 @@ def ListRoles(user_id, debug_flag=False):
         return result
 
     try:
-        roles_data['UserToGroup'] = as_dict(
+        roles_data['user_to_group_association'] = as_dict(
             DBSession
                 .query(dbUserToGroup)
                 .filter_by(user_id=user_id)
                 .all())
 
-        group_set = map(lambda x: x['group_id'], roles_data['UserToGroup'])
+        group_set = set(x['group_id'] for x in roles_data['user_to_group_association'])
 
-        roles_data['Group'] = as_dict(
+        roles_data['group'] = as_dict(
             DBSession
                 .query(dbGroup)
                 .filter(dbGroup.id.in_(group_set))
                 .all())
 
-        base_group_set = map(lambda y: y['base_group_id'], roles_data['Group'])
+        base_group_set = set(y['base_group_id'] for y in roles_data['group'])
 
-        roles_data['BaseGroup'] = as_dict(
+        roles_data['basegroup'] = as_dict(
             DBSession
                 .query(dbBaseGroup)
                 .filter(dbBaseGroup.id.in_(base_group_set))
                 .all())
 
-        group_subject_set = map(lambda z: (z['subject_client_id'], z['subject_object_id']), roles_data['Group'])
+        group_subject_set = set(
+            (z['subject_client_id'], z['subject_object_id'])
+            for z in roles_data['group']
+            if z['subject_client_id'] and z['subject_object_id'])
 
-        if debug_flag:
-            group_subject_set = list(group_subject_set)
-
-        roles_data['ObjectTOC'] = as_dict(
+        roles_data['objecttoc'] = as_dict(
             DBSession
                 .query(dbObjectTOC)
                 .filter(tuple_(
                     dbObjectTOC.client_id,
                     dbObjectTOC.object_id)
-                        .in_(group_subject_set))
+                        .in_(ids_to_id_query(group_subject_set)))
                 .all())
 
         return roles_data
@@ -223,39 +225,25 @@ def ListRoles(user_id, debug_flag=False):
         raise
 
 
-def MergeRoles(local_roles, proxy_roles, debug_flag=False):
-
-    result_entries = dict()
-
-    local_data = local_roles.__dict__['roles_data']
+def MergeRoles(proxy_roles, debug_flag=False):
     proxy_data = proxy_roles.__dict__['roles_data']
     proxy_data = proxy_data['sync_roles']['roles_data']
 
     db_model = {
-        'ObjectTOC': dbObjectTOC,
-        'BaseGroup': dbBaseGroup,
-        'Group': dbGroup,
-        'UserToGroup': dbUserToGroup
+        'objecttoc': (dbObjectTOC, ['client_id', 'object_id']),
+        'basegroup': (dbBaseGroup, ['id']),
+        'group': (dbGroup, ['id']),
+        'user_to_group_association': (dbUserToGroup, ['user_id', 'group_id'])
     }
-
-    def pkey(row):
-        return (
-            row.get('id') or
-            row.get('user_id') and row.get('group_id') and (row.get('user_id'), row.get('group_id')) or
-            row.get('client_id') and row.get('object_id') and (row.get('client_id'), row.get('object_id')))
 
     try:
         # Get new entries from proxy
         for table in db_model:
-            local_pkeys = set(map(
-                lambda x: pkey(x), local_data[table]))
-            result_entries[table] = list(filter(
-                lambda y: pkey(y) not in local_pkeys, proxy_data[table]))
-            db_objects = list(map(
-                lambda z: db_model[table](**z), result_entries[table]))
-
-            DBSession.add_all(db_objects)
-            DBSession.flush()
+            model, index = db_model[table]
+            for row in proxy_data[table]:
+                stmt = insert(model).values(**row).on_conflict_do_nothing(index_elements=index)
+                DBSession.execute(stmt)
+                DBSession.flush()
 
         print("\nAdded roles!")
 
