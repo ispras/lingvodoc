@@ -180,23 +180,23 @@ def ListRoles(user_id, debug_flag=False):
         return result
 
     try:
-        roles_data['user_to_group_association'] = as_dict(
+        roles_data['UserToGroup'] = as_dict(
             DBSession
                 .query(dbUserToGroup)
                 .filter_by(user_id=user_id)
                 .all())
 
-        group_set = set(x['group_id'] for x in roles_data['user_to_group_association'])
+        group_set = set(x['group_id'] for x in roles_data['UserToGroup'])
 
-        roles_data['group'] = as_dict(
+        roles_data['Group'] = as_dict(
             DBSession
                 .query(dbGroup)
                 .filter(dbGroup.id.in_(group_set))
                 .all())
 
-        base_group_set = set(y['base_group_id'] for y in roles_data['group'])
+        base_group_set = set(y['base_group_id'] for y in roles_data['Group'])
 
-        roles_data['basegroup'] = as_dict(
+        roles_data['BaseGroup'] = as_dict(
             DBSession
                 .query(dbBaseGroup)
                 .filter(dbBaseGroup.id.in_(base_group_set))
@@ -204,16 +204,24 @@ def ListRoles(user_id, debug_flag=False):
 
         group_subject_set = set(
             (z['subject_client_id'], z['subject_object_id'])
-            for z in roles_data['group']
+            for z in roles_data['Group']
             if z['subject_client_id'] and z['subject_object_id'])
 
-        roles_data['objecttoc'] = as_dict(
+        roles_data['ObjectTOC'] = as_dict(
             DBSession
                 .query(dbObjectTOC)
                 .filter(tuple_(
                     dbObjectTOC.client_id,
                     dbObjectTOC.object_id)
                         .in_(ids_to_id_query(group_subject_set)))
+                .all())
+
+        client_set = set(c['client_id'] for c in roles_data['ObjectTOC'])
+
+        roles_data['Client'] = as_dict(
+            DBSession
+                .query(dbClient)
+                .filter(dbClient.id.in_(client_set))
                 .all())
 
         return roles_data
@@ -230,10 +238,11 @@ def MergeRoles(proxy_roles, debug_flag=False):
     proxy_data = proxy_data['sync_roles']['roles_data']
 
     db_model = {
-        'objecttoc': (dbObjectTOC, ['client_id', 'object_id']),
-        'basegroup': (dbBaseGroup, ['id']),
-        'group': (dbGroup, ['id']),
-        'user_to_group_association': (dbUserToGroup, ['user_id', 'group_id'])
+        'Client': (dbClient, ['id']),
+        'ObjectTOC': (dbObjectTOC, ['client_id', 'object_id']),
+        'BaseGroup': (dbBaseGroup, ['id']),
+        'Group': (dbGroup, ['id']),
+        'UserToGroup': (dbUserToGroup, ['user_id', 'group_id'])
     }
 
     try:
@@ -241,9 +250,12 @@ def MergeRoles(proxy_roles, debug_flag=False):
         for table in db_model:
             model, index = db_model[table]
             for row in proxy_data[table]:
-                stmt = insert(model).values(**row).on_conflict_do_nothing(index_elements=index)
+                stmt = (
+                    insert(model)
+                        .values(**row)
+                        .on_conflict_do_nothing(index_elements=index))
                 DBSession.execute(stmt)
-                DBSession.flush()
+            DBSession.flush()
 
         print("\nAdded roles!")
 
