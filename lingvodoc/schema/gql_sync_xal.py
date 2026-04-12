@@ -9,10 +9,11 @@ import re
 import logging
 import traceback
 import requests
-from sqlalchemy import func
+from sqlalchemy import func, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
+from lingvodoc.utils import ids_to_id_query
 
 from lingvodoc.models import (
     DBSession,
@@ -173,27 +174,32 @@ def CheckPermissions(info, perspective_id, debug_flag=False):
     return result
 
 
-def ListRoles(user_id, subject_id, debug_flag=False):
+def ListRoles(user_id, subject_ids, debug_flag=False):
 
-    def cte_as_dict(cte):
-        obj = DBSession.query(cte).all()
+    def as_dict(obj):
+        # If object is cte
+        if type(obj) is not list:
+            obj = DBSession.query(obj).all()
         try:
-            result = list(map(
-                lambda x: x._asdict(), obj))
+            return [x._asdict() for x in obj]
         except AttributeError:
-            result = list(map(
-                lambda x: {k: v for k, v in x.__dict__.items() if not k.startswith('_')}, obj))
-        return result
+            return [{k: v for k, v in x.__dict__.items() if not k.startswith('_')} for x in obj]
 
     # Getting tree of entries for current user_id or subject_id
     try:
         if user_id is not None:
             filter_by_args = [dbUserToGroup.user_id == user_id]
 
-        elif subject_id is not None:
+        elif subject_ids is not None:
+
+            if len(subject_ids) == 0:
+                return {}
+
             filter_by_args = [dbUserToGroup.group_id == dbGroup.id,
-                              dbGroup.subject_client_id == subject_id[0],
-                              dbGroup.subject_object_id == subject_id[1]]
+                              tuple_(
+                                dbGroup.subject_client_id,
+                                dbGroup.subject_object_id
+                              ).in_(ids_to_id_query(subject_ids))]
         else:
             raise NotImplementedError()
 
@@ -216,7 +222,7 @@ def ListRoles(user_id, subject_id, debug_flag=False):
                 .query(dbBaseGroup)
                 .filter(dbBaseGroup.id == Group.c.base_group_id)
                 .distinct()
-                .cte())
+                .all())
 
         ObjectTOC = (
             DBSession
@@ -224,21 +230,21 @@ def ListRoles(user_id, subject_id, debug_flag=False):
                 .filter(dbObjectTOC.client_id == Group.c.subject_client_id,
                         dbObjectTOC.object_id == Group.c.subject_object_id)
                 .distinct()
-                .cte())
+                .all())
 
         Client = (
             DBSession
                 .query(dbClient)
                 .filter(dbClient.id == Group.c.subject_client_id)
                 .distinct()
-                .cte())
+                .all())
 
         return {
-            'Client': cte_as_dict(Client),
-            'ObjectTOC': cte_as_dict(ObjectTOC),
-            'BaseGroup': cte_as_dict(BaseGroup),
-            'Group': cte_as_dict(Group),
-            'UserToGroup': cte_as_dict(UserToGroup)
+            'Client': as_dict(Client),
+            'ObjectTOC': as_dict(ObjectTOC),
+            'BaseGroup': as_dict(BaseGroup),
+            'Group': as_dict(Group),
+            'UserToGroup': as_dict(UserToGroup)
         }
 
     # Debugging
@@ -248,16 +254,17 @@ def ListRoles(user_id, subject_id, debug_flag=False):
         raise
 
 
-def MergeRoles(proxy_roles, debug_flag=False):
-
-    proxy_data = proxy_roles.__dict__['roles_data']
-    proxy_data = proxy_data['sync_roles']['roles_data']
+def MergeRoles(roles_data, debug_flag=False):
 
     try:
         # Add new entries to database
         for table in db_model_roles:
+            if table not in roles_data:
+                continue
+
             model, index = db_model_roles[table]
-            for row in proxy_data[table]:
+
+            for row in roles_data[table]:
                 stmt = (
                     insert(model)
                         .values(**row)
@@ -290,6 +297,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     sync_for = sync_between[not sync_between.index(local)]
 
     local_result = {'warns': []}
+    local_ids = []
     id_pool = set()
     clients = set()
     count = 0
@@ -390,6 +398,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 columns = obj._asdict()
                 columns.pop('_sa_instance_state', None)
 
+                local_ids.append((obj.client_id, obj.object_id))
                 composite_id = key2str(obj.client_id, obj.object_id, table)
                 local_result[composite_id] = columns
 
@@ -524,6 +533,10 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     if local == 'isp' and sync_point is not None:
         local_result['clients'] = client_list()
+
+    if sync_point is not None:
+        local_result['roles'] = (
+            ListRoles(None, local_ids, debug_flag))
 
     # Pickling by perspective id
     pickle_path = store_data(local, local_result)
@@ -714,6 +727,9 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
         if next_synced_at > current_synced_at:
             set_synced_at(next_synced_at)
             DBSession.flush()
+
+        # Add roles for current perspective
+        MergeRoles(foreign_changes['roles'], debug_flag)
 
         os.remove(local_pickle_path)
         os.remove(foreign_pickle_path)

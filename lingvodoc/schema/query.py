@@ -9319,7 +9319,10 @@ class SyncRoles(graphene.Mutation):
                 proxy_roles = SyncRoles.mutate(
                     root, info, user_id, proxy=True, debug_flag=debug_flag)
 
-                MergeRoles(proxy_roles, debug_flag)
+                roles_data = proxy_roles.__dict__['roles_data']
+                roles_data = roles_data['sync_roles']['roles_data']
+
+                MergeRoles(roles_data, debug_flag)
 
                 return (
                     SyncRoles(
