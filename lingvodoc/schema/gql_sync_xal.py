@@ -233,9 +233,13 @@ def ListRoles(user_id, subject_id, debug_flag=False):
                 .distinct()
                 .cte())
 
-        roles_data = {cte: cte_as_dict(eval(cte)) for cte in db_model_roles}
-
-        return roles_data
+        return {
+            'Client': cte_as_dict(Client),
+            'ObjectTOC': cte_as_dict(ObjectTOC),
+            'BaseGroup': cte_as_dict(BaseGroup),
+            'Group': cte_as_dict(Group),
+            'UserToGroup': cte_as_dict(UserToGroup)
+        }
 
     # Debugging
     except Exception as e:
