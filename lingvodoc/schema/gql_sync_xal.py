@@ -9,11 +9,10 @@ import re
 import logging
 import traceback
 import requests
-from sqlalchemy import func, tuple_
+from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
-from lingvodoc.utils import ids_to_id_query
 
 from lingvodoc.models import (
     DBSession,
@@ -47,7 +46,7 @@ min_date = 1735689600.0  # 2025-01-01 00:00:00
 none = ''
 
 # Ordered (!) models to create entries from the beginning
-db_model = {
+db_model_data = {
     # Translations
     'TranslationGist': dbTranslationGist,
     'TranslationAtom': dbTranslationAtom,
@@ -69,6 +68,14 @@ db_model = {
     # Parser results
     'Parser': dbParser,
     'ParserResult': dbParserResult
+}
+
+db_model_roles = {
+    'Client': (dbClient, ['id']),
+    'ObjectTOC': (dbObjectTOC, ['client_id', 'object_id']),
+    'BaseGroup': (dbBaseGroup, ['id']),
+    'Group': (dbGroup, ['id']),
+    'UserToGroup': (dbUserToGroup, ['user_id', 'group_id'])
 }
 
 # Tuple means relative: (his_dbModel, my_suffix, his_suffix)
@@ -137,7 +144,7 @@ def key2str(*key):
 
 
 # For debugging
-def whats_time(epoch_times, no_caption=False):
+def report(epoch_times, no_caption=False):
     headers = list(epoch_times.keys())
     values = list(epoch_times.values())
     next_values = list(epoch_times.values())[1:]
@@ -166,63 +173,67 @@ def CheckPermissions(info, perspective_id, debug_flag=False):
     return result
 
 
-def ListRoles(user_id, debug_flag=False):
+def ListRoles(user_id, subject_id, debug_flag=False):
 
-    roles_data = dict()
-
-    def as_dict(res):
+    def cte_as_dict(cte):
+        obj = DBSession.query(cte).all()
         try:
             result = list(map(
-                lambda x: x._asdict(), res))
+                lambda x: x._asdict(), obj))
         except AttributeError:
             result = list(map(
-                lambda x: {k: v for k, v in x.__dict__.items() if not k.startswith('_')}, res))
+                lambda x: {k: v for k, v in x.__dict__.items() if not k.startswith('_')}, obj))
         return result
 
+    # Getting tree of entries for current user_id or subject_id
     try:
-        roles_data['UserToGroup'] = as_dict(
+        if user_id is not None:
+            filter_by_args = [dbUserToGroup.user_id == user_id]
+
+        elif subject_id is not None:
+            filter_by_args = [dbUserToGroup.group_id == dbGroup.id,
+                              dbGroup.subject_client_id == subject_id[0],
+                              dbGroup.subject_object_id == subject_id[1]]
+        else:
+            raise NotImplementedError()
+
+        UserToGroup = (
             DBSession
                 .query(dbUserToGroup)
-                .filter_by(user_id=user_id)
-                .all())
+                .filter(*filter_by_args)
+                .distinct()
+                .cte())
 
-        group_set = set(x['group_id'] for x in roles_data['UserToGroup'])
-
-        roles_data['Group'] = as_dict(
+        Group = (
             DBSession
                 .query(dbGroup)
-                .filter(dbGroup.id.in_(group_set))
-                .all())
+                .filter(dbGroup.id == UserToGroup.c.group_id)
+                .distinct()
+                .cte())
 
-        base_group_set = set(y['base_group_id'] for y in roles_data['Group'])
-
-        roles_data['BaseGroup'] = as_dict(
+        BaseGroup = (
             DBSession
                 .query(dbBaseGroup)
-                .filter(dbBaseGroup.id.in_(base_group_set))
-                .all())
+                .filter(dbBaseGroup.id == Group.c.base_group_id)
+                .distinct()
+                .cte())
 
-        group_subject_set = set(
-            (z['subject_client_id'], z['subject_object_id'])
-            for z in roles_data['Group']
-            if z['subject_client_id'] and z['subject_object_id'])
-
-        roles_data['ObjectTOC'] = as_dict(
+        ObjectTOC = (
             DBSession
                 .query(dbObjectTOC)
-                .filter(tuple_(
-                    dbObjectTOC.client_id,
-                    dbObjectTOC.object_id)
-                        .in_(ids_to_id_query(group_subject_set)))
-                .all())
+                .filter(dbObjectTOC.client_id == Group.c.subject_client_id,
+                        dbObjectTOC.object_id == Group.c.subject_object_id)
+                .distinct()
+                .cte())
 
-        client_set = set(c['client_id'] for c in roles_data['ObjectTOC'])
-
-        roles_data['Client'] = as_dict(
+        Client = (
             DBSession
                 .query(dbClient)
-                .filter(dbClient.id.in_(client_set))
-                .all())
+                .filter(dbClient.id == Group.c.subject_client_id)
+                .distinct()
+                .cte())
+
+        roles_data = {cte: cte_as_dict(eval(cte)) for cte in db_model_roles}
 
         return roles_data
 
@@ -234,21 +245,14 @@ def ListRoles(user_id, debug_flag=False):
 
 
 def MergeRoles(proxy_roles, debug_flag=False):
+
     proxy_data = proxy_roles.__dict__['roles_data']
     proxy_data = proxy_data['sync_roles']['roles_data']
 
-    db_model = {
-        'Client': (dbClient, ['id']),
-        'ObjectTOC': (dbObjectTOC, ['client_id', 'object_id']),
-        'BaseGroup': (dbBaseGroup, ['id']),
-        'Group': (dbGroup, ['id']),
-        'UserToGroup': (dbUserToGroup, ['user_id', 'group_id'])
-    }
-
     try:
-        # Get new entries from proxy
-        for table in db_model:
-            model, index = db_model[table]
+        # Add new entries to database
+        for table in db_model_roles:
+            model, index = db_model_roles[table]
             for row in proxy_data[table]:
                 stmt = (
                     insert(model)
@@ -386,7 +390,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 local_result[composite_id] = columns
 
                 if debug_flag:
-                    whats_time({
+                    report({
                         ('Sync point', 20): local_result['sync_point'],
                         ('Updated at', 20): obj.updated_at,
                         ('Composite id', 20): composite_id,
@@ -506,11 +510,6 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     ##### End of cross-server query #####
 
-    '''
-    task = TaskStatus(user_id, "Synchronisation with server", '', 5)
-    task.set(1, 1, "Started", "")
-    '''
-
     if debug_flag:
         print('\nPreparing sync...')
 
@@ -535,7 +534,10 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
     if not CheckPermissions(info, perspective_id, debug_flag):
-        raise ResponseError("You have no permissions to do sync")
+        return {
+            'triumph': False,
+            'message': "You have no permissions to do sync"
+        }
 
     message = []
     request = info.context.request
@@ -579,7 +581,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
     # We should order changes according to foreign_keys between tables
     # So an entry can't be added into 'dictionaryperspective' table
     # before its parent is not added into 'dictionary' table and so on
-    # Tables are placed correctly in db_model dictionary in advance
+    # Tables are placed correctly in db_model_data dictionary in advance
 
     def ordered(changes):
         try:
@@ -590,7 +592,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
                     changes_by_table[table][composite_key] = value
 
             result = {}
-            for table in db_model:
+            for table in db_model_data:
                 result.update(changes_by_table[table])
 
             return result
@@ -661,7 +663,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             foreign_content = foreign_dict.get('content', '')
 
             client_id, object_id, table = composite_id.split(',')
-            model = db_model[table]
+            model = db_model_data[table]
 
             db_object = (
                 DBSession
@@ -694,7 +696,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
             next_synced_at = max(next_synced_at, foreign_update)
 
             if debug_flag:
-                whats_time({
+                report({
                     ('Sync time', 20): current_synced_at,
                     ('Foreign update', 20): foreign_update,
                     ('Local update', 20): local_update,

@@ -9334,7 +9334,7 @@ class SyncRoles(graphene.Mutation):
                     try_proxy(request)
 
                 # Get data locally
-                roles_data = ListRoles(user_id, debug_flag)
+                roles_data = ListRoles(user_id, None, debug_flag)
 
             except ProxyPass as e:
                 roles_data = e.response_json.get('data')
