@@ -735,14 +735,12 @@ class Query(graphene.ObjectType):
     check_permissions = (
         graphene.Field(
             graphene.Boolean,
-            perspective_id = LingvodocID(required = True),
-            debug_flag = graphene.Boolean()))
+            perspective_id = LingvodocID(required = True)))
 
     check_permissions_bulk = (
         graphene.Field(
             ObjectVal,
-            perspective_id_list = graphene.List(LingvodocID, required = True),
-            debug_flag = graphene.Boolean()))
+            perspective_id_list = graphene.List(LingvodocID, required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -5469,7 +5467,7 @@ class Query(graphene.ObjectType):
         result = {}
         for perspective_id in perspective_id_list:
             perspective_id_str = ','.join(map(str, perspective_id))
-            result[perspective_id_str] = CheckPermissions(info, perspective_id, debug_flag)
+            result[perspective_id_str] = CheckPermissions(info, perspective_id)
         return result
 
 class PerspectivesAndFields(graphene.InputObjectType):

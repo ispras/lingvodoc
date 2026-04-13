@@ -167,8 +167,11 @@ def report(epoch_times, no_caption=False):
 
 
 def CheckPermissions(info, perspective_id, action='edit'):
-    result = info.context.acl_check_if(action, 'perspective', perspective_id)
-    return result
+    # For now everyone with allowed_sync == True and any permission
+    # for the perspective on remote host can add this perspective locally
+    return (
+        action == 'create' or
+        info.context.acl_check_if(action, 'perspective', perspective_id))
 
 
 def as_dict(obj):
