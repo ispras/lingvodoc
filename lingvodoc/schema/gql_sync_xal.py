@@ -37,9 +37,6 @@ from lingvodoc.models import (
     UserToGroupAssociation as dbUserToGroup
 )
 
-from lingvodoc.cache.caching import TaskStatus
-from lingvodoc.queue.celery import celery
-
 from pdb import set_trace as A
 
 log = logging.getLogger(__name__)
@@ -169,21 +166,23 @@ def report(epoch_times, no_caption=False):
         print(cell(v, w), end=sign)
 
 
-def CheckPermissions(info, perspective_id, debug_flag=False):
-    result = info.context.acl_check_if('edit', 'perspective', perspective_id)
+def CheckPermissions(info, perspective_id, action='edit'):
+    result = info.context.acl_check_if(action, 'perspective', perspective_id)
     return result
 
 
-def ListRoles(user_id, subject_ids, debug_flag=False):
+def as_dict(obj):
+    # If object is cte
+    if type(obj) is not list:
+        obj = DBSession.query(obj).all()
 
-    def as_dict(obj):
-        # If object is cte
-        if type(obj) is not list:
-            obj = DBSession.query(obj).all()
-        try:
-            return [x._asdict() for x in obj]
-        except AttributeError:
-            return [{k: v for k, v in x.__dict__.items() if not k.startswith('_')} for x in obj]
+    try:
+        return [x._asdict() for x in obj]
+    except AttributeError:
+        return [{k: v for k, v in x.__dict__.items() if not k.startswith('_')} for x in obj]
+
+
+def ListRoles(user_id, subject_ids, debug_flag=False):
 
     # Getting tree of entries for current user_id or subject_id
     try:
@@ -193,7 +192,7 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
         elif subject_ids is not None:
 
             if len(subject_ids) == 0:
-                return {}
+                return None
 
             filter_by_args = [dbUserToGroup.group_id == dbGroup.id,
                               tuple_(
@@ -256,14 +255,14 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
 
 def MergeRoles(roles_data, debug_flag=False):
 
+    if roles_data is None:
+        print("\nNo any update for roles")
+        return
+
     try:
         # Add new entries to database
         for table in db_model_roles:
-            if table not in roles_data:
-                continue
-
             model, index = db_model_roles[table]
-
             for row in roles_data[table]:
                 stmt = (
                     insert(model)
@@ -297,13 +296,14 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     sync_for = sync_between[not sync_between.index(local)]
 
     local_result = {'warns': []}
-    local_ids = []
+    local_ids = set()
     id_pool = set()
     clients = set()
     count = 0
     repeats = 0
 
     def store_data(side, data):
+
         pickle_path = 'no_store'
 
         # Don't store result locally
@@ -326,6 +326,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         return pickle_path
 
     def get_sync_point():
+
         perspective_metadata = ((
             DBSession
                 .query(
@@ -393,14 +394,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
             for obj in changed_objects:
                 clients.add(obj.client_id)
-
-                # '_sa_instance_state' is an object so is not json-serializable, we'll fix this
-                columns = obj._asdict()
-                columns.pop('_sa_instance_state', None)
-
-                local_ids.append((obj.client_id, obj.object_id))
+                local_ids.add((obj.client_id, obj.object_id))
                 composite_id = key2str(obj.client_id, obj.object_id, table)
-                local_result[composite_id] = columns
+                local_result[composite_id] = as_dict([obj])[0]
 
                 if debug_flag:
                     report({
@@ -548,9 +544,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     return local_result
 
 
-def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
+def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
 
-    if not CheckPermissions(info, perspective_id, debug_flag):
+    if not CheckPermissions(info, perspective_id, action):
         return {
             'triumph': False,
             'message': "You have no permissions to do sync"
@@ -581,6 +577,7 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
 
         #db_perspective.updated_at = synced_at
 
+    # TODO: get rid of this
     def is_comp_id(comp_id):
         return bool(re.match(r'^\d+,\d+,\w+$', comp_id))
 
@@ -600,6 +597,8 @@ def MergeChanges(info, perspective_id, sync_between, debug_flag=False):
     # before its parent is not added into 'dictionary' table and so on
     # Tables are placed correctly in db_model_data dictionary in advance
 
+    # TODO: change dictionary from changes[composite_key] to changes[table][coid]
+    # TODO: get rid of this function, order by db_model_data at once
     def ordered(changes):
         try:
             changes_by_table = collections.defaultdict(dict)
