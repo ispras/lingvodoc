@@ -5460,14 +5460,19 @@ class Query(graphene.ObjectType):
         return ListChanges(info, **args)
 
     def resolve_check_permissions(self, info, **args):
-        return CheckPermissions(info, **args)
+        client_id = info.context.client_id
+        user_id = Client.get_user_by_client_id(client_id)
 
-    def resolve_check_permissions_bulk(
-            self, info, perspective_id_list, debug_flag=False):
+        return CheckPermissions(info, user_id, **args)
+
+    def resolve_check_permissions_bulk(self, info, perspective_id_list):
+        client_id = info.context.client_id
+        user_id = Client.get_user_by_client_id(client_id)
+
         result = {}
         for perspective_id in perspective_id_list:
             perspective_id_str = ','.join(map(str, perspective_id))
-            result[perspective_id_str] = CheckPermissions(info, perspective_id)
+            result[perspective_id_str] = CheckPermissions(info, user_id, perspective_id)
         return result
 
 class PerspectivesAndFields(graphene.InputObjectType):
@@ -5506,7 +5511,7 @@ class ApplySync(graphene.Mutation):
         if user.id != 1 and not (user.additional_metadata or {}).get('allowed_sync'):
             raise ResponseError("This client has no permissions to apply synchronization.")
 
-        result = MergeChanges(info, **args)
+        result = MergeChanges(info, user.id, **args)
 
         if isinstance(result, dict):
             return ApplySync(**result)

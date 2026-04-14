@@ -166,12 +166,12 @@ def report(epoch_times, no_caption=False):
         print(cell(v, w), end=sign)
 
 
-def CheckPermissions(info, perspective_id, action='edit'):
+def CheckPermissions(info, user_id, subject_id, action='edit'):
     # For now everyone with allowed_sync == True and any permission
     # for the perspective on remote host can add this perspective locally
     return (
-        action == 'create' or
-        info.context.acl_check_if(action, 'perspective', perspective_id))
+        user_id == 1 or action == 'create' or
+        info.context.acl_check_if(action, 'perspective', subject_id))
 
 
 def as_dict(obj):
@@ -399,7 +399,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                 clients.add(obj.client_id)
                 local_ids.add((obj.client_id, obj.object_id))
                 composite_id = key2str(obj.client_id, obj.object_id, table)
-                local_result[composite_id] = as_dict([obj])[0]
+                local_result[composite_id] = obj._asdict()
 
                 if debug_flag:
                     report({
@@ -547,15 +547,14 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     return local_result
 
 
-def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
+def MergeChanges(info, user_id, perspective_id, sync_between, action='edit', debug_flag=False):
 
-    if not CheckPermissions(info, perspective_id, action):
+    if not CheckPermissions(info, user_id, perspective_id, action):
         return {
             'triumph': False,
             'message': "You have no permissions to do sync"
         }
 
-    message = []
     request = info.context.request
     settings = request.registry.settings
     local = settings['proxy']['local']
@@ -739,12 +738,12 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         if debug_flag:
             print('\nComplete!')
 
-        return {'triumph': True, 'message': message}
+        return {'triumph': True, 'message': ""}
 
     except Exception:
-        message.append('Something wrong with changes merging')
+        message = "Something went wrong with merging of changes"
         traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
-        log.warning(message[-1])
+        log.warning(message)
         log.warning(traceback_string)
 
         return {
