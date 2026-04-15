@@ -5473,11 +5473,10 @@ class Query(graphene.ObjectType):
                 try_proxy(request)
 
             except ProxyPass as e:
-                proxy_permission = (
-                    e.response_json
-                        .get('data', {})
-                        .get('check_permissions'))
-            A()
+                proxy_permission = ((e.response_json
+                                    .get('data') or {})
+                                    .get('check_permissions'))
+
             return local_permission and proxy_permission
 
         # Remotely we check if perspective exists
