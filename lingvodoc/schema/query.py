@@ -326,6 +326,7 @@ from lingvodoc.schema.gql_markups import (
 
 from lingvodoc.schema.gql_sync_xal import (
     CheckPermissions,
+    CheckPerspective,
     ListChanges,
     MergeChanges,
     ListRoles,
@@ -735,7 +736,8 @@ class Query(graphene.ObjectType):
     check_permissions = (
         graphene.Field(
             graphene.Boolean,
-                subject_id = LingvodocID(required = True)))
+            subject_id = LingvodocID(required = True),
+            proxy = graphene.Boolean()))
 
     check_permissions_bulk = (
         graphene.Field(
@@ -5459,20 +5461,35 @@ class Query(graphene.ObjectType):
     def resolve_list_changes(self, info, **args):
         return ListChanges(info, **args)
 
-    def resolve_check_permissions(self, info, **args):
-        client_id = info.context.client_id
-        user_id = Client.get_user_by_client_id(client_id)
+    def resolve_check_permissions(self, info, subject_id, proxy=None):
 
-        return CheckPermissions(info, user_id, **args)
+        if proxy is None:
+            local_permission = CheckPermissions(info, subject_id)
+            proxy_permission = False
+
+            try:
+                # Call remote request
+                request = info.context.request
+                try_proxy(request)
+
+            except ProxyPass as e:
+                proxy_permission = (
+                    e.response_json
+                        .get('data', {})
+                        .get('check_permissions'))
+            A()
+            return local_permission and proxy_permission
+
+        # Remotely we check if perspective exists
+        return CheckPerspective(subject_id)
 
     def resolve_check_permissions_bulk(self, info, subject_id_list):
-        client_id = info.context.client_id
-        user_id = Client.get_user_by_client_id(client_id)
 
         result = {}
         for subject_id in subject_id_list:
             subject_id_str = ','.join(map(str, subject_id))
-            result[subject_id_str] = CheckPermissions(info, user_id, subject_id)
+            result[subject_id_str] = CheckPermissions(info, subject_id)
+
         return result
 
 class PerspectivesAndFields(graphene.InputObjectType):
@@ -5511,7 +5528,7 @@ class ApplySync(graphene.Mutation):
         if user.id != 1 and not (user.additional_metadata or {}).get('allowed_sync'):
             raise ResponseError("This client has no permissions to apply synchronization.")
 
-        result = MergeChanges(info, user.id, **args)
+        result = MergeChanges(info, **args)
 
         if isinstance(result, dict):
             return ApplySync(**result)

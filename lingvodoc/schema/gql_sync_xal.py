@@ -166,12 +166,32 @@ def report(epoch_times, no_caption=False):
         print(cell(v, w), end=sign)
 
 
-def CheckPermissions(info, user_id, subject_id, action='edit'):
+def CheckPermissions(info, subject_id, action='edit'):
     # For now everyone with allowed_sync == True and any permission
     # for the perspective on remote host can add this perspective locally
+
+    client_id = info.context.client_id
+    user_id = dbClient.get_user_by_client_id(client_id)
+
     return (
-        user_id == 1 or action == 'create' or
+        user_id == 1 or
+        action == 'create' or
         info.context.acl_check_if(action, 'perspective', subject_id))
+
+
+def CheckPerspective(perspective_id):
+    db_perspective = (
+        DBSession
+            .query(
+                dbDictionaryPerspective)
+            .filter_by(
+                client_id=perspective_id[0],
+                object_id=perspective_id[1],
+                marked_for_deletion=False)
+            .first())
+
+    return (
+        db_perspective is not None)
 
 
 def as_dict(obj):
@@ -547,9 +567,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     return local_result
 
 
-def MergeChanges(info, user_id, perspective_id, sync_between, action='edit', debug_flag=False):
+def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
 
-    if not CheckPermissions(info, user_id, perspective_id, action):
+    if not CheckPermissions(info, perspective_id, action):
         return {
             'triumph': False,
             'message': "You have no permissions to do sync"
