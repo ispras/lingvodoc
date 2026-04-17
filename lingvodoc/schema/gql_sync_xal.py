@@ -68,7 +68,7 @@ db_model_data = {
 }
 
 tables_for_roles = ['Dictionary', 'DictionaryPerspective']
-tables_for_report = ['Language', 'Dictionary', 'DictionaryPerspective', 'Entity']
+tables_for_summary = ['Language', 'Dictionary', 'DictionaryPerspective', 'Entity']
 
 db_model_roles = {
     'Client': (dbClient, ['id']),
@@ -137,6 +137,10 @@ db_tree = {
 
     dbTranslationAtom: []
 }
+
+
+def summary(result):
+    return {k: result[k] for k in result if k in tables_for_summary}
 
 
 def key2str(*key):
@@ -317,6 +321,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     variables = request.json_body.get('variables', {})
     user_id = variables.get('user_id')
     sync_point = variables.get('sync_point')
+    foreign_side = sync_point is not None
 
     settings = request.registry.settings
     local = settings['proxy']['local']
@@ -337,7 +342,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
         # Don't store result locally
         # if query went from remote server
-        if sync_point is not None:
+        if foreign_side:
             return pickle_path
 
         try:
@@ -545,7 +550,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             if debug_flag:
                 print(f'Foreign stored: {pickle_path} <- {remote}')
 
-            return remote_result
+            return summary(remote_result)
         else:
             raise ResponseError(f'{resp_status=} from {remote=}')
 
@@ -561,13 +566,10 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     ##### Running main recursion from here #####
     process_db_objects(dbDictionaryPerspective, perspective_id, none)
 
-    # Filter data to report it for user
-    report_result = {k: local_result[k] for k in local_result if k in tables_for_report}
-
-    if local == 'isp' and sync_point is not None:
+    if local == 'isp' and foreign_side:
         local_result['clients'] = client_list()
 
-    if sync_point is not None:
+    if foreign_side:
         # Update result with roles for subjects
         local_result['roles'] = ListRoles(None, subject_ids, debug_flag)
 
@@ -578,7 +580,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         print(f'\nSkipped repeats: {repeats}')
         print(f'Local stored: {local} -> {pickle_path}')
 
-    return report_result
+    return local_result if foreign_side else summary(local_result)
 
 
 def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
@@ -663,7 +665,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         # Iterate by local changes to get maximal updating point
         # this time will be new sync_point (not real time)
         for table in db_model_data:
-            for local_dict in local_changes[table].values():
+            for local_dict in local_changes.get(table, {}).values():
                 local_update = local_dict.get('updated_at')
                 next_synced_at = max(next_synced_at, local_update)
 
@@ -673,8 +675,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         count = 0
 
         for table in db_model_data:
-            for obj_coid, foreign_dict in foreign_changes[table].items():
-                local_dict = local_changes[table].get(obj_coid, {})
+            for obj_coid, foreign_dict in foreign_changes.get(table, {}).items():
+                local_dict = local_changes.get(table, {}).get(obj_coid, {})
                 local_update = local_dict.get('updated_at', min_date)
                 foreign_update = foreign_dict.get('updated_at')
                 foreign_content = foreign_dict.get('content', '')

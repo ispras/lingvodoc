@@ -9334,7 +9334,7 @@ class SyncRoles(graphene.Mutation):
         debug_flag=False):
 
         if proxy is None:
-            roles_data = {}
+            roles_data = None
 
             # Get data remotely
             try:
@@ -9342,10 +9342,8 @@ class SyncRoles(graphene.Mutation):
                 try_proxy(request)
 
             except ProxyPass as e:
-                proxy_roles = e.response_json.get('data')
-                roles_data = proxy_roles.__dict__['roles_data']
+                roles_data = e.response_json.get('data')
                 roles_data = roles_data['sync_roles']['roles_data']
-                A()
 
             MergeRoles(roles_data, debug_flag)
 
