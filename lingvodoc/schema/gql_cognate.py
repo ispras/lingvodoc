@@ -5774,8 +5774,10 @@ class NeuroCognateAnalysis(graphene.Mutation):
             return ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
-        # Here are: administrator, Julia Normanskaya, Viktoria Kukanova or Irina Novak
-        allowed_users = [1, 5, 180, 317]
+        # Here are: administrator,
+        # Julia Normanskaya, Viktoria Kukanova, Irina Novak,
+        # Svetlana Nagurnaya and Maria Kosheleva
+        allowed_users = [1, 5, 180, 317, 779, 789]
 
         # For now only allowed_users can use neuro cognates tool
         if user.id not in allowed_users:
