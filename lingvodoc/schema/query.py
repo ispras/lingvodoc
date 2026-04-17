@@ -9331,53 +9331,32 @@ class SyncRoles(graphene.Mutation):
         info,
         user_id,
         proxy=None,
-        debug_flag = False):
+        debug_flag=False):
 
-        try:
-            # Run request for remote host and perform mutation
-            if proxy is None:
-                proxy_roles = SyncRoles.mutate(
-                    root, info, user_id, proxy=True, debug_flag=debug_flag)
+        if proxy is None:
+            roles_data = {}
 
-                roles_data = proxy_roles.__dict__['roles_data']
-                roles_data = roles_data['sync_roles']['roles_data']
-
-                MergeRoles(roles_data, debug_flag)
-
-                return (
-                    SyncRoles(
-                        roles_data=None,
-                        triumph=True))
-
+            # Get data remotely
             try:
                 request = info.context.request
-
-                # Call remote request
-                if proxy:
-                    try_proxy(request)
-
-                # Get data locally
-                roles_data = ListRoles(user_id, None, debug_flag)
+                try_proxy(request)
 
             except ProxyPass as e:
-                roles_data = e.response_json.get('data')
+                proxy_roles = e.response_json.get('data')
+                roles_data = proxy_roles.__dict__['roles_data']
+                roles_data = roles_data['sync_roles']['roles_data']
+                A()
 
-        except Exception as exception:
-
-            traceback_string = (
-                ''.join(
-                    traceback.format_exception(
-                        exception, exception, exception.__traceback__))[:-1])
-
-            log.warning('sync_roles: exception')
-            log.warning(traceback_string)
+            MergeRoles(roles_data, debug_flag)
 
             return (
-                ResponseError(
-                    'Exception:\n' + traceback_string))
+                SyncRoles(
+                    roles_data=None,
+                    triumph=True))
 
-        # Return data for further mutation
-        # This is called above for both hosts
+        # Get data locally on remote host
+        roles_data = ListRoles(user_id, None, debug_flag)
+
         return (
             SyncRoles(
                 roles_data=roles_data,

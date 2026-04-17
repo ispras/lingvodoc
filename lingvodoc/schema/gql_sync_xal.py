@@ -5,7 +5,6 @@ import pickle
 import gzip
 import sys
 import os
-import re
 import logging
 import traceback
 import requests
@@ -67,6 +66,9 @@ db_model_data = {
     'Parser': dbParser,
     'ParserResult': dbParserResult
 }
+
+tables_for_roles = ['Dictionary', 'DictionaryPerspective']
+tables_for_report = ['Language', 'Dictionary', 'DictionaryPerspective', 'Entity']
 
 db_model_roles = {
     'Client': (dbClient, ['id']),
@@ -207,37 +209,41 @@ def as_dict(obj):
 
 def ListRoles(user_id, subject_ids, debug_flag=False):
 
+    # Basegroups without any relation to dictionaries or perspectives
+    user_base_groups = [*range(1, 7), 9, 18, *range(28, 33)]
+
     # Getting tree of entries for current user_id or subject_id
     try:
         if user_id is not None:
-            filter_by_args = [dbUserToGroup.user_id == user_id]
+            filter_by_args = [dbGroup.base_group_id.in_(user_base_groups),
+                              dbGroup.id == dbUserToGroup.group_id,
+                              dbUserToGroup.user_id == user_id]
 
         elif subject_ids is not None:
 
             if len(subject_ids) == 0:
                 return None
 
-            filter_by_args = [dbUserToGroup.group_id == dbGroup.id,
-                              tuple_(
+            filter_by_args = [tuple_(
                                 dbGroup.subject_client_id,
                                 dbGroup.subject_object_id
                               ).in_(ids_to_id_query(subject_ids))]
         else:
             raise NotImplementedError()
 
-        UserToGroup = (
+        Group = (
             DBSession
-                .query(dbUserToGroup)
+                .query(dbGroup)
                 .filter(*filter_by_args)
                 .distinct()
                 .cte())
 
-        Group = (
+        UserToGroup = (
             DBSession
-                .query(dbGroup)
-                .filter(dbGroup.id == UserToGroup.c.group_id)
+                .query(dbUserToGroup)
+                .filter(dbUserToGroup.group_id == Group.c.id)
                 .distinct()
-                .cte())
+                .all())
 
         BaseGroup = (
             DBSession
@@ -252,14 +258,14 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
                 .filter(dbObjectTOC.client_id == Group.c.subject_client_id,
                         dbObjectTOC.object_id == Group.c.subject_object_id)
                 .distinct()
-                .all())
+                .all()) if subject_ids else []
 
         Client = (
             DBSession
                 .query(dbClient)
                 .filter(dbClient.id == Group.c.subject_client_id)
                 .distinct()
-                .all())
+                .all()) if subject_ids else []
 
         return {
             'Client': as_dict(Client),
@@ -319,7 +325,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     sync_for = sync_between[not sync_between.index(local)]
 
     local_result = {'warns': []}
-    local_ids = set()
+    subject_ids = set()
     id_pool = set()
     clients = set()
     count = 0
@@ -380,6 +386,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         nonlocal count
         nonlocal repeats
         table = model.__name__
+        local_result[table] = {}
 
         # Controlling already processed elements
         pool_item = key2str(*coid, table, suff)
@@ -417,15 +424,17 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
             for obj in changed_objects:
                 clients.add(obj.client_id)
-                local_ids.add((obj.client_id, obj.object_id))
-                composite_id = key2str(obj.client_id, obj.object_id, table)
-                local_result[composite_id] = obj._asdict()
+                obj_coid = key2str(obj.client_id, obj.object_id)
+                local_result[table][obj_coid] = obj._asdict()
+
+                if table in tables_for_roles:
+                    subject_ids.add((obj.client_id, obj.object_id))
 
                 if debug_flag:
                     report({
                         ('Sync point', 20): local_result['sync_point'],
                         ('Updated at', 20): obj.updated_at,
-                        ('Composite id', 20): composite_id,
+                        ('Composite id', 20): f"{obj_coid},{table}",
                         ('Deleted', 12):
                             obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'n/a',
                         ('Content', 20): getattr(obj, 'content', 'n/a')
@@ -548,14 +557,19 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     # For remote query get 'sync_point' from request json
     # for local query get it from database
     local_result['sync_point'] = sync_point or get_sync_point()
+
+    ##### Running main recursion from here #####
     process_db_objects(dbDictionaryPerspective, perspective_id, none)
+
+    # Filter data to report it for user
+    report_result = {k: local_result[k] for k in local_result if k in tables_for_report}
 
     if local == 'isp' and sync_point is not None:
         local_result['clients'] = client_list()
 
     if sync_point is not None:
-        local_result['roles'] = (
-            ListRoles(None, local_ids, debug_flag))
+        # Update result with roles for subjects
+        local_result['roles'] = ListRoles(None, subject_ids, debug_flag)
 
     # Pickling by perspective id
     pickle_path = store_data(local, local_result)
@@ -564,7 +578,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         print(f'\nSkipped repeats: {repeats}')
         print(f'Local stored: {local} -> {pickle_path}')
 
-    return local_result
+    return report_result
 
 
 def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
@@ -597,11 +611,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             **perspective_metadata,
             f'{remote}_synced_at': synced_at}
 
-        #db_perspective.updated_at = synced_at
-
-    # TODO: get rid of this
-    def is_comp_id(comp_id):
-        return bool(re.match(r'^\d+,\d+,\w+$', comp_id))
+        # Doesn't work
+        # db_perspective.updated_at = synced_at
 
     local_pickle_path = os.path.join(
         storage_path,
@@ -613,31 +624,6 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         f'{remote}_sync',
         key2str(*perspective_id)
     )
-
-    # We should order changes according to foreign_keys between tables
-    # So an entry can't be added into 'dictionaryperspective' table
-    # before its parent is not added into 'dictionary' table and so on
-    # Tables are placed correctly in db_model_data dictionary in advance
-
-    # TODO: change dictionary from changes[composite_key] to changes[table][coid]
-    # TODO: get rid of this function, order by db_model_data at once
-    def ordered(changes):
-        try:
-            changes_by_table = collections.defaultdict(dict)
-            for composite_key, value in changes.items():
-                if is_comp_id(composite_key):
-                    _, _, table = composite_key.split(',')
-                    changes_by_table[table][composite_key] = value
-
-            result = {}
-            for table in db_model_data:
-                result.update(changes_by_table[table])
-
-            return result
-
-        # Debugging
-        except Exception as e:
-            raise
 
     # Reading pickle files
     try:
@@ -676,74 +662,67 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
         # Iterate by local changes to get maximal updating point
         # this time will be new sync_point (not real time)
-        for composite_id, local_dict in local_changes.items():
-            # Service keys e.g. 'warns'
-            if not is_comp_id(composite_id):
-                continue
-
-            local_update = local_dict.get('updated_at')
-            next_synced_at = max(next_synced_at, local_update)
+        for table in db_model_data:
+            for local_dict in local_changes[table].values():
+                local_update = local_dict.get('updated_at')
+                next_synced_at = max(next_synced_at, local_update)
 
         if debug_flag:
             print('\nApplying sync...')
 
         count = 0
 
-        for composite_id, foreign_dict in ordered(foreign_changes).items():
-            # Service keys e.g. 'warns'
-            if not is_comp_id(composite_id):
-                continue
+        for table in db_model_data:
+            for obj_coid, foreign_dict in foreign_changes[table].items():
+                local_dict = local_changes[table].get(obj_coid, {})
+                local_update = local_dict.get('updated_at', min_date)
+                foreign_update = foreign_dict.get('updated_at')
+                foreign_content = foreign_dict.get('content', '')
 
-            local_dict = local_changes.get(composite_id, {})
-            local_update = local_dict.get('updated_at', min_date)
-            local_content = local_dict.get('content', '')
-            foreign_update = foreign_dict.get('updated_at')
-            foreign_content = foreign_dict.get('content', '')
+                client_id, object_id = obj_coid.split(',')
+                model = db_model_data[table]
 
-            client_id, object_id, table = composite_id.split(',')
-            model = db_model_data[table]
+                db_object = (
+                    DBSession
+                        .query(model)
+                        .filter_by(
+                            client_id=client_id,
+                            object_id=object_id)
+                        .first())
 
-            db_object = (
-                DBSession
-                    .query(model)
-                    .filter_by(
-                        client_id=client_id,
-                        object_id=object_id)
-                    .first())
+                action = 'n/a'
 
-            action = 'n/a'
+                if db_object is None:
+                    # Add new object
+                    db_object = model(**foreign_dict)
+                    DBSession.add(db_object)
 
-            if db_object is None:
-                # Add new object
-                db_object = model(**foreign_dict)
-                DBSession.add(db_object)
+                    action = 'added'
 
-                action = 'added'
+                elif foreign_update > local_update:
+                    # Delete client_id and object_id
+                    # from dict to avoid collision
+                    foreign_dict.pop('client_id', None)
+                    foreign_dict.pop('object_id', None)
 
-            elif foreign_update > local_update:
-                # Delete client_id and object_id
-                # from dict to avoid collision
-                foreign_dict.pop('client_id', None)
-                foreign_dict.pop('object_id', None)
+                    for k, v in foreign_dict.items():
+                        setattr(db_object, k, v)
 
-                for k, v in foreign_dict.items():
-                    setattr(db_object, k, v)
+                    action = 'updated'
 
-                action = 'updated'
+                next_synced_at = max(next_synced_at, foreign_update)
 
-            next_synced_at = max(next_synced_at, foreign_update)
+                if debug_flag:
+                    report({
+                        ('Sync time', 20): current_synced_at,
+                        ('Foreign update', 20): foreign_update,
+                        ('Local update', 20): local_update,
+                        ('Action', 8): action,
+                        ('Composite id', 20): f"{obj_coid},{table}",
+                        ('Foreign content', 20): foreign_content
+                    }, no_caption=bool(count))
 
-            if debug_flag:
-                report({
-                    ('Sync time', 20): current_synced_at,
-                    ('Foreign update', 20): foreign_update,
-                    ('Local update', 20): local_update,
-                    ('Action', 8): action,
-                    ('Composite id', 20): composite_id,
-                    ('Foreign content', 20): foreign_content
-                }, no_caption=bool(count))
-
-            count += 1
+                count += 1
 
         if next_synced_at > current_synced_at:
             set_synced_at(next_synced_at)
