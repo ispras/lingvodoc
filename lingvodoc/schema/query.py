@@ -742,7 +742,7 @@ class Query(graphene.ObjectType):
     check_permissions_bulk = (
         graphene.Field(
             ObjectVal,
-            subject_id_list = graphene.List(LingvodocID, required = True)))
+            category = graphene.Int(required = True)))
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -1964,6 +1964,9 @@ class Query(graphene.ObjectType):
                 and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
 
             fill_permission_list(approvable_perspectives, 'publish')
+
+            if debug_flag:
+                print("Calculated proxy permission")
 
             return Permissions(**permission_lists)
 
@@ -5482,7 +5485,21 @@ class Query(graphene.ObjectType):
         # Remotely we check if perspective exists
         return CheckPerspective(subject_id)
 
-    def resolve_check_permissions_bulk(self, info, subject_id_list):
+    def resolve_check_permissions_bulk(self, info, category):
+
+        print("Calculating local permissions...")
+
+        subject_id_list = (
+            DBSession
+                .query(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
+                .filter(
+                    dbPerspective.marked_for_deletion == False,
+                    dbPerspective.parent_id == dbDictionary.id,
+                    dbDictionary.marked_for_deletion == False,
+                    dbDictionary.category == category)
+                .all())
 
         result = {}
         for subject_id in subject_id_list:

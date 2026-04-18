@@ -1,4 +1,3 @@
-import collections
 from time import time as now
 from datetime import datetime
 import pickle
@@ -675,6 +674,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         count = 0
 
         for table in db_model_data:
+            model = db_model_data[table]
+
             for obj_coid, foreign_dict in foreign_changes.get(table, {}).items():
                 local_dict = local_changes.get(table, {}).get(obj_coid, {})
                 local_update = local_dict.get('updated_at', min_date)
@@ -682,7 +683,6 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                 foreign_content = foreign_dict.get('content', '')
 
                 client_id, object_id = obj_coid.split(',')
-                model = db_model_data[table]
 
                 db_object = (
                     DBSession
