@@ -773,14 +773,6 @@ class Query(graphene.ObjectType):
         debug_flag = False):
 
         try:
-            '''
-            print(f"Language tree request {local=} {locals()}")
-            request = info.context.request
-
-            if proxy:
-                try_proxy(request)
-            '''
-
             language_field_asts = []
 
             for field in info.field_asts:
@@ -1866,131 +1858,104 @@ class Query(graphene.ObjectType):
 
             return tuple(existing)
 
-        try:
-            request = info.context.request
-            '''
-            if proxy:
-                try_proxy(request)
-            '''
-            client_id = info.context.client_id
+        request = info.context.request
+        client_id = info.context.client_id
 
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            headers = dict()
-            if request.headers.get('Cookie'):
-                headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            subreq.json = {'searchstring': 'Published'}
-            resp = request.invoke_subrequest(subreq)
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        headers = dict()
+        if request.headers.get('Cookie'):
+            headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        subreq.json = {'searchstring': 'Published'}
+        resp = request.invoke_subrequest(subreq)
 
-            if 'error' not in resp.json:
-                published_gist_object_id, published_gist_client_id = resp.json['object_id'], resp.json['client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
+        if 'error' not in resp.json:
+            published_gist_object_id, published_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
 
-            subreq.json = {'searchstring': 'Limited access'}  # todo: fix
-            resp = request.invoke_subrequest(subreq)
+        subreq.json = {'searchstring': 'Limited access'}  # todo: fix
+        resp = request.invoke_subrequest(subreq)
 
-            if 'error' not in resp.json:
-                limited_gist_object_id, limited_gist_client_id = resp.json['object_id'], resp.json['client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
+        if 'error' not in resp.json:
+            limited_gist_object_id, limited_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
 
-            ### Limited permissions ###
+        ### Limited permissions ###
 
-            dblimited = DBSession.query(dbPerspective).filter(
-                and_(dbPerspective.state_translation_gist_client_id == limited_gist_client_id,
-                     dbPerspective.state_translation_gist_object_id == limited_gist_object_id)
-            )
+        dblimited = DBSession.query(dbPerspective).filter(
+            and_(dbPerspective.state_translation_gist_client_id == limited_gist_client_id,
+                 dbPerspective.state_translation_gist_object_id == limited_gist_object_id)
+        )
 
-            # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
-            fill_permission_list(dblimited.all(), 'limited')
+        # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
+        fill_permission_list(dblimited.all(), 'limited')
 
-            ### View permissions ###
+        ### View permissions ###
 
-            dbpublished = DBSession.query(dbPerspective).filter(
-                and_(dbPerspective.state_translation_gist_client_id == published_gist_client_id,
-                     dbPerspective.state_translation_gist_object_id == published_gist_object_id)
-            )
+        dbpublished = DBSession.query(dbPerspective).filter(
+            and_(dbPerspective.state_translation_gist_client_id == published_gist_client_id,
+                 dbPerspective.state_translation_gist_object_id == published_gist_object_id)
+        )
 
-            existing = fill_permission_list(dbpublished.all(), 'view')
+        existing = fill_permission_list(dbpublished.all(), 'view')
 
-            if not client_id:
-                return Permissions(**permission_lists, edit=list(), publish=list())
+        if not client_id:
+            return Permissions(**permission_lists, edit=list(), publish=list())
 
-            user = DBSession.query(Client).filter(client_id == Client.id).first()
+        user = DBSession.query(Client).filter(client_id == Client.id).first()
 
-            if not user:
-                return None
+        if not user:
+            return None
 
-            user_id = user.user_id
+        user_id = user.user_id
 
-            ### Edit permissions ###
+        ### Edit permissions ###
 
-            editor_basegroup = DBSession.query(dbBaseGroup).filter(
-                and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
-            editable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
-                dbPerspective.client_id == dbGroup.subject_client_id,
-                dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
-                and_(dbUser.id == user_id,
-                     dbGroup.base_group_id == editor_basegroup.id,
-                     dbPerspective.marked_for_deletion == False)).all()
+        editor_basegroup = DBSession.query(dbBaseGroup).filter(
+            and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
+        editable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+            dbPerspective.client_id == dbGroup.subject_client_id,
+            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+            and_(dbUser.id == user_id,
+                 dbGroup.base_group_id == editor_basegroup.id,
+                 dbPerspective.marked_for_deletion == False)).all()
 
-            fill_permission_list(editable_perspectives, 'edit')
+        fill_permission_list(editable_perspectives, 'edit')
 
-            ### View personal permissions ###
+        ### View personal permissions ###
 
-            # Cleaning up view permissions
-            permission_lists['view'] = list()
+        # Cleaning up view permissions
+        permission_lists['view'] = list()
 
-            reader_basegroup = DBSession.query(dbBaseGroup).filter(
-                and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
-            readable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
-                dbPerspective.client_id == dbGroup.subject_client_id,
-                dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
-                and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
+        reader_basegroup = DBSession.query(dbBaseGroup).filter(
+            and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
+        readable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+            dbPerspective.client_id == dbGroup.subject_client_id,
+            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+            and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
 
-            fill_permission_list(readable_perspectives, 'view', existing)
+        fill_permission_list(readable_perspectives, 'view', existing)
 
-            ### Publish permissions ###
+        ### Publish permissions ###
 
-            publisher_basegroup = DBSession.query(dbBaseGroup).filter(
-                and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
+        publisher_basegroup = DBSession.query(dbBaseGroup).filter(
+            and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
 
-            approvable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
-                dbPerspective.client_id == dbGroup.subject_client_id,
-                dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
-                and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
+        approvable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+            dbPerspective.client_id == dbGroup.subject_client_id,
+            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+            and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
 
-            fill_permission_list(approvable_perspectives, 'publish')
+        fill_permission_list(approvable_perspectives, 'publish')
 
-            if debug_flag:
-                print("Calculated proxy permission")
+        if debug_flag:
+            log.warning("Calculated proxy permission")
 
-            return Permissions(**permission_lists)
-
-        # ProxyPass exception is used to skip other computations in schema
-        # and to keep data from remote host. This exception block is important
-        except ProxyPass:
-            raise
-
-        '''
-        except ProxyPass as e:
-            if debug_flag:
-                print('Getting data from response body...')
-
-            permission_lists = collections.defaultdict(list)
-
-            permissions = 'view', 'edit', 'publish', 'limited'
-            permission_lists_of_dicts = subdict(
-                e.response_data.get('permission_lists', {}), *permissions)
-
-            for list_name in permissions:
-                fill_permission_list(permission_lists_of_dicts[list_name], list_name)
-
-            return Permissions(**permission_lists)
-        '''
+        return Permissions(**permission_lists)
 
     def resolve_advanced_search(
         self,
@@ -5487,7 +5452,7 @@ class Query(graphene.ObjectType):
 
     def resolve_check_permissions_bulk(self, info, category):
 
-        print("Calculating local permissions...")
+        log.warning("Calculating local permissions...")
 
         subject_id_list = (
             DBSession
@@ -7862,7 +7827,7 @@ class BidirectionalLinks(graphene.Mutation):
                                   link_id=from_id)
                     fixed += 1
 
-                print(f'\nTotal fixed links: {fixed}')
+                log.info(f'\nTotal fixed links: {fixed}')
 
         except Exception as exception:
 

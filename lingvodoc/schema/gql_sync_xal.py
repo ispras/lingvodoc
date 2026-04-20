@@ -17,6 +17,7 @@ from lingvodoc.models import (
     DBSession,
     Client as dbClient,
     User as dbUser,
+    ENGLISH_LOCALE,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     Field as dbField,
@@ -67,7 +68,7 @@ db_model_data = {
 }
 
 tables_for_roles = ['Dictionary', 'DictionaryPerspective']
-tables_for_summary = ['Language', 'Dictionary', 'DictionaryPerspective', 'Entity']
+tables_for_summary = ['Language', 'Dictionary', 'Field', 'Entity']
 
 db_model_roles = {
     'Client': (dbClient, ['id']),
@@ -288,7 +289,7 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
 def MergeRoles(roles_data, debug_flag=False):
 
     if roles_data is None:
-        print("\nNo any update for roles")
+        log.warning("\nNo any update for roles")
         return
 
     try:
@@ -303,7 +304,7 @@ def MergeRoles(roles_data, debug_flag=False):
                 DBSession.execute(stmt)
             DBSession.flush()
 
-        print("\nAdded roles!")
+        log.warning("\nAdded roles!")
 
     # Debugging
     except Exception as e:
@@ -320,6 +321,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     variables = request.json_body.get('variables', {})
     user_id = variables.get('user_id')
     sync_point = variables.get('sync_point')
+    locale_id = (
+        int(request.cookies.get('locale_id') or ENGLISH_LOCALE))
     foreign_side = sync_point is not None
 
     settings = request.registry.settings
@@ -475,7 +478,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                     process_db_objects(model, get_id(obj, our_suff), his_suff)
 
         except Exception as e:
-            print(str(e))
+            log.warning(str(e))
 
     # Get client_id from security data
     if not (client_id := request.authenticated_userid):
@@ -547,7 +550,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             pickle_path = store_data(remote, remote_result)
 
             if debug_flag:
-                print(f'Foreign stored: {pickle_path} <- {remote}')
+                log.warning(f'Foreign stored: {pickle_path} <- {remote}')
 
             return summary(remote_result)
         else:
@@ -556,7 +559,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     ##### End of cross-server query #####
 
     if debug_flag:
-        print('\nPreparing sync...')
+        log.warning('\nPreparing sync...')
 
     # For remote query get 'sync_point' from request json
     # for local query get it from database
@@ -576,8 +579,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     pickle_path = store_data(local, local_result)
 
     if debug_flag:
-        print(f'\nSkipped repeats: {repeats}')
-        print(f'Local stored: {local} -> {pickle_path}')
+        log.warning(f'\nSkipped repeats: {repeats}')
+        log.warning(f'Local stored: {local} -> {pickle_path}')
 
     return local_result if foreign_side else summary(local_result)
 
@@ -669,7 +672,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                 next_synced_at = max(next_synced_at, local_update)
 
         if debug_flag:
-            print('\nApplying sync...')
+            log.warning('\nApplying sync...')
 
         count = 0
 
@@ -737,7 +740,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         os.remove(foreign_pickle_path)
 
         if debug_flag:
-            print('\nComplete!')
+            log.warning('\nComplete!')
 
         return {'triumph': True, 'message': ""}
 
