@@ -67,7 +67,10 @@ db_model_data = {
     'ParserResult': dbParserResult
 }
 
-tables_for_roles = ['Dictionary', 'DictionaryPerspective']
+# Base groups without any relation to subjects
+user_base_groups = [*range(1, 7), 9, 18, 30, 31, 32]
+# Subjects for groups with relations
+tables_for_roles = ['Dictionary', 'DictionaryPerspective', 'TranslationGist', 'TranslationAtom']
 tables_for_summary = ['Language', 'Dictionary', 'Field', 'Entity']
 
 db_model_roles = {
@@ -212,9 +215,6 @@ def as_dict(obj):
 
 
 def ListRoles(user_id, subject_ids, debug_flag=False):
-
-    # Basegroups without any relation to dictionaries or perspectives
-    user_base_groups = [*range(1, 7), 9, 18, *range(28, 33)]
 
     # Getting tree of entries for current user_id or subject_id
     try:

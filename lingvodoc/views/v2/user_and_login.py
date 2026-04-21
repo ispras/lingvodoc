@@ -430,16 +430,6 @@ def desk_signin(request):
         resp_cookies = client_resp.cookies.get_dict()
 
         if resp_status == 200:
-            with open('authentication_data.json', 'w') as f:
-                f.write(json.dumps(resp_cookies))
-
-            # Storing to database co-named values from client_dict
-            if new_in_base(Client.id == client_dict['id']):
-                DBSession.add(
-                    Client(
-                        **subdict(
-                            client_dict, 'id', 'user_id', 'is_browser_client')))
-
             user_path = isp_server + 'api/user'
             user_json = session.get(user_path).json()
             user_dict = user_json if type(user_json) is dict else json.loads(user_json)
@@ -450,6 +440,13 @@ def desk_signin(request):
                     User(
                         **subdict(
                             user_dict, 'id', 'login', 'name', 'intl_name', 'birthday', 'is_active', 'default_locale_id')))
+
+            # Storing to database co-named values from client_dict
+            if new_in_base(Client.id == client_dict['id']):
+                DBSession.add(
+                    Client(
+                        **subdict(
+                            client_dict, 'id', 'user_id', 'is_browser_client')))
 
             DBSession.flush()
 
