@@ -69,7 +69,7 @@ Some known issues and solutions:
 ```
 1) Error: operator class "gin_trgm_ops" does not exist for access method "gin"
 Solution: run this command for "lingvodoc" database:
-ALTER EXTENSION pg_trgm SET SCHEMA pg_catalog;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 2) Error: insert or update on table "parser" violates foreign key constraint "parser_client_id_fkey"
 Solution: comment these rows in alembic migration file:
