@@ -74,6 +74,7 @@ tables_for_roles = ['Language', 'Dictionary', 'DictionaryPerspective', 'Translat
 tables_for_summary = ['Language', 'Dictionary', 'Field', 'Entity']
 
 db_model_roles = {
+    'User': (dbUser, ['id']),
     'Client': (dbClient, ['id']),
     'ObjectTOC': (dbObjectTOC, ['client_id', 'object_id']),
     'BaseGroup': (dbBaseGroup, ['id']),
@@ -110,7 +111,7 @@ db_tree = {
 
     dbDictionaryPerspectiveToField: [
         (dbDictionaryPerspective, 'link_', none),
-        (dbDictionaryPerspectiveToField, 'self_', none),
+        (dbDictionaryPerspectiveToField, none, 'self_'),
         (dbField, 'field_', none)
     ],
 
@@ -204,14 +205,18 @@ def CheckPerspective(perspective_id):
 
 
 def as_dict(obj):
+    try:
+        return obj._asdict()
+    except AttributeError:
+        return {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+
+
+def as_dicts(obj):
     # If object is cte
     if type(obj) is not list:
         obj = DBSession.query(obj).all()
 
-    try:
-        return [x._asdict() for x in obj]
-    except AttributeError:
-        return [{k: v for k, v in x.__dict__.items() if not k.startswith('_')} for x in obj]
+    return [as_dict(x) for x in obj]
 
 
 def ListRoles(user_id, subject_ids, debug_flag=False):
@@ -252,7 +257,7 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
                 .query(dbUserToGroup)
                 .filter(*filter_user_to_group)
                 .distinct()
-                .all())
+                .cte())
 
         BaseGroup = (
             DBSession
@@ -269,6 +274,13 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
                 .distinct()
                 .all()) if subject_ids else []
 
+        User = (
+            DBSession
+                .query(dbUser)
+                .filter(dbUser.id == UserToGroup.c.user_id)
+                .distinct()
+                .all()) if subject_ids else []
+
         Client = (
             DBSession
                 .query(dbClient)
@@ -277,11 +289,12 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
                 .all()) if subject_ids else []
 
         return {
-            'Client': as_dict(Client),
-            'ObjectTOC': as_dict(ObjectTOC),
-            'BaseGroup': as_dict(BaseGroup),
-            'Group': as_dict(Group),
-            'UserToGroup': as_dict(UserToGroup)
+            'User': as_dicts(User),
+            'Client': as_dicts(Client),
+            'ObjectTOC': as_dicts(ObjectTOC),
+            'BaseGroup': as_dicts(BaseGroup),
+            'Group': as_dicts(Group),
+            'UserToGroup': as_dicts(UserToGroup)
         }
 
     # Debugging
@@ -298,9 +311,6 @@ def MergeRoles(roles_data, debug_flag=False):
         return
 
     try:
-        # Rollback dirty session if is
-        DBSession.rollback()
-
         # Add new entries to database
         for table in db_model_roles:
             model, index = db_model_roles[table]
@@ -342,7 +352,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     local_result = {'warns': []}
     subject_ids = set()
     id_pool = set()
-    clients = set()
+    client_ids = set()
     count = 0
     repeats = 0
 
@@ -385,16 +395,28 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     def client_list():
 
-        result = (
+        client_user_ids = (
             DBSession
                 .query(
                     dbClient.id,
                     dbClient.user_id)
                 .filter(
-                    dbClient.id.in_(clients))
-                .distinct().all())
+                    dbClient.id.in_(client_ids))
+                .all())
 
-        return result
+        user_ids = set(user_id for _, user_id in client_user_ids)
+
+        user_objs = (
+            DBSession
+                .query(
+                    dbUser)
+                .filter(
+                    dbUser.id.in_(user_ids))
+                .all())
+
+        user_dict = {obj.id: as_dict(obj) for obj in user_objs}
+
+        return client_user_ids, user_dict
 
     def get_db_objects(model, coid, suff):
 
@@ -440,9 +462,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
                     .all())
 
             for obj in changed_objects:
-                clients.add(obj.client_id)
+                client_ids.add(obj.client_id)
                 obj_coid = key2str(obj.client_id, obj.object_id)
-                local_result[table][obj_coid] = obj._asdict()
+                local_result[table][obj_coid] = as_dict(obj)
 
                 if table in tables_for_roles:
                     subject_ids.add((obj.client_id, obj.object_id))
@@ -662,20 +684,17 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
         # Adding users and clients met in perspective into remote database
         if local != 'isp':
-            client_list = foreign_changes['clients']
+            client_user_ids, user_dict = foreign_changes['clients']
 
-            DBSession.rollback()
+            for client_id, user_id in client_user_ids:
 
-            for client_id, user_id in client_list:
-
-                if not (user := DBSession.query(dbUser).filter_by(id=user_id).first()):
-                    user = dbUser(id=user_id)
+                if not DBSession.query(dbUser).filter_by(id=user_id).first():
+                    user = dbUser(**user_dict[str(user_id)])
                     DBSession.add(user)
 
                 if not DBSession.query(dbClient).filter_by(id=client_id).first():
                     client = dbClient(id=client_id, user_id=user_id)
                     DBSession.add(client)
-                    user.clients.append(client)
 
             DBSession.flush()
 
@@ -691,13 +710,10 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
         count = 0
 
-        # Preparing the session
-        DBSession.rollback()
-
         for table in db_model_data:
             model = db_model_data[table]
 
-            for obj_coid, foreign_dict in foreign_changes.get(table, {}).items():
+            for obj_coid, foreign_dict in reversed(foreign_changes.get(table, {}).items()):
                 local_dict = local_changes.get(table, {}).get(obj_coid, {})
                 local_update = local_dict.get('updated_at', min_date)
                 foreign_update = foreign_dict.get('updated_at')
