@@ -434,12 +434,16 @@ def desk_signin(request):
             user_json = session.get(user_path).json()
             user_dict = user_json if type(user_json) is dict else json.loads(user_json)
 
+            DBSession.rollback()
+
             # Storing to database co-named values from user_dict
             if new_in_base(User.id == user_dict['id']):
                 DBSession.add(
                     User(
                         **subdict(
-                            user_dict, 'id', 'login', 'name', 'intl_name', 'birthday', 'is_active', 'default_locale_id')))
+                            user_dict, 'id', 'login', 'name', 'intl_name',
+                            'birthday', 'is_active', 'default_locale_id',
+                            'additional_metadata')))
 
             # Storing to database co-named values from client_dict
             if new_in_base(Client.id == client_dict['id']):
@@ -646,6 +650,7 @@ def get_user_info(request):  # tested
     response['is_active'] = user.is_active
     response['allowed_sync'] = (
             user.additional_metadata or {}).get('allowed_sync')
+    response['additional_metadata'] = user.additional_metadata
     if user.email:
         response['email'] = user.email.email
     meta = None

@@ -68,9 +68,9 @@ db_model_data = {
 }
 
 # Base groups without any relation to subjects
-user_base_groups = [*range(1, 7), 9, 18, 30, 31, 32]
+user_base_groups = [*range(1, 5), 9, 18, 30, 31, 32]
 # Subjects for groups with relations
-tables_for_roles = ['Dictionary', 'DictionaryPerspective', 'TranslationGist', 'TranslationAtom']
+tables_for_roles = ['Language', 'Dictionary', 'DictionaryPerspective', 'TranslationGist', 'TranslationAtom']
 tables_for_summary = ['Language', 'Dictionary', 'Field', 'Entity']
 
 db_model_roles = {
@@ -242,10 +242,15 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
                 .distinct()
                 .cte())
 
+        if user_id:
+            filter_user_to_group = filter_by_args
+        else:
+            filter_user_to_group = [dbUserToGroup.group_id == Group.c.id]
+
         UserToGroup = (
             DBSession
                 .query(dbUserToGroup)
-                .filter(dbUserToGroup.group_id == Group.c.id)
+                .filter(*filter_user_to_group)
                 .distinct()
                 .all())
 
@@ -293,6 +298,9 @@ def MergeRoles(roles_data, debug_flag=False):
         return
 
     try:
+        # Rollback dirty session if is
+        DBSession.rollback()
+
         # Add new entries to database
         for table in db_model_roles:
             model, index = db_model_roles[table]
@@ -393,7 +401,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         nonlocal count
         nonlocal repeats
         table = model.__name__
-        local_result[table] = {}
+
+        if table not in local_result:
+            local_result[table] = {}
 
         # Controlling already processed elements
         pool_item = key2str(*coid, table, suff)
@@ -484,6 +494,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     if not (client_id := request.authenticated_userid):
         raise ResponseError('no client_id is in request')
 
+    '''
     ### Create client if it absents on remote server ###
 
     if not (client := DBSession.query(dbClient).filter_by(id=client_id).first()):
@@ -509,6 +520,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
     else:
         if not (user_id := dbClient.get_user_by_client_id(client_id).id):
             raise ResponseError(f'no any user for this {client_id=}')
+    '''
 
     ##### Cross-server query #####
 
@@ -651,6 +663,9 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         # Adding users and clients met in perspective into remote database
         if local != 'isp':
             client_list = foreign_changes['clients']
+
+            DBSession.rollback()
+
             for client_id, user_id in client_list:
 
                 if not (user := DBSession.query(dbUser).filter_by(id=user_id).first()):
@@ -675,6 +690,9 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             log.warning('\nApplying sync...')
 
         count = 0
+
+        # Preparing the session
+        DBSession.rollback()
 
         for table in db_model_data:
             model = db_model_data[table]
@@ -728,6 +746,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                     }, no_caption=bool(count))
 
                 count += 1
+
+            DBSession.flush()
 
         if next_synced_at > current_synced_at:
             set_synced_at(next_synced_at)
