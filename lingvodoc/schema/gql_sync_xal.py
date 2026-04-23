@@ -42,29 +42,30 @@ log = logging.getLogger(__name__)
 min_date = 1735689600.0  # 2025-01-01 00:00:00
 none = ''
 
-# Ordered (!) models to create entries from the beginning
+# Ordered models to create entries from independent ones
+# Suffixes are for ordering entries by subjection within groups
 db_model_data = {
     # Translations
-    'TranslationGist': dbTranslationGist,
-    'TranslationAtom': dbTranslationAtom,
+    'TranslationGist': (dbTranslationGist, None),
+    'TranslationAtom': (dbTranslationAtom, None),
 
     # Language tree
-    'Language': dbLanguage,
-    'Dictionary': dbDictionary,
-    'DictionaryPerspective': dbDictionaryPerspective,
+    'Language': (dbLanguage, 'parent_'),
+    'Dictionary': (dbDictionary, None),
+    'DictionaryPerspective': (dbDictionaryPerspective, None),
 
     # Fields
-    'Field': dbField,
-    'DictionaryPerspectiveToField': dbDictionaryPerspectiveToField,
+    'Field': (dbField, None),
+    'DictionaryPerspectiveToField': (dbDictionaryPerspectiveToField, 'self_'),
 
     # Lexical entries
-    'LexicalEntry': dbLexicalEntry,
-    'Entity': dbEntity,
-    'PublishingEntity': dbPublishingEntity,
+    'LexicalEntry': (dbLexicalEntry, None),
+    'Entity': (dbEntity, 'self_'),
+    'PublishingEntity': (dbPublishingEntity, None),
 
     # Parser results
-    'Parser': dbParser,
-    'ParserResult': dbParserResult
+    'Parser': (dbParser, None),
+    'ParserResult': (dbParserResult, None)
 }
 
 # Base groups without any relation to subjects
@@ -99,7 +100,9 @@ db_tree = {
 
     dbEntity: [
         (dbPublishingEntity, none, none),
-        (dbField, 'field_', none),
+        # fields are created or updated with perspective itself
+        # no need to collect them for every entity
+        # (dbField, 'field_', none),
         (dbEntity, 'self_', none),
         (dbLexicalEntry, 'link_', none),
         (dbParserResult, none, 'entity_')
@@ -111,7 +114,7 @@ db_tree = {
 
     dbDictionaryPerspectiveToField: [
         (dbDictionaryPerspective, 'link_', none),
-        (dbDictionaryPerspectiveToField, none, 'self_'),
+        (dbDictionaryPerspectiveToField, 'self_', none),
         (dbField, 'field_', none)
     ],
 
@@ -337,7 +340,7 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     # The next variables are added manually but unavailable by graphql
     variables = request.json_body.get('variables', {})
-    user_id = variables.get('user_id')
+    #user_id = variables.get('user_id')
     sync_point = variables.get('sync_point')
     locale_id = (
         int(request.cookies.get('locale_id') or ENGLISH_LOCALE))
@@ -561,7 +564,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
         variables = {
             **request.json_body.get('variables', {}),
-            'user_id': user_id,
+            # no any need
+            # 'user_id': user_id,
             'sync_point': get_sync_point()
         }
 
@@ -711,9 +715,14 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         count = 0
 
         for table in db_model_data:
-            model = db_model_data[table]
+            table_data = foreign_changes.get(table, {})
+            model, suff = db_model_data[table]
 
-            for obj_coid, foreign_dict in reversed(foreign_changes.get(table, {}).items()):
+            # Sorting within groups by recursion field to make None values before any other
+            if suff is not None:
+                table_data = dict(sorted(table_data.items(), key=lambda item: bool(item[1][suff + 'client_id'])))
+
+            for obj_coid, foreign_dict in table_data.items():
                 local_dict = local_changes.get(table, {}).get(obj_coid, {})
                 local_update = local_dict.get('updated_at', min_date)
                 foreign_update = foreign_dict.get('updated_at')
