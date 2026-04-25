@@ -8,6 +8,7 @@ import logging
 import traceback
 import requests
 from sqlalchemy import func, tuple_
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
@@ -43,29 +44,28 @@ min_date = 1735689600.0  # 2025-01-01 00:00:00
 none = ''
 
 # Ordered models to create entries from independent ones
-# Suffixes are for ordering entries by subjection within groups
 db_model_data = {
     # Translations
-    'TranslationGist': (dbTranslationGist, None),
-    'TranslationAtom': (dbTranslationAtom, None),
+    'TranslationGist': dbTranslationGist,
+    'TranslationAtom': dbTranslationAtom,
 
     # Language tree
-    'Language': (dbLanguage, 'parent_'),
-    'Dictionary': (dbDictionary, None),
-    'DictionaryPerspective': (dbDictionaryPerspective, None),
+    'Language': dbLanguage,
+    'Dictionary': dbDictionary,
+    'DictionaryPerspective': dbDictionaryPerspective,
 
     # Fields
-    'Field': (dbField, None),
-    'DictionaryPerspectiveToField': (dbDictionaryPerspectiveToField, 'self_'),
+    'Field': dbField,
+    'DictionaryPerspectiveToField': dbDictionaryPerspectiveToField,
 
     # Lexical entries
-    'LexicalEntry': (dbLexicalEntry, None),
-    'Entity': (dbEntity, 'self_'),
-    'PublishingEntity': (dbPublishingEntity, None),
+    'LexicalEntry': dbLexicalEntry,
+    'Entity': dbEntity,
+    'PublishingEntity': dbPublishingEntity,
 
     # Parser results
-    'Parser': (dbParser, None),
-    'ParserResult': (dbParserResult, None)
+    'Parser': dbParser,
+    'ParserResult': dbParserResult
 }
 
 # Base groups without any relation to subjects
@@ -102,6 +102,7 @@ db_tree = {
         (dbPublishingEntity, none, none),
         # fields are created or updated with perspective itself
         # no need to collect them for every entity
+        # but because of collisions sometimes we have to do this
         # (dbField, 'field_', none),
         (dbEntity, 'self_', none),
         (dbLexicalEntry, 'link_', none),
@@ -340,7 +341,6 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     # The next variables are added manually but unavailable by graphql
     variables = request.json_body.get('variables', {})
-    #user_id = variables.get('user_id')
     sync_point = variables.get('sync_point')
     locale_id = (
         int(request.cookies.get('locale_id') or ENGLISH_LOCALE))
@@ -516,36 +516,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             log.warning(str(e))
 
     # Get client_id from security data
-    if not (client_id := request.authenticated_userid):
+    if not request.authenticated_userid:
         raise ResponseError('no client_id is in request')
-
-    '''
-    ### Create client if it absents on remote server ###
-
-    if not (client := DBSession.query(dbClient).filter_by(id=client_id).first()):
-        if local == 'isp':
-            raise ResponseError('try to login again')
-        else:
-            if user_id is None:
-                raise ResponseError('no user id is in request')
-            if not (user := DBSession.query(dbUser).filter_by(id=user_id).first()):
-                raise ResponseError('no such user is in db')
-
-            # Add new client
-            client_args = {
-                'id': client_id,
-                'user_id': user_id,
-                'is_browser_client': True
-            }
-
-            client = dbClient(**client_args)
-            user.clients.append(client)
-            DBSession.add(client)
-            DBSession.flush()
-    else:
-        if not (user_id := dbClient.get_user_by_client_id(client_id).id):
-            raise ResponseError(f'no any user for this {client_id=}')
-    '''
 
     ##### Cross-server query #####
 
@@ -564,8 +536,6 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
         variables = {
             **request.json_body.get('variables', {}),
-            # no any need
-            # 'user_id': user_id,
             'sync_point': get_sync_point()
         }
 
@@ -685,22 +655,34 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
     try:
         current_synced_at = local_changes['sync_point']
         next_synced_at = current_synced_at
+        try:
+            # Adding users and clients met in perspective into remote database
+            if local != 'isp':
+                client_user_ids, user_dict = foreign_changes['clients']
 
-        # Adding users and clients met in perspective into remote database
-        if local != 'isp':
-            client_user_ids, user_dict = foreign_changes['clients']
+                # DBSession.rollback()
 
-            for client_id, user_id in client_user_ids:
+                for client_id, user_id in client_user_ids:
 
-                if not DBSession.query(dbUser).filter_by(id=user_id).first():
-                    user = dbUser(**user_dict[str(user_id)])
-                    DBSession.add(user)
+                    if not DBSession.query(dbUser).filter_by(id=user_id).first():
+                        user = dbUser(**user_dict[str(user_id)])
+                        DBSession.add(user)
 
-                if not DBSession.query(dbClient).filter_by(id=client_id).first():
-                    client = dbClient(id=client_id, user_id=user_id)
-                    DBSession.add(client)
+                    if not DBSession.query(dbClient).filter_by(id=client_id).first():
+                        client = dbClient(id=client_id, user_id=user_id)
+                        DBSession.add(client)
 
-            DBSession.flush()
+                    DBSession.flush()
+
+        # Debugging
+        except InvalidRequestError as e:
+            if debug_flag:
+                A()
+            raise
+
+        except:
+            A()
+            raise
 
         # Iterate by local changes to get maximal updating point
         # this time will be new sync_point (not real time)
@@ -716,11 +698,14 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
         for table in db_model_data:
             table_data = foreign_changes.get(table, {})
-            model, suff = db_model_data[table]
+            model = db_model_data[table]
 
             # Sorting within groups by recursion field to make None values before any other
-            if suff is not None:
-                table_data = dict(sorted(table_data.items(), key=lambda item: bool(item[1][suff + 'client_id'])))
+            if table in ['Entity', 'DictionaryPerspectiveToField']:
+                table_data = dict(sorted(
+                    table_data.items(), key=lambda item: bool(item[1]['self_client_id'])))
+            elif table in ['Language']:
+                table_data = dict(reversed(table_data.items()))
 
             for obj_coid, foreign_dict in table_data.items():
                 local_dict = local_changes.get(table, {}).get(obj_coid, {})
@@ -730,33 +715,50 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
                 client_id, object_id = obj_coid.split(',')
 
-                db_object = (
-                    DBSession
-                        .query(model)
-                        .filter_by(
-                            client_id=client_id,
-                            object_id=object_id)
-                        .first())
+                try:
+                    db_object = (
+                        DBSession
+                            .query(model)
+                            .filter_by(
+                                client_id=client_id,
+                                object_id=object_id)
+                            .first())
 
-                action = 'n/a'
+                    action = 'n/a'
 
-                if db_object is None:
-                    # Add new object
-                    db_object = model(**foreign_dict)
-                    DBSession.add(db_object)
+                    if db_object is None:
+                        # Add new object
+                        db_object = model(**foreign_dict)
+                        DBSession.add(db_object)
 
-                    action = 'added'
+                        action = 'added'
 
-                elif foreign_update > local_update:
-                    # Delete client_id and object_id
-                    # from dict to avoid collision
-                    foreign_dict.pop('client_id', None)
-                    foreign_dict.pop('object_id', None)
+                    elif foreign_update > local_update:
+                        # Delete client_id and object_id
+                        # from dict to avoid collision
+                        foreign_dict.pop('client_id', None)
+                        foreign_dict.pop('object_id', None)
 
-                    for k, v in foreign_dict.items():
-                        setattr(db_object, k, v)
+                        for k, v in foreign_dict.items():
+                            setattr(db_object, k, v)
 
-                    action = 'updated'
+                        action = 'updated'
+
+                    DBSession.flush()
+
+                # Some entities correspond to corrupted fields, we'll skip them
+                except (IntegrityError, InvalidRequestError) as e:
+                    if table in ['Entity', 'PublishingEntity']:
+                        DBSession.rollback()
+                        #log.warning(e)
+                        pass
+                    else:
+                        raise
+
+                # Debugging
+                except Exception as e:
+                    A()
+                    raise
 
                 next_synced_at = max(next_synced_at, foreign_update)
 
@@ -771,8 +773,6 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                     }, no_caption=bool(count))
 
                 count += 1
-
-            DBSession.flush()
 
         if next_synced_at > current_synced_at:
             set_synced_at(next_synced_at)
