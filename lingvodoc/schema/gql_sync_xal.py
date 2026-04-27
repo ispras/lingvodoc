@@ -7,12 +7,13 @@ import os
 import logging
 import traceback
 import requests
+import psutil
 from sqlalchemy import func, tuple_
-from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils import ids_to_id_query
+from psycopg2 import errors, IntegrityError
 
 from lingvodoc.models import (
     DBSession,
@@ -42,6 +43,9 @@ from pdb import set_trace as A
 log = logging.getLogger(__name__)
 min_date = 1735689600.0  # 2025-01-01 00:00:00
 none = ''
+SUCCESS = True
+FAILURE = None
+MEM_EDGE = 80.0
 
 # Ordered models to create entries from independent ones
 db_model_data = {
@@ -72,7 +76,7 @@ db_model_data = {
 user_base_groups = [*range(1, 5), 9, 18, 30, 31, 32]
 # Subjects for groups with relations
 tables_for_roles = ['Language', 'Dictionary', 'DictionaryPerspective', 'TranslationGist', 'TranslationAtom']
-tables_for_summary = ['Language', 'Dictionary', 'Field', 'Entity']
+tables_for_summary = ['warns', 'triumph', 'Language', 'Dictionary', 'Field', 'Entity']
 
 db_model_roles = {
     'User': (dbUser, ['id']),
@@ -421,23 +425,85 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
         return client_user_ids, user_dict
 
-    def get_db_objects(model, coid, suff):
+    # Running cross request and storing data locally
+    def cross_request():
 
-        nonlocal count
-        nonlocal repeats
-        table = model.__name__
-
-        if table not in local_result:
-            local_result[table] = {}
-
-        # Controlling already processed elements
-        pool_item = key2str(*coid, table, suff)
-        if pool_item in id_pool:
-            repeats += 1
-            return []
-        id_pool.add(pool_item)
+        remote_result = {'warns': []}
 
         try:
+            # Changing req_path and req_data to query from remote server
+            if remote_server := settings['proxy'].get(f'{remote}_server'):
+                client_path = remote_server + 'api' + request.path
+            else:
+                raise NotImplementedError
+
+            # Get and set session
+            adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+            session = requests.Session()
+            session.headers.update({'Connection': 'Keep-Alive'})
+            session.mount('http://', adapter)
+
+            variables = {
+                **request.json_body.get('variables', {}),
+                'sync_point': get_sync_point()
+            }
+
+            req_args = {
+                'json': {
+                    **request.json_body,
+                    'variables': variables
+                },
+                'cookies': request.cookies
+            }
+
+            # Query
+            remote_resp = session.post(client_path, **req_args)
+            resp_status = remote_resp.status_code
+            remote_result.update((remote_resp.json()
+                                 .get('data') or {})
+                                 .get('list_changes'))
+
+            if resp_status == 200 and remote_result.get('triumph'):
+                pickle_path = store_data(remote, remote_result)
+
+                if debug_flag:
+                    log.warning(f'Foreign stored: {pickle_path} <- {remote}')
+            else:
+                raise ResponseError(f'Failed remote request: {resp_status=} from {remote=}')
+
+        except Exception as e:
+            #remote_result['warns'].append(str(e))
+            log.warning(str(e))
+            store_data(remote, {})
+
+        return summary(remote_result)
+
+    def get_db_objects(model, coid, suff):
+
+        try:
+            # Large perspective can totally fill memory
+            # Compressed dictionary or hard-drive storing
+            # need to get a plain dictionary back before
+            # json-serialization. So it is not a solution
+            if psutil.virtual_memory().percent > MEM_EDGE:
+                message = "We have no enough RAM to synchronize this perspective"
+                local_result['warns'].append(message)
+                raise RuntimeError(message)
+
+            nonlocal count
+            nonlocal repeats
+            table = model.__name__
+
+            if table not in local_result:
+                local_result[table] = {}
+
+            # Controlling already processed elements
+            pool_item = key2str(*coid, table, suff)
+            if pool_item in id_pool:
+                repeats += 1
+                return []
+            id_pool.add(pool_item)
+
             dbFilter = [
                 getattr(model, f'{suff}client_id') == coid[0],
                 getattr(model, f'{suff}object_id') == coid[1]
@@ -490,8 +556,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             log.warning('get_db_objects: exception')
             log.warning(traceback_string)
 
-            local_result['warns'].append('Exception:\n' + traceback_string)
-            return []
+            #local_result['warns'].append('Exception:\n' + traceback_string)
+            return FAILURE
 
         return relatives
 
@@ -500,7 +566,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         model, _, _ = args
 
         try:
-            objects = get_db_objects(*args)
+            if (objects := get_db_objects(*args)) == FAILURE:
+                raise RuntimeError
+
             relatives = db_tree[model]
 
             def get_id(obj, suff):
@@ -510,85 +578,61 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
             for obj in objects:
                 for model, our_suff, his_suff in relatives:
-                    process_db_objects(model, get_id(obj, our_suff), his_suff)
+                    if process_db_objects(model, get_id(obj, our_suff), his_suff) == FAILURE:
+                        raise RuntimeError
+
+            return SUCCESS
 
         except Exception as e:
             log.warning(str(e))
+            return FAILURE
 
-    # Get client_id from security data
-    if not request.authenticated_userid:
-        raise ResponseError('no client_id is in request')
+    try:
 
-    ##### Cross-server query #####
+        # Get client_id from security data
+        if not request.authenticated_userid:
+            raise ResponseError('no client_id is in request')
 
-    if local != remote:
-        # Changing req_path and req_data to query from remote server
-        if remote_server := settings['proxy'].get(f'{remote}_server'):
-            client_path = remote_server + 'api' + request.path
-        else:
-            raise NotImplementedError
+        # Cross-server query
+        if local != remote:
+            return cross_request()
 
-        # Get and set session
-        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
-        session = requests.Session()
-        session.headers.update({'Connection': 'Keep-Alive'})
-        session.mount('http://', adapter)
+        if debug_flag:
+            log.warning('\nPreparing sync...')
 
-        variables = {
-            **request.json_body.get('variables', {}),
-            'sync_point': get_sync_point()
-        }
+        # For remote query get 'sync_point' from request json
+        # for local query get it from database
+        local_result['sync_point'] = sync_point or get_sync_point()
 
-        req_args = {
-            'json': {
-                **request.json_body,
-                'variables': variables
-            },
-            'cookies': request.cookies
-        }
+        ##### Running main recursion from here #####
+        if process_db_objects(dbDictionaryPerspective, perspective_id, none) == FAILURE:
+            raise RuntimeError
 
-        # Query
-        remote_resp = session.post(client_path, **req_args)
-        resp_status = remote_resp.status_code
-        remote_result = ((remote_resp.json()
-                         .get('data') or {})
-                         .get('list_changes'))
+        local_result['triumph'] = True
 
-        if resp_status == 200:
-            pickle_path = store_data(remote, remote_result)
+        if local == 'isp' and foreign_side:
+            local_result['clients'] = client_list()
 
-            if debug_flag:
-                log.warning(f'Foreign stored: {pickle_path} <- {remote}')
+        if foreign_side:
+            # Update result with roles for subjects
+            local_result['roles'] = ListRoles(None, subject_ids, debug_flag)
 
-            return summary(remote_result)
-        else:
-            raise ResponseError(f'{resp_status=} from {remote=}')
+        # Pickling by perspective id
+        pickle_path = store_data(local, local_result)
 
-    ##### End of cross-server query #####
+        if debug_flag:
+            log.warning(f'\nSkipped repeats: {repeats}')
+            log.warning(f'Local stored: {local} -> {pickle_path}')
 
-    if debug_flag:
-        log.warning('\nPreparing sync...')
+    except Exception as e:
+        traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
 
-    # For remote query get 'sync_point' from request json
-    # for local query get it from database
-    local_result['sync_point'] = sync_point or get_sync_point()
+        log.warning('ListChanges: exception')
+        log.warning(traceback_string)
 
-    ##### Running main recursion from here #####
-    process_db_objects(dbDictionaryPerspective, perspective_id, none)
-
-    if local == 'isp' and foreign_side:
-        local_result['clients'] = client_list()
-
-    if foreign_side:
-        # Update result with roles for subjects
-        local_result['roles'] = ListRoles(None, subject_ids, debug_flag)
-
-    # Pickling by perspective id
-    pickle_path = store_data(local, local_result)
-
-    if debug_flag:
-        log.warning(f'\nSkipped repeats: {repeats}')
-        log.warning(f'Local stored: {local} -> {pickle_path}')
+        #local_result['warns'].append('Exception:\n' + traceback_string)
+        local_result['triumph'] = False
+        store_data(local, {})
 
     return local_result if foreign_side else summary(local_result)
 
@@ -623,9 +667,6 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             **perspective_metadata,
             f'{remote}_synced_at': synced_at}
 
-        # Doesn't work
-        # db_perspective.updated_at = synced_at
-
     local_pickle_path = os.path.join(
         storage_path,
         f'{local}_sync',
@@ -637,22 +678,25 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         key2str(*perspective_id)
     )
 
-    # Reading pickle files
     try:
-        with gzip.open(local_pickle_path, 'rb') as f:
-            local_changes = pickle.load(f)
+        # Reading pickle files
+        try:
+            with gzip.open(local_pickle_path, 'rb') as f:
+                local_changes = pickle.load(f)
 
-    except Exception as e:
-        raise ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
+        except Exception as e:
+            raise ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
 
-    try:
-        with gzip.open(foreign_pickle_path, 'rb') as f:
-            foreign_changes = pickle.load(f)
+        try:
+            with gzip.open(foreign_pickle_path, 'rb') as f:
+                foreign_changes = pickle.load(f)
 
-    except Exception as e:
-        raise ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
+        except Exception as e:
+            raise ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
 
-    try:
+        if not local_changes.get('triumph') or not foreign_changes.get('triumph'):
+            raise ResponseError('Changes data is not correct')
+
         current_synced_at = local_changes['sync_point']
         next_synced_at = current_synced_at
         try:
@@ -672,16 +716,19 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                         client = dbClient(id=client_id, user_id=user_id)
                         DBSession.add(client)
 
-                    DBSession.flush()
+                DBSession.flush()
 
-        # Debugging
-        except InvalidRequestError as e:
+        except errors.UniqueViolation:
+            print("This record already exists.")
+            DBSession.rollback()
+
+        except IntegrityError:
+            print("A general integrity error occurred (includes UniqueViolation).")
+            DBSession.rollback()
+
+        except Exception as e:
             if debug_flag:
                 A()
-            raise
-
-        except:
-            A()
             raise
 
         # Iterate by local changes to get maximal updating point
@@ -747,17 +794,17 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                     DBSession.flush()
 
                 # Some entities correspond to corrupted fields, we'll skip them
-                except (IntegrityError, InvalidRequestError) as e:
-                    if table in ['Entity', 'PublishingEntity']:
-                        DBSession.rollback()
-                        #log.warning(e)
-                        pass
-                    else:
-                        raise
+                except errors.UniqueViolation:
+                    print("This record already exists.")
+                    DBSession.rollback()
 
-                # Debugging
+                except IntegrityError:
+                    print("A general integrity error occurred (includes UniqueViolation).")
+                    DBSession.rollback()
+
                 except Exception as e:
-                    A()
+                    if debug_flag:
+                        A()
                     raise
 
                 next_synced_at = max(next_synced_at, foreign_update)
@@ -789,8 +836,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
         return {'triumph': True, 'message': ""}
 
-    except Exception:
-        message = "Something went wrong with merging of changes"
+    except Exception as e:
+        message = f"Something went wrong with merging of changes: {str(e)}"
         traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
         log.warning(message)
         log.warning(traceback_string)
