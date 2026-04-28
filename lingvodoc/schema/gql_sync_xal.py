@@ -778,6 +778,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                 local_update = local_dict.get('updated_at', min_date)
                 foreign_update = foreign_dict.get('updated_at')
                 foreign_content = foreign_dict.get('content', '')
+                foreign_deleted = foreign_dict.get('marked_for_deletion')
 
                 client_id, object_id = obj_coid.split(',')
 
@@ -792,7 +793,9 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
                     action = None
 
-                    if db_object is None:
+                    # We don't add deleted element
+                    if (db_object is None and
+                          not foreign_deleted):
                         # Add new object
                         db_object = model(**foreign_dict)
                         DBSession.add(db_object)
