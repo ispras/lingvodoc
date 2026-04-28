@@ -158,6 +158,7 @@ def check_memory():
     process = psutil.Process(os.getpid())
     print(f"Memory RSS: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
+
 def summary(result):
     return {k: result[k] for k in result if k in tables_for_summary}
 
