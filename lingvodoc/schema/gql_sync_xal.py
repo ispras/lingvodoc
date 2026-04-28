@@ -1,3 +1,5 @@
+import gc
+import time
 from time import time as now
 from datetime import datetime
 import pickle
@@ -8,12 +10,14 @@ import logging
 import traceback
 import requests
 import psutil
+import transaction
 from sqlalchemy import func, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils import ids_to_id_query
-from psycopg2 import errors, IntegrityError
+from psycopg2.errors import UniqueViolation
+from sqlalchemy.exc import IntegrityError, ResourceClosedError
 
 from lingvodoc.models import (
     DBSession,
@@ -181,7 +185,7 @@ def report(epoch_times, no_caption=False):
             '\n' if v2 is None else
             ' || ' if not is_stamp(v2) else
             ' == ' if v1 == v2 else ' << ' if v1 < v2 else ' >> ')
-        print(cell(v, w), end=sign)
+        print(cell(v, w), end=sign, flush=True)
 
 
 def CheckPermissions(info, subject_id, action='edit'):
@@ -329,11 +333,14 @@ def MergeRoles(roles_data, debug_flag=False):
                         .on_conflict_do_nothing(index_elements=index))
                 DBSession.execute(stmt)
             DBSession.flush()
+        transaction.commit()
 
         log.warning("\nAdded roles!")
 
     # Debugging
     except Exception as e:
+        DBSession.rollback()
+        transaction.abort()
         if debug_flag:
             A()
         raise
@@ -624,6 +631,8 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             log.warning(f'\nSkipped repeats: {repeats}')
             log.warning(f'Local stored: {local} -> {pickle_path}')
 
+        return local_result if foreign_side else summary(local_result)
+
     except Exception as e:
         traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
 
@@ -634,7 +643,13 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
         local_result['triumph'] = False
         store_data(local, {})
 
-    return local_result if foreign_side else summary(local_result)
+        return local_result if foreign_side else summary(local_result)
+
+    finally:
+        log.warning('Run garbage collector')
+        gc.collect()
+        if debug_flag:
+            A()
 
 
 def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
@@ -679,20 +694,20 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
     )
 
     try:
+        pickle_path = local_pickle_path
+
         # Reading pickle files
         try:
-            with gzip.open(local_pickle_path, 'rb') as f:
+            with gzip.open(pickle_path, 'rb') as f:
                 local_changes = pickle.load(f)
 
-        except Exception as e:
-            raise ResponseError(f"Cannot read file '{local_pickle_path}': {e}")
+            pickle_path = foreign_pickle_path
 
-        try:
-            with gzip.open(foreign_pickle_path, 'rb') as f:
+            with gzip.open(pickle_path, 'rb') as f:
                 foreign_changes = pickle.load(f)
 
         except Exception as e:
-            raise ResponseError(f"Cannot read file '{foreign_pickle_path}': {e}")
+            raise ResponseError(f"Cannot read file '{pickle_path}': {e}")
 
         if not local_changes.get('triumph') or not foreign_changes.get('triumph'):
             raise ResponseError('Changes data is not correct')
@@ -703,8 +718,6 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             # Adding users and clients met in perspective into remote database
             if local != 'isp':
                 client_user_ids, user_dict = foreign_changes['clients']
-
-                # DBSession.rollback()
 
                 for client_id, user_id in client_user_ids:
 
@@ -718,13 +731,9 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
                 DBSession.flush()
 
-        except errors.UniqueViolation:
-            print("This record already exists.")
+        except (UniqueViolation, IntegrityError, ResourceClosedError):
             DBSession.rollback()
-
-        except IntegrityError:
-            print("A general integrity error occurred (includes UniqueViolation).")
-            DBSession.rollback()
+            transaction.abort()
 
         except Exception as e:
             if debug_flag:
@@ -746,6 +755,10 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         for table in db_model_data:
             table_data = foreign_changes.get(table, {})
             model = db_model_data[table]
+
+            if debug_flag:
+                print(f"Memory usage: {psutil.virtual_memory().percent}%")
+                time.sleep(2)
 
             # Sorting within groups by recursion field to make None values before any other
             if table in ['Entity', 'DictionaryPerspectiveToField']:
@@ -771,7 +784,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                                 object_id=object_id)
                             .first())
 
-                    action = 'n/a'
+                    action = None
 
                     if db_object is None:
                         # Add new object
@@ -792,15 +805,13 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                         action = 'updated'
 
                     DBSession.flush()
+                    transaction.commit()
 
                 # Some entities correspond to corrupted fields, we'll skip them
-                except errors.UniqueViolation:
-                    print("This record already exists.")
+                except (UniqueViolation, IntegrityError, ResourceClosedError):
                     DBSession.rollback()
-
-                except IntegrityError:
-                    print("A general integrity error occurred (includes UniqueViolation).")
-                    DBSession.rollback()
+                    transaction.abort()
+                    log.warning("Rolled back session")
 
                 except Exception as e:
                     if debug_flag:
@@ -809,7 +820,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
                 next_synced_at = max(next_synced_at, foreign_update)
 
-                if debug_flag:
+                if debug_flag and action:
                     report({
                         ('Sync time', 20): current_synced_at,
                         ('Foreign update', 20): foreign_update,
@@ -846,3 +857,9 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             'triumph': False,
             'message': message
         }
+
+    finally:
+        log.warning('Run garbage collector')
+        gc.collect()
+        if debug_flag:
+            A()
