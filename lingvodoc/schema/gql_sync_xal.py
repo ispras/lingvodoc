@@ -154,6 +154,9 @@ db_tree = {
     dbTranslationAtom: []
 }
 
+def check_memory():
+    process = psutil.Process(os.getpid())
+    print(f"Memory RSS: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 def summary(result):
     return {k: result[k] for k in result if k in tables_for_summary}
@@ -647,9 +650,11 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
 
     finally:
         log.warning('Run garbage collector')
+        del local_result
         gc.collect()
         if debug_flag:
-            A()
+            check_memory()
+            #A()
 
 
 def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
@@ -758,7 +763,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
             if debug_flag:
                 print(f"Memory usage: {psutil.virtual_memory().percent}%")
-                time.sleep(2)
+                time.sleep(1)
 
             # Sorting within groups by recursion field to make None values before any other
             if table in ['Entity', 'DictionaryPerspectiveToField']:
@@ -860,6 +865,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
     finally:
         log.warning('Run garbage collector')
+        del local_changes, foreign_changes
         gc.collect()
         if debug_flag:
-            A()
+            check_memory()
+            #A()
