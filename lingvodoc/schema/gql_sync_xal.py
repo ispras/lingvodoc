@@ -350,7 +350,7 @@ def MergeRoles(roles_data, debug_flag=False):
         raise
 
 
-def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
+def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=False):
 
     request = info.context.request
 
@@ -518,7 +518,9 @@ def ListChanges(info, perspective_id, remote, sync_between, debug_flag=False):
             dbFilter = [
                 getattr(model, f'{suff}client_id') == coid[0],
                 getattr(model, f'{suff}object_id') == coid[1]
-            ]
+            ] + ([
+                getattr(model, 'marked_for_deletion', False) == False
+            ] if action == 'create' else [])
 
             relatives_cte = (
                 DBSession

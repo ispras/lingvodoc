@@ -729,7 +729,7 @@ class Query(graphene.ObjectType):
             remote = graphene.String(required = True),
             sync_between = graphene.List(graphene.String, required = True),
             perspective_id = LingvodocID(required = True),
-            user_id = graphene.Int(),
+            action = graphene.String(required = True),
             sync_point = graphene.Float(),
             debug_flag = graphene.Boolean()))
 
