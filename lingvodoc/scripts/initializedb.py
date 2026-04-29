@@ -731,5 +731,5 @@ def main(argv=sys.argv):
     # for k, v in parser.items('alembic'):
     #     alembic_conf[k] = v
     #dbname = alembic_conf['sqlalchemy.url']
-    dbname = 'postgresql+psycopg2://postgres:@/test_base_1'
+    dbname = 'postgresql+psycopg2://postgres:password@localhost:25432/lingvodoc'
     data_init(transaction.manager, accounts, dbname)
