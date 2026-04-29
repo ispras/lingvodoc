@@ -11,6 +11,8 @@ import traceback
 import requests
 import psutil
 import transaction
+import tracemalloc
+import objgraph
 from sqlalchemy import func, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
@@ -49,7 +51,7 @@ min_date = 1735689600.0  # 2025-01-01 00:00:00
 none = ''
 SUCCESS = True
 FAILURE = None
-MEM_EDGE = 80.0
+MEM_EDGE = 40.0
 
 # Ordered models to create entries from independent ones
 db_model_data = {
@@ -352,6 +354,10 @@ def MergeRoles(roles_data, debug_flag=False):
 
 def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=False):
 
+    tracemalloc.start(25)
+    snap1 = tracemalloc.take_snapshot()
+    objgraph.show_growth()
+
     request = info.context.request
 
     # The next variables are added manually but unavailable by graphql
@@ -482,12 +488,16 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
             else:
                 raise ResponseError(f'Failed remote request: {resp_status=} from {remote=}')
 
+            return summary(remote_result)
+
         except Exception as e:
             #remote_result['warns'].append(str(e))
             log.warning(str(e))
             store_data(remote, {})
+            return summary(remote_result)
 
-        return summary(remote_result)
+        finally:
+            session.close()
 
     def get_db_objects(model, coid, suff):
 
@@ -543,6 +553,8 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
                     .query(relatives_cte)
                     .all())
 
+            DBSession.expunge_all()
+
             for obj in changed_objects:
                 client_ids.add(obj.client_id)
                 obj_coid = key2str(obj.client_id, obj.object_id)
@@ -563,6 +575,8 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
 
                 count += 1
 
+            return relatives
+
         except Exception:
             traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
 
@@ -572,7 +586,11 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
             #local_result['warns'].append('Exception:\n' + traceback_string)
             return FAILURE
 
-        return relatives
+        finally:
+            #del relatives
+            #DBSession.expunge_all()
+            #gc.collect()
+            pass
 
     def process_db_objects(*args):
 
@@ -654,10 +672,15 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
     finally:
         log.warning('Run garbage collector')
         del local_result
+        DBSession.expunge_all()
         gc.collect()
         if debug_flag:
             check_memory()
-            #A()
+            snap2 = tracemalloc.take_snapshot()
+            for stat in snap2.compare_to(snap1, 'lineno')[:30]:
+                print(stat)
+            objgraph.show_growth()
+            A()
 
 
 def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
@@ -842,6 +865,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                     }, no_caption=bool(count))
 
                 count += 1
+
+            DBSession.expunge_all()
 
         if next_synced_at > current_synced_at:
             set_synced_at(next_synced_at)
