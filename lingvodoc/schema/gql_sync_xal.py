@@ -355,7 +355,7 @@ def MergeRoles(roles_data, debug_flag=False):
 def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=False):
 
     # Memory tracing
-    if debug_flag:
+    if debug_flag and False:
         tracemalloc.start(25)
         snap1 = tracemalloc.take_snapshot()
         objgraph.show_growth()
@@ -681,7 +681,7 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
         del local_result
         DBSession.expunge_all()
         gc.collect()
-        if debug_flag:
+        if debug_flag and False:
             check_memory()
             snap2 = tracemalloc.take_snapshot()
             for stat in snap2.compare_to(snap1, 'lineno')[:30]:
@@ -733,6 +733,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
     try:
         pickle_path = local_pickle_path
+        local_changes = {}
+        foreign_changes = {}
 
         # Reading pickle files
         try:

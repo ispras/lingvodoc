@@ -880,7 +880,7 @@ class Query(graphene.ObjectType):
                                 dbGrant.grant_number,
                                 dbGrant.id)
 
-                            .all())
+                            .all()) if id_list else []
 
                 else:
 
@@ -899,7 +899,7 @@ class Query(graphene.ObjectType):
                             .order_by(
                                 dbOrganization.id)
 
-                            .all())
+                            .all()) if id_list else []
 
                 id_str_list = [
 
