@@ -51,7 +51,7 @@ min_date = 1735689600.0  # 2025-01-01 00:00:00
 none = ''
 SUCCESS = True
 FAILURE = None
-MEM_EDGE = 40.0
+MEM_EDGE = 80.0
 
 # Ordered models to create entries from independent ones
 db_model_data = {
@@ -354,9 +354,11 @@ def MergeRoles(roles_data, debug_flag=False):
 
 def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=False):
 
-    tracemalloc.start(25)
-    snap1 = tracemalloc.take_snapshot()
-    objgraph.show_growth()
+    # Memory tracing
+    if debug_flag:
+        tracemalloc.start(25)
+        snap1 = tracemalloc.take_snapshot()
+        objgraph.show_growth()
 
     request = info.context.request
 
@@ -379,6 +381,8 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
     client_ids = set()
     count = 0
     repeats = 0
+    expunge_count = 0
+    CHUNK_SIZE = 1000
 
     def store_data(side, data):
 
@@ -513,6 +517,8 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
 
             nonlocal count
             nonlocal repeats
+            nonlocal expunge_count
+            expunge_count += 1
             table = model.__name__
 
             if table not in local_result:
@@ -553,8 +559,6 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
                     .query(relatives_cte)
                     .all())
 
-            DBSession.expunge_all()
-
             for obj in changed_objects:
                 client_ids.add(obj.client_id)
                 obj_coid = key2str(obj.client_id, obj.object_id)
@@ -568,12 +572,15 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
                         ('Sync point', 20): local_result['sync_point'],
                         ('Updated at', 20): obj.updated_at,
                         ('Composite id', 20): f"{obj_coid},{table}",
-                        ('Deleted', 12):
-                            obj.marked_for_deletion if hasattr(obj, 'marked_for_deletion') else 'n/a',
+                        ('Deleted', 12): getattr(obj, 'marked_for_deletion', 'n/a'),
                         ('Content', 20): getattr(obj, 'content', 'n/a')
                     }, no_caption=bool(count))
 
                 count += 1
+
+            if expunge_count % CHUNK_SIZE == 0:
+                DBSession.expunge_all()
+                log.warning('Cleared session')
 
             return relatives
 

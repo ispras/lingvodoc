@@ -445,6 +445,13 @@ def desk_signin(request):
                             'birthday', 'is_active', 'default_locale_id',
                             'additional_metadata')))
 
+            if new_in_base(Email.user_id == user_dict['id']):
+                DBSession.add(
+                    Email(
+                        **{
+                            'user_id': user_dict['id'],
+                            'email': user_dict['email']}))
+
             # Storing to database co-named values from client_dict
             if new_in_base(Client.id == client_dict['id']):
                 DBSession.add(
