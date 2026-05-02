@@ -82,7 +82,7 @@ db_model_data = {
 user_base_groups = [*range(1, 5), 9, 18, 30, 31, 32]
 # Subjects for groups with relations
 tables_for_roles = ['Language', 'Dictionary', 'DictionaryPerspective', 'TranslationGist', 'TranslationAtom']
-tables_for_summary = ['warns', 'triumph', 'Language', 'Dictionary', 'Field', 'Entity']
+tables_for_summary = ['warns', 'message', 'triumph', 'Language', 'Dictionary', 'Field', 'Entity']
 
 db_model_roles = {
     'User': (dbUser, ['id']),
@@ -495,9 +495,11 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
             return summary(remote_result)
 
         except Exception as e:
-            #remote_result['warns'].append(str(e))
             log.warning(str(e))
-            store_data(remote, {})
+
+            remote_result['warns'].append(str(e))
+            store_data(remote, remote_result)
+
             return summary(remote_result)
 
         finally:
@@ -512,7 +514,7 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
             # json-serialization. So it is not a solution
             if psutil.virtual_memory().percent > MEM_EDGE:
                 message = "We have no enough RAM to synchronize this perspective"
-                local_result['warns'].append(message)
+                local_result['message'] = message
                 raise RuntimeError(message)
 
             nonlocal count
@@ -584,13 +586,12 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
 
             return relatives
 
-        except Exception:
+        except Exception as e:
             traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
-
             log.warning('get_db_objects: exception')
             log.warning(traceback_string)
 
-            #local_result['warns'].append('Exception:\n' + traceback_string)
+            local_result['warns'].append(str(e))
             return FAILURE
 
         finally:
@@ -666,13 +667,12 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
 
     except Exception as e:
         traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
-
         log.warning('ListChanges: exception')
         log.warning(traceback_string)
 
-        #local_result['warns'].append('Exception:\n' + traceback_string)
         local_result['triumph'] = False
-        store_data(local, {})
+        local_result['warns'].append(str(e))
+        store_data(local, local_result)
 
         return local_result if foreign_side else summary(local_result)
 
@@ -750,7 +750,10 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             raise ResponseError(f"Cannot read file '{pickle_path}': {e}")
 
         if not local_changes.get('triumph') or not foreign_changes.get('triumph'):
-            raise ResponseError('Changes data is not correct')
+            message = (
+                ((m1 := local_changes.get('message', "")) and f"LOCAL: {m1}; ") +
+                ((m2 := foreign_changes.get('message', "")) and f"REMOTE: {m2}"))
+            raise ResponseError(message or 'Changes data is not correct')
 
         current_synced_at = local_changes['sync_point']
         next_synced_at = current_synced_at
