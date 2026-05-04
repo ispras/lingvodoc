@@ -82,7 +82,7 @@ db_model_data = {
 user_base_groups = [*range(1, 5), 9, 18, 30, 31, 32]
 # Subjects for groups with relations
 tables_for_roles = ['Language', 'Dictionary', 'DictionaryPerspective', 'TranslationGist', 'TranslationAtom']
-tables_for_summary = ['warns', 'message', 'triumph', 'Language', 'Dictionary', 'Field', 'Entity']
+tables_for_summary = ['warns', 'message', 'triumph', 'sync_point', 'Entity']
 
 db_model_roles = {
     'User': (dbUser, ['id']),
