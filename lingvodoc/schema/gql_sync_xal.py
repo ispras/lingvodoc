@@ -712,8 +712,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                 .filter_by(
                     client_id = perspective_id[0],
                     object_id = perspective_id[1])
-                .one()
-        )
+                .one())
 
         perspective_metadata = db_perspective.additional_metadata or {}
         db_perspective.additional_metadata = {
