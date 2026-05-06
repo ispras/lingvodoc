@@ -25,6 +25,7 @@ from lingvodoc.models import (
     DBSession,
     Client as dbClient,
     User as dbUser,
+    Email as dbEmail,
     ENGLISH_LOCALE,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
@@ -86,6 +87,7 @@ tables_for_summary = ['warns', 'message', 'triumph', 'sync_point', 'Entity']
 
 db_model_roles = {
     'User': (dbUser, ['id']),
+    'Email': (dbEmail, ['email']),
     'Client': (dbClient, ['id']),
     'ObjectTOC': (dbObjectTOC, ['client_id', 'object_id']),
     'BaseGroup': (dbBaseGroup, ['id']),
@@ -222,19 +224,24 @@ def CheckPerspective(perspective_id):
         db_perspective is not None)
 
 
-def as_dict(obj):
+def as_dict(obj, exclude=None):
     try:
-        return obj._asdict()
+        obj_as_dict = obj._asdict()
     except AttributeError:
-        return {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+        obj_as_dict = {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+
+    for key in (exclude or []):
+        del obj_as_dict[key]
+
+    return obj_as_dict
 
 
-def as_dicts(obj):
+def as_dicts(obj, exclude=None):
     # If object is cte
     if type(obj) is not list:
         obj = DBSession.query(obj).all()
 
-    return [as_dict(x) for x in obj]
+    return [as_dict(x, exclude) for x in obj]
 
 
 def ListRoles(user_id, subject_ids, debug_flag=False):
@@ -299,6 +306,13 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
                 .distinct()
                 .all()) if subject_ids else []
 
+        Email = (
+            DBSession
+                .query(dbEmail)
+                .filter(dbEmail.user_id == UserToGroup.c.user_id)
+                .distinct()
+                .all()) if subject_ids else []
+
         Client = (
             DBSession
                 .query(dbClient)
@@ -308,6 +322,7 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
 
         return {
             'User': as_dicts(User),
+            'Email': as_dicts(Email, ['id']),
             'Client': as_dicts(Client),
             'ObjectTOC': as_dicts(ObjectTOC),
             'BaseGroup': as_dicts(BaseGroup),
