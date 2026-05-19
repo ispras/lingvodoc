@@ -5487,6 +5487,7 @@ class ApplySync(graphene.Mutation):
 
         perspective_id = LingvodocID(required=True)
         sync_between = graphene.List(graphene.String, required=True)
+        perspective_name = graphene.String()
         action = graphene.String()
         debug_flag = graphene.Boolean()
 

@@ -1,7 +1,7 @@
 import gc
 import time
 from time import time as now
-from datetime import datetime
+from datetime import datetime, timezone
 import pickle
 import gzip
 import sys
@@ -13,13 +13,16 @@ import psutil
 import transaction
 import tracemalloc
 import objgraph
-from sqlalchemy import func, tuple_
+import uuid
+from sqlalchemy import bindparam, func, text, tuple_, create_engine
 from sqlalchemy.dialects.postgresql import insert
 from itertools import zip_longest, starmap
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils import ids_to_id_query
 from psycopg2.errors import UniqueViolation
 from sqlalchemy.exc import IntegrityError, ResourceClosedError
+from lingvodoc.queue.celery import celery
+from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
 from lingvodoc.models import (
     DBSession,
@@ -53,6 +56,7 @@ none = ''
 SUCCESS = True
 FAILURE = None
 MEM_EDGE = 80.0
+CHUNK_SIZE = 1000
 
 # Ordered models to create entries from independent ones
 db_model_data = {
@@ -79,6 +83,8 @@ db_model_data = {
     'ParserResult': dbParserResult
 }
 
+tables_num = len(db_model_data)
+
 # Base groups without any relation to subjects
 user_base_groups = [*range(1, 5), 9, 18, 30, 31, 32]
 # Subjects for groups with relations
@@ -95,6 +101,7 @@ db_model_roles = {
     'UserToGroup': (dbUserToGroup, ['user_id', 'group_id'])
 }
 
+'''
 # Tuple means relative: (his_dbModel, my_suffix, his_suffix)
 db_tree = {
     dbParser: [],
@@ -157,6 +164,7 @@ db_tree = {
 
     dbTranslationAtom: []
 }
+'''
 
 def check_memory():
     process = psutil.Process(os.getpid())
@@ -201,7 +209,7 @@ def CheckPermissions(info, subject_id, action='edit'):
     # for the perspective on remote host can add this perspective locally
 
     client_id = info.context.client_id
-    user_id = dbClient.get_user_by_client_id(client_id)
+    user_id = dbClient.get_user_by_client_id(client_id).id
 
     return (
         user_id == 1 or
@@ -366,6 +374,393 @@ def MergeRoles(roles_data, debug_flag=False):
             A()
         raise
 
+'''
+# Cache of parameterized (q_changed, q_relatives) per (model, suff, action)
+# combo — used by the legacy recursive get_db_objects path inside
+# ListChanges. The expression tree (BindParameter, anonymous labels, etc.)
+# is built ONCE per cache entry; only the param VALUES change per call via
+# Query.params(). Eliminates the per-call query-construction churn that
+# was responsible for the residual leak after the no-CTE refactor (the
+# CTE-event-registry leak was the dominant pre-existing issue and is
+# addressed separately by the no-CTE form below).
+_fk_query_cache = {}
+
+def _get_or_build_fk_query(model, suff, action):
+    """Return (q_changed, q_relatives) for this (model, suff, action) combo.
+
+    q_changed: filtered by FK + sync_point (param :_xal_sync_point)
+    q_relatives: filtered by FK only
+
+    Both expect params: _xal_cid, _xal_oid (and _xal_sync_point for q_changed).
+    """
+    key = (model.__name__, suff, action)
+    if key in _fk_query_cache:
+        return _fk_query_cache[key]
+
+    cid_col = getattr(model, f'{suff}client_id')
+    oid_col = getattr(model, f'{suff}object_id')
+
+    base_filters = [
+        cid_col == bindparam('_xal_cid'),
+        oid_col == bindparam('_xal_oid'),
+    ]
+    if action == 'create':
+        md_col = getattr(model, 'marked_for_deletion', None)
+        if md_col is not None:
+            base_filters.append(md_col == False)
+
+    q_relatives = DBSession.query(model).filter(*base_filters)
+    q_changed = q_relatives.filter(
+        bindparam('_xal_sync_point') < func.date_part('EPOCH', model.updated_at))
+
+    _fk_query_cache[key] = (q_changed, q_relatives)
+    return q_changed, q_relatives
+'''
+
+def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
+                           client_ids, subject_ids):
+    """Bulk-query equivalent of the process_db_objects Python recursion.
+
+    Replaces ~N per-FK-node queries (where N scales with entity count) with
+    a fixed handful (~12-15) of bulk queries, including ~3 recursive CTEs
+    for the parts that need recursive traversal (Language ancestors,
+    DictionaryPerspectiveToField self-references, Entity self-+ link-
+    references). The Entity recursive CTE additionally populates a temp
+    table that subsequent stages (PublishingEntity, ParserResult) JOIN
+    against, avoiding a Python<->SQL round-trip of all entity IDs.
+
+    Mutates local_result, client_ids, subject_ids to mirror the side
+    effects the original recursion would have produced.
+    """
+    # Convenience: a row passes the action filter if (action != 'create')
+    # OR the row isn't marked deleted.
+    md_str = "and marked_for_deletion = false" if action == 'create' else ""
+
+    # Track every (cid, oid) we still need to fetch by table — accumulates
+    # across stages.
+    le_ids = set()           # LexicalEntry IDs (perspective + Entity link_)
+    ent_ids = set()          # Entity IDs (for PE/PR lookup)
+    parser_ids = set()       # Parser IDs
+    field_ids = set()        # Field IDs
+    gist_ids = set()         # TranslationGist IDs (collected from many sources)
+
+    def _row_to_dict(r):
+        """Convert ORM instance OR SQLA RowProxy to plain column-name -> value dict.
+
+        ORM goes through TypeDecorator.process_result_value (EpochType
+        converts datetime -> epoch float). RowProxy from raw text()
+        bypasses that, returning datetime. To match the baseline output
+        we manually apply the EpochType conversion for `created_at` /
+        `updated_at` when we see a datetime on a RowProxy row.
+
+        as_dict() in this file tries `r._asdict()` first, then falls
+        back to `r.__dict__` filter. RowProxy in SQLA 1.2 has neither
+        — `__dict__` access is interpreted as a column lookup. So
+        for RowProxy we use `dict(r.items())` directly.
+        """
+        if hasattr(r, '_sa_instance_state'):
+            # ORM instance — has the SQLA state attribute. EpochType
+            # already applied; nothing to do.
+            return {k: v for k, v in r.__dict__.items() if not k.startswith('_')}
+        # RowProxy path. Apply EpochType-equivalent conversion for the
+        # known epoch-encoded timestamp columns.
+        d = dict(r.items())
+        for k in ('created_at', 'updated_at'):
+            v = d.get(k)
+            if hasattr(v, 'timestamp'):  # datetime-like
+                d[k] = v.replace(tzinfo=timezone.utc).timestamp()
+        return d
+
+    def _add(table, rows, also_subject=False):
+        d = local_result.setdefault(table, {})
+        for r in rows:
+            client_ids.add(r.client_id)
+            d[key2str(r.client_id, r.object_id)] = _row_to_dict(r)
+            if also_subject:
+                subject_ids.add((r.client_id, r.object_id))
+
+    def _filter_changed(rows):
+        """Filter rows by sync_point < extract(epoch from updated_at).
+
+        updated_at may be a datetime or already a float epoch depending
+        on the model's column type. Handle both.
+        """
+        sp = local_result['sync_point']
+        out = []
+        for r in rows:
+            u = r.updated_at
+            if u is None:
+                continue
+            if hasattr(u, 'timestamp'):
+                ut = u.timestamp()
+            else:
+                ut = float(u)
+            if ut > sp:
+                out.append(r)
+        return out
+
+    def _id_pairs_in(model, attr_cid, attr_oid, ids):
+        """Build a tuple_-IN filter for (cid, oid) pairs.
+
+        Use ids_to_id_query() (SQL VALUES subquery) instead of a literal
+        tuple list — postgres' parser hits stack-depth limits on
+        IN ((1,2),(3,4),...) with thousands of tuples; VALUES handles it
+        as a relation and scales cleanly.
+        """
+        ids_list = list(ids)
+        if not ids_list:
+            return False  # never match — caller should short-circuit
+        return tuple_(getattr(model, attr_cid), getattr(model, attr_oid)).in_(
+            ids_to_id_query(ids_list))
+
+    # --- Stage 1: Perspective ---
+    pcid, poid = perspective_id
+    persp_filt = [
+        dbDictionaryPerspective.client_id == pcid,
+        dbDictionaryPerspective.object_id == poid,
+    ]
+    if action == 'create':
+        persp_filt.append(dbDictionaryPerspective.marked_for_deletion == False)
+    persp_rows = DBSession.query(dbDictionaryPerspective).filter(*persp_filt).all()
+    if not persp_rows:
+        return  # nothing to do
+    _add('DictionaryPerspective', _filter_changed(persp_rows), also_subject=True)
+    persp = persp_rows[0]
+    for cid, oid in [
+        (persp.translation_gist_client_id, persp.translation_gist_object_id),
+        (persp.state_translation_gist_client_id, persp.state_translation_gist_object_id),
+    ]:
+        if cid is not None and oid is not None:
+            gist_ids.add((cid, oid))
+
+    # --- Stage 2: Dictionary ---
+    dict_filt = [
+        dbDictionary.client_id == persp.parent_client_id,
+        dbDictionary.object_id == persp.parent_object_id,
+    ]
+    if action == 'create':
+        dict_filt.append(dbDictionary.marked_for_deletion == False)
+    dict_rows = DBSession.query(dbDictionary).filter(*dict_filt).all()
+    _add('Dictionary', _filter_changed(dict_rows), also_subject=True)
+    if dict_rows:
+        d = dict_rows[0]
+        for cid, oid in [
+            (d.translation_gist_client_id, d.translation_gist_object_id),
+            (d.state_translation_gist_client_id, d.state_translation_gist_object_id),
+        ]:
+            if cid is not None and oid is not None:
+                gist_ids.add((cid, oid))
+        lang_root = (d.parent_client_id, d.parent_object_id)
+    else:
+        lang_root = None
+
+    # --- Stage 3: Language ancestors via recursive CTE ---
+    if lang_root is not None and lang_root[0] is not None:
+        lang_sql = text(f"""
+            with recursive lang_walk as (
+                select * from language
+                 where client_id = :start_cid and object_id = :start_oid
+                   {md_str}
+                union
+                select L.* from language L, lang_walk
+                 where L.client_id = lang_walk.parent_client_id
+                   and L.object_id = lang_walk.parent_object_id
+                   {md_str.replace('marked_for_deletion', 'L.marked_for_deletion')}
+            )
+            select client_id, object_id from lang_walk
+        """)
+        lang_id_rows = DBSession.execute(
+            lang_sql, {'start_cid': lang_root[0], 'start_oid': lang_root[1]}
+        ).fetchall()
+        lang_id_pairs = [(r.client_id, r.object_id) for r in lang_id_rows]
+        if lang_id_pairs:
+            lang_filt = [_id_pairs_in(dbLanguage, 'client_id', 'object_id', lang_id_pairs)]
+            if action == 'create':
+                lang_filt.append(dbLanguage.marked_for_deletion == False)
+            lang_rows = DBSession.query(dbLanguage).filter(*lang_filt).all()
+            _add('Language', _filter_changed(lang_rows), also_subject=True)
+            for L in lang_rows:
+                if L.translation_gist_client_id is not None:
+                    gist_ids.add((L.translation_gist_client_id, L.translation_gist_object_id))
+
+    # --- Stage 5: DictionaryPerspectiveToField (with self_ recursion) ---
+    dpf_sql = text(f"""
+        with recursive dpf_walk as (
+            select * from dictionaryperspectivetofield
+             where parent_client_id = :pcid and parent_object_id = :poid
+               {md_str}
+            union
+            select D.* from dictionaryperspectivetofield D, dpf_walk
+             where D.client_id = dpf_walk.self_client_id
+               and D.object_id = dpf_walk.self_object_id
+               {md_str.replace('marked_for_deletion', 'D.marked_for_deletion')}
+        )
+        select client_id, object_id from dpf_walk
+    """)
+    dpf_id_rows = DBSession.execute(dpf_sql, {'pcid': pcid, 'poid': poid}).fetchall()
+    dpf_id_pairs = [(r.client_id, r.object_id) for r in dpf_id_rows]
+    if dpf_id_pairs:
+        dpf_filt = [_id_pairs_in(dbDictionaryPerspectiveToField, 'client_id', 'object_id', dpf_id_pairs)]
+        if action == 'create':
+            dpf_filt.append(dbDictionaryPerspectiveToField.marked_for_deletion == False)
+        dpf_rows = DBSession.query(dbDictionaryPerspectiveToField).filter(*dpf_filt).all()
+        _add('DictionaryPerspectiveToField', _filter_changed(dpf_rows))
+        for D in dpf_rows:
+            if D.field_client_id is not None:
+                field_ids.add((D.field_client_id, D.field_object_id))
+
+    # --- Stage 6: Field ---
+    if field_ids:
+        f_filt = [_id_pairs_in(dbField, 'client_id', 'object_id', list(field_ids))]
+        if action == 'create':
+            f_filt.append(dbField.marked_for_deletion == False)
+        field_rows = DBSession.query(dbField).filter(*f_filt).all()
+        _add('Field', _filter_changed(field_rows))
+        for F in field_rows:
+            for cid, oid in [
+                (F.translation_gist_client_id, F.translation_gist_object_id),
+                (F.data_type_translation_gist_client_id, F.data_type_translation_gist_object_id),
+            ]:
+                if cid is not None and oid is not None:
+                    gist_ids.add((cid, oid))
+
+    # --- Stage 7: LexicalEntry for the perspective ---
+    le_filt = [
+        dbLexicalEntry.parent_client_id == pcid,
+        dbLexicalEntry.parent_object_id == poid,
+    ]
+    if action == 'create':
+        le_filt.append(dbLexicalEntry.marked_for_deletion == False)
+    le_rows = DBSession.query(dbLexicalEntry).filter(*le_filt).all()
+    _add('LexicalEntry', _filter_changed(le_rows))
+    for LE in le_rows:
+        le_ids.add((LE.client_id, LE.object_id))
+
+    # --- Stage 8: Entity (recursive: self_, link_) ---
+    # Use a temp table to avoid round-tripping 69K IDs Python<->SQL.
+    # The recursive CTE populates the temp table directly; then the
+    # ORM query JOINs against it to hydrate full Entity rows.
+    # PublishingEntity stage below also JOINs against the same temp table.
+    ent_ids_table = None
+    if le_ids:
+        ent_ids_table = 'xal_ent_ids_' + uuid.uuid4().hex
+        le_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in le_ids)
+        # Postgres requires the recursive part of a recursive CTE to be a
+        # single SELECT (or UNION of selects, but not mixed with the
+        # non-recursive anchor). Combine self_ + link_ traversal into
+        # one recursive arm with OR.
+        # Anchor arm: optional "AND e.marked_for_deletion = false"
+        e_md_anchor = (
+            "and e.marked_for_deletion = false" if action == 'create' else "")
+        # Recursive arm: optional "e.marked_for_deletion = false AND " prefix
+        e_md_recur = (
+            "e.marked_for_deletion = false and " if action == 'create' else "")
+        # Store FULL entity rows in the temp table (not just IDs). Then we
+        # can read them back with raw SELECT — skipping the JOIN AND skipping
+        # ORM hydration. RowProxy._asdict() produces the same dict shape
+        # as ORM as_dict() for standard column types.
+        ent_sql = text(f"""
+            create temporary table {ent_ids_table}
+                on commit drop as
+            with recursive
+              le_seed (cid, oid) as (values {le_values}),
+              ent_walk as (
+                select e.* from entity e, le_seed
+                 where e.parent_client_id = le_seed.cid
+                   and e.parent_object_id = le_seed.oid
+                   {e_md_anchor}
+                union
+                select e.* from entity e, ent_walk
+                 where {e_md_recur}(
+                         (e.client_id = ent_walk.self_client_id
+                          and e.object_id = ent_walk.self_object_id)
+                      or (e.parent_client_id = ent_walk.link_client_id
+                          and e.parent_object_id = ent_walk.link_object_id)
+                       )
+              )
+            select * from ent_walk
+        """)
+        DBSession.execute(ent_sql)
+
+        # Pull only the link_'d LE IDs we don't yet have (small set):
+        linked_le_rows = DBSession.execute(text(
+            f"select distinct link_client_id, link_object_id "
+            f"  from {ent_ids_table} "
+            f" where link_client_id is not null")).fetchall()
+        for r in linked_le_rows:
+            le_ids.add((r.link_client_id, r.link_object_id))
+
+        # Read all entity rows directly from the temp table as RowProxy —
+        # no JOIN, no ORM hydration. _asdict() via as_dict() yields the
+        # same dict shape downstream consumers expect.
+        ent_rows = DBSession.execute(
+            text(f"select * from {ent_ids_table}")).fetchall()
+        _add('Entity', _filter_changed(ent_rows))
+        for E in ent_rows:
+            ent_ids.add((E.client_id, E.object_id))
+
+    # --- Stage 9: Re-fetch all LEs (now including link_'d ones) ---
+    if le_ids:
+        le_full_filt = [_id_pairs_in(dbLexicalEntry, 'client_id', 'object_id', list(le_ids))]
+        if action == 'create':
+            le_full_filt.append(dbLexicalEntry.marked_for_deletion == False)
+        le_rows_full = DBSession.query(dbLexicalEntry).filter(*le_full_filt).all()
+        # Append-only update — already-added entries get overwritten with same data
+        _add('LexicalEntry', _filter_changed(le_rows_full))
+
+    # --- Stage 10: PublishingEntity (1:1 by id with Entity) ---
+    # Raw SELECT joined against the entity-ids temp table — RowProxy
+    # path, same shape as the Entity stage above.
+    if ent_ids and ent_ids_table is not None:
+        pe_rows = DBSession.execute(text(f"""
+            select pe.* from publishingentity pe, {ent_ids_table} t
+             where pe.client_id = t.client_id
+               and pe.object_id = t.object_id
+        """)).fetchall()
+        _add('PublishingEntity', _filter_changed(pe_rows))
+
+    # --- Stage 11: ParserResult under entities (via entity_ FK) ---
+    # Raw SELECT joined against the entity-ids temp table.
+    if ent_ids and ent_ids_table is not None:
+        pr_md = "and pr.marked_for_deletion = false" if action == 'create' else ""
+        pr_rows = DBSession.execute(text(f"""
+            select pr.* from parserresult pr, {ent_ids_table} t
+             where pr.entity_client_id = t.client_id
+               and pr.entity_object_id = t.object_id
+               {pr_md}
+        """)).fetchall()
+        _add('ParserResult', _filter_changed(pr_rows))
+        for PR in pr_rows:
+            if PR.parser_client_id is not None:
+                parser_ids.add((PR.parser_client_id, PR.parser_object_id))
+
+    # --- Stage 12: Parser ---
+    if parser_ids:
+        pa_filt = [_id_pairs_in(dbParser, 'client_id', 'object_id', list(parser_ids))]
+        # Parser has no marked_for_deletion (or does it?) — apply if available
+        if hasattr(dbParser, 'marked_for_deletion') and action == 'create':
+            pa_filt.append(dbParser.marked_for_deletion == False)
+        pa_rows = DBSession.query(dbParser).filter(*pa_filt).all()
+        _add('Parser', _filter_changed(pa_rows))
+
+    # --- Stage 13: TranslationGist (all collected) ---
+    if gist_ids:
+        tg_filt = [_id_pairs_in(dbTranslationGist, 'client_id', 'object_id', list(gist_ids))]
+        if action == 'create':
+            tg_filt.append(dbTranslationGist.marked_for_deletion == False)
+        tg_rows = DBSession.query(dbTranslationGist).filter(*tg_filt).all()
+        _add('TranslationGist', _filter_changed(tg_rows), also_subject=True)
+
+    # --- Stage 14: TranslationAtom (children of those gists) ---
+    if gist_ids:
+        ta_filt = [
+            tuple_(dbTranslationAtom.parent_client_id, dbTranslationAtom.parent_object_id)
+                .in_(ids_to_id_query(list(gist_ids)))]
+        if action == 'create':
+            ta_filt.append(dbTranslationAtom.marked_for_deletion == False)
+        ta_rows = DBSession.query(dbTranslationAtom).filter(*ta_filt).all()
+        _add('TranslationAtom', _filter_changed(ta_rows), also_subject=True)
+
 
 def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=False):
 
@@ -397,7 +792,6 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
     count = 0
     repeats = 0
     expunge_count = 0
-    CHUNK_SIZE = 1000
 
     def store_data(side, data):
 
@@ -520,6 +914,7 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
         finally:
             session.close()
 
+    '''
     def get_db_objects(model, coid, suff):
 
         try:
@@ -548,32 +943,31 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
                 return []
             id_pool.add(pool_item)
 
-            dbFilter = [
-                getattr(model, f'{suff}client_id') == coid[0],
-                getattr(model, f'{suff}object_id') == coid[1]
-            ] + ([
-                getattr(model, 'marked_for_deletion', False) == False
-            ] if action == 'create' else [])
+            # xal-leak fix: was previously building a CTE on (model, dbFilter)
+            # then running two queries against the CTE — one filtered by
+            # sync_point (changed_objects), one unfiltered (relatives). The
+            # CTE construct was created fresh per recursion node and never
+            # GC-released because each .cte() registers DDL events in
+            # sqlalchemy.event.registry._key_to_collection, which holds
+            # strong refs.  First fix: drop the CTE (62% RSS reduction).
+            # Second fix (this code): cache the parameterized Query objects
+            # per (model, suff, action) combo so the SQL expression tree
+            # (BindParameter, _CompileLabel, etc.) is built once and reused
+            # across recursion nodes — only the param VALUES change per call.
 
-            relatives_cte = (
-                DBSession
-                    .query(model)
-                    .filter(*dbFilter)
-                    .cte())
+            q_changed, q_relatives = _get_or_build_fk_query(model, suff, action)
 
-            # Getting related objects which are updated
-            # after 'sync_point' date
             changed_objects = (
-                DBSession
-                    .query(relatives_cte)
-                    .filter(local_result['sync_point']
-                            < func.date_part('EPOCH', relatives_cte.c.updated_at))
+                q_changed
+                    .params(
+                        _xal_cid=coid[0],
+                        _xal_oid=coid[1],
+                        _xal_sync_point=local_result['sync_point'])
                     .all())
 
-            # Getting all related objects to get next relations
             relatives = (
-                DBSession
-                    .query(relatives_cte)
+                q_relatives
+                    .params(_xal_cid=coid[0], _xal_oid=coid[1])
                     .all())
 
             for obj in changed_objects:
@@ -595,9 +989,9 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
 
                 count += 1
 
-            if expunge_count % CHUNK_SIZE == 0:
-                DBSession.expunge_all()
-                log.warning('Cleared session')
+                if expunge_count % CHUNK_SIZE == 0:
+                    DBSession.expunge_all()
+                    log.warning('Cleared session')
 
             return relatives
 
@@ -640,6 +1034,7 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
         except Exception as e:
             log.warning(str(e))
             return FAILURE
+    '''
 
     try:
 
@@ -658,9 +1053,15 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
         # for local query get it from database
         local_result['sync_point'] = sync_point or get_sync_point()
 
-        ##### Running main recursion from here #####
-        if process_db_objects(dbDictionaryPerspective, perspective_id, none) == FAILURE:
-            raise RuntimeError
+        # Bulk-walk replaces the per-FK-node Python recursion the function
+        # was originally built around (see process_db_objects above, kept
+        # in place as the authoritative reference for what this function
+        # computes). The bulk walk produces a bit-for-bit identical
+        # local_result with much lower memory and time cost, by issuing a
+        # fixed handful of bulk queries (~12-15) and 3 recursive CTEs
+        # rather than N queries per recursion node.
+        _walk_perspective_bulk(perspective_id, sync_point, action,
+                               local_result, client_ids, subject_ids)
 
         local_result['triumph'] = True
 
@@ -705,7 +1106,13 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
             A()
 
 
-def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=False):
+def MergeChanges(
+        info,
+        perspective_id,
+        sync_between,
+        action='edit',
+        perspective_name="<unnamed perspective>",
+        **args):
 
     if not CheckPermissions(info, perspective_id, action):
         return {
@@ -713,11 +1120,51 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             'message': "You have no permissions to do sync"
         }
 
+    client_id = info.context.client_id
+    user_id = dbClient.get_user_by_client_id(client_id).id
+    task_status = TaskStatus(
+        user_id, "Synchronization", perspective_name, tables_num + 2)
+
+    # 'info' is not serializable, so we have to get
+    # single values as arguments for async function
     request = info.context.request
     settings = request.registry.settings
     local = settings['proxy']['local']
     remote = sync_between[not sync_between.index(local)]
-    storage_path = settings['storage']['path']
+
+    async_func_args = {
+        'local': local,
+        'remote': remote,
+        'storage_path': settings['storage']['path'],
+        'sqlalchemy_url': settings['sqlalchemy.url'],
+        'cache_kwargs': settings['cache_kwargs'],
+        'task_key': task_status.key
+    }
+
+    MergeChangesAsync.delay(perspective_id, **async_func_args, **args)
+    # We return success result, but async
+    # function may end not successfully
+    return {'triumph': True, 'message': ""}
+
+
+@celery.task
+def MergeChangesAsync(
+        perspective_id,
+        local,
+        remote,
+        storage_path,
+        sqlalchemy_url,
+        cache_kwargs,
+        task_key,
+        debug_flag=False):
+
+    # Ok, and now we go on with task execution.
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind=engine)
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
+
+    task_status.set(1, 20, 'Getting stored data...')
 
     def set_synced_at(synced_at):
         db_perspective = (
@@ -771,6 +1218,9 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
         current_synced_at = local_changes['sync_point']
         next_synced_at = current_synced_at
+
+        task_status.set(1, 70, 'Adding new clients and users...')
+
         try:
             # Adding users and clients met in perspective into remote database
             if local != 'isp':
@@ -797,6 +1247,8 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
                 A()
             raise
 
+        task_status.set(1, 90, 'Getting maximal update time for local changes...')
+
         # Iterate by local changes to get maximal updating point
         # this time will be new sync_point (not real time)
         for table in db_model_data:
@@ -809,11 +1261,10 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
         count = 0
 
-        for table in db_model_data:
+        for i, (table, model) in enumerate(db_model_data.items()):
             table_data = foreign_changes.get(table, {})
-            model = db_model_data[table]
 
-            if debug_flag:
+            if debug_flag and False:
                 print(f"Memory usage: {psutil.virtual_memory().percent}%")
                 time.sleep(1)
 
@@ -824,7 +1275,14 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
             elif table in ['Language']:
                 table_data = dict(reversed(table_data.items()))
 
-            for obj_coid, foreign_dict in table_data.items():
+            table_data_size = len(table_data)
+
+            for j, (obj_coid, foreign_dict) in enumerate(table_data.items()):
+
+                if j % 100 == 0:
+                    task_status.set(
+                        i + 2, int(j / table_data_size * 100), f'Writing {table}...')
+
                 local_dict = local_changes.get(table, {}).get(obj_coid, {})
                 local_update = local_dict.get('updated_at', min_date)
                 foreign_update = foreign_dict.get('updated_at')
@@ -880,7 +1338,7 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
                 next_synced_at = max(next_synced_at, foreign_update)
 
-                if debug_flag and action:
+                if debug_flag and action and False:
                     report({
                         ('Sync time', 20): current_synced_at,
                         ('Foreign update', 20): foreign_update,
@@ -892,11 +1350,17 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
 
                 count += 1
 
-            DBSession.expunge_all()
+                if count % CHUNK_SIZE == 0:
+                    DBSession.expunge_all()
+                    log.warning('Cleared session')
+
+        task_status.set(tables_num + 2, 10, f'Final steps')
 
         if next_synced_at > current_synced_at:
             set_synced_at(next_synced_at)
             DBSession.flush()
+
+        task_status.set(tables_num + 2, 50, f'Final steps')
 
         # Add roles for current perspective
         MergeRoles(foreign_changes['roles'], debug_flag)
@@ -904,21 +1368,25 @@ def MergeChanges(info, perspective_id, sync_between, action='edit', debug_flag=F
         os.remove(local_pickle_path)
         os.remove(foreign_pickle_path)
 
+        task_status.set(tables_num + 2, 100, f'Synchronization complete')
+
         if debug_flag:
             log.warning('\nComplete!')
 
-        return {'triumph': True, 'message': ""}
+        #return {'triumph': True, 'message': ""}
 
     except Exception as e:
         message = f"Something went wrong with merging of changes: {str(e)}"
         traceback_string = ''.join(traceback.format_exception(*sys.exc_info()))
         log.warning(message)
         log.warning(traceback_string)
-
+        task_status.set(None, -1, 'Finished (ERROR), exception:\n' + traceback_string)
+        '''
         return {
             'triumph': False,
             'message': message
         }
+        '''
 
     finally:
         log.warning('Run garbage collector')
