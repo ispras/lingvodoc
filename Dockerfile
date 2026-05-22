@@ -35,7 +35,7 @@ RUN \
   ln -sf $(which python3.10) /usr/bin/python3 && \
   ln -sf /etc/mecabrc /usr/local/etc/mecabrc && \
   curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 && \
-  pip3 install pip==20.3.2 setuptools==44.0
+  pip3 install pip==20.3.3 setuptools==44.0
 
 # Installing python packages
 RUN --mount=type=cache,target=/root/.cache/pip \
