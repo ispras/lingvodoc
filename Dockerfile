@@ -56,9 +56,9 @@ RUN \
   ldconfig
 
 # Special steps for fasttext model
-RUN \
-  curl https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ru.300.vec.gz --create-dirs -o /opt/fasttext/cc.ru.300.vec.gz && \
-  gzip -d /opt/fasttext/cc.ru.300.vec.gz
+#RUN \
+#  curl https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ru.300.vec.gz --create-dirs -o /opt/fasttext/cc.ru.300.vec.gz && \
+#  gzip -d /opt/fasttext/cc.ru.300.vec.gz
 
 # Some final steps
 RUN \
