@@ -9326,9 +9326,11 @@ class SyncRoles(graphene.Mutation):
 
             except ProxyPass as e:
                 roles_data = e.response_json.get('data')
-                roles_data = roles_data['sync_roles']['roles_data']
 
-            MergeRoles(roles_data, debug_flag)
+            if roles_data:
+                MergeRoles(
+                    roles_data['sync_roles']['roles_data'],
+                    debug_flag)
 
             return (
                 SyncRoles(

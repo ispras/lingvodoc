@@ -1,6 +1,7 @@
 __author__ = 'student'
 import requests
 import json
+from requests.exceptions import ConnectionError
 from distutils.util import strtobool
 from pdb import set_trace as A
 
@@ -60,11 +61,14 @@ class ProxyPass(Exception):
             }
         }
 
-        status = session.post(path, json=json_data, headers=session.headers, cookies=cookies)
-        #print(status.request)
+        try:
+            status = session.post(path, json=json_data, headers=session.headers, cookies=cookies)
+            self.response_body = status.content
+            self.response_json = status.json() if status.status_code == 200 else {}
 
-        self.response_body = status.content
-        self.response_json = status.json()
+        except ConnectionError:
+            self.response_body = b''
+            self.response_json = {}
 
 
 def try_proxy(*args):

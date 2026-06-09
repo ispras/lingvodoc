@@ -24,21 +24,29 @@ from lingvodoc.utils.static_fields import fields_static
 
 
 def translation_gist_search(searchstring, session=DBSession, gist_type='Service'):
-    return (
-        session
-            .query(dbTranslationGist)
-            .join(dbTranslationAtom)
-            .filter(
-                dbTranslationAtom.marked_for_deletion == False,
-                dbTranslationAtom.content == searchstring,
-                dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                dbTranslationGist.marked_for_deletion == False,
-                dbTranslationGist.type == gist_type)
-            .order_by(
-                dbTranslationGist.created_at,
-                dbTranslationGist.client_id,
-                dbTranslationGist.object_id)
-            .one_or_none())
+    try:
+        return (
+            session
+                .query(dbTranslationGist)
+                .join(dbTranslationAtom)
+                .filter(
+                    dbTranslationAtom.marked_for_deletion == False,
+                    dbTranslationAtom.content == searchstring,
+                    dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                    dbTranslationGist.marked_for_deletion == False,
+                    dbTranslationGist.type == gist_type)
+                .order_by(
+                    dbTranslationGist.created_at,
+                    dbTranslationGist.client_id,
+                    dbTranslationGist.object_id)
+                .one_or_none())
+
+    except Exception as e:
+        print(str(e))
+        print(f"Please take a look on translation: {gist_type=} {searchstring=}")
+        print("Make sure that its english part doesn't repeat for same gist type")
+        raise
+
 
 def translation_gist_id_search(searchstring, session=DBSession, gist_type='Service'):
     return (
