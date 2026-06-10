@@ -2843,7 +2843,7 @@ class Language_Resolver(object):
                 where S.id = {
                   self.args.grant_id
                     if self.args.grant_id is not None else
-                    self.args.organization_id};
+                    self.args.organization_id}
 
                 '''
 
@@ -2855,9 +2855,7 @@ class Language_Resolver(object):
 
                     .columns(
                         client_id = SLBigInteger,
-                        object_id = SLBigInteger)
-
-                    .alias())
+                        object_id = SLBigInteger))
 
             self.dictionary_id_c = (
                 dictionary_id_query.c)
@@ -2903,11 +2901,8 @@ class Language_Resolver(object):
                 # Othwerwise, if we'll need to filter based on dictionary ids when getting dictionary
                 # counts, we turn dictionary id query into a CTE.
 
-                dictionary_id_cte = (
-                    dictionary_id_query.cte())
-
                 self.dictionary_id_c = (
-                    dictionary_id_cte.c)
+                    dictionary_id_query.cte().c)
 
             # Getting languages bottom-up from dictionaries through recursive CTE.
 
