@@ -1001,6 +1001,8 @@ class Metadata(graphene.ObjectType):
     markups = graphene.List(ObjectVal)
     stars = ObjectVal()
 
+    allowed_sync = graphene.Boolean()
+
 metadata_key_set = {
 
     key
