@@ -743,13 +743,45 @@ def convert_five_tiers(
                 for x in lexes
                 if x.field_id == backref_fid)
 
-        mark_re = re.compile('[-.][\dA-Z]+')
-        dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?/|]*)')
-        # issue 1191
-        nom_re = re.compile(
-            '[-]IN|[-]PRT|[-]AD|[-]NOM|[-]INF|[-]SG.NOM|[-]PL.NOM')
-        conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
-        affix_re = re.compile('[-][\w]+')
+        nom_gloss = [
+            'ABB',
+            'ABL',
+            'ACC',
+            'AD',
+            'ALL',
+            'APPRX',
+            'COM',
+            'EGR',
+            'ELA',
+            'ESS',
+            'GEN',
+            'ILL',
+            'IN',
+            'INS',
+            'NOM',
+            'PL',
+            'PROL',
+            'PRT',
+            'TERM',
+            'TRANS'
+        ]
+
+        conj_gloss = [
+            'CON',
+            'INF',
+            'PTCP',
+            '[1-3]DU',
+            '[1-3]PL',
+            '[1-3]SG'
+        ]
+
+        sign = r'[-.]'
+        nom_re = re.compile(sign + f'|{sign}'.join(nom_gloss), re.IGNORECASE)
+        conj_re = re.compile(sign + f'|{sign}'.join(conj_gloss), re.IGNORECASE)
+
+        mark_re = re.compile(r'[-.][\dA-Z]+')
+        dash_re = re.compile(r'[-]([\dA-Z?][\dA-Za-z.?/|]*)')
+        affix_re = re.compile(r'[-][\w]+')
 
         # Checking text data of all existing lexical entries.
 
