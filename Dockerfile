@@ -43,10 +43,16 @@ RUN --mount=type=cache,target=/root/.cache/pip \
   pip3 install -r server-requirements-final.txt
 
 # Special steps for apertium parsers
+
+# These steps are for getting dependencies from official repository
+#RUN locale-gen en_US.UTF-8 && update-locale && \
+#curl -sS https://apertium.projectjj.com/apt/install-nightly.sh | bash
+
+# This way is for inner ispras mirror
 RUN \
-  locale-gen en_US.UTF-8 && update-locale && \
-  ( curl -sS https://apertium.projectjj.com/apt/install-nightly.sh | bash ) && \
-  apt install -y lttoolbox apertium-dev apertium-lex-tools apertium-separable hfst libhfst-dev cg3 cg3-dev autoconf
+  echo 'deb [trusted=yes] https://mirror.ispras.ru/repos/apertium-nightly-jammy/ jammy main' >> /etc/apt/sources.list && \
+  apt update && \
+  apt install -y lttoolbox apertium-all-dev apertium-lex-tools apertium-separable hfst libhfst-dev cg3 cg3-dev autoconf
 
 # Special steps for liboslon.so
 RUN \
