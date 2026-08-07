@@ -1836,18 +1836,24 @@ class CognateAnalysis(graphene.Mutation):
             raw_list = single_list
 
             def f(index, tt_tuple):
-                """
-                Gets entry id by its perspective index, translations and transcriptions.
-                """
+                try:
+                    """
+                    Gets entry id by its perspective index, translations and transcriptions.
+                    """
 
-                transcription_str, translation_str = tt_tuple
+                    transcription_str, translation_str = tt_tuple
 
-                return (
+                    return (
 
-                    entry_id_dict[(
-                        index,
-                        transcription_str + (
-                            ' ' + translation_str if translation_str else ''))])
+                        entry_id_dict[(
+                            index,
+                            transcription_str + (
+                                ' ' + translation_str if translation_str else ''))])
+
+                except KeyError as e:
+                    log.warning(f'No such key was collected earlier: {e}')
+
+                    return None
 
             single_list = [
                 (index, tt_tuple, f(index, tt_tuple))
