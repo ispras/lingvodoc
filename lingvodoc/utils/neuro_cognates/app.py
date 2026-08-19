@@ -341,7 +341,7 @@ class NeuroCognates:
         return result, links
 
     @celery.task
-    def predict_cognates(self, word_pairs, task):
+    def predict_cognates(self, mode, word_pairs, task):
 
         start_time = now()
         results = []
@@ -502,8 +502,9 @@ class NeuroCognates:
 
         return results
 
-    def index(self, word_pairs, task):
+    def index(self, mode, word_pairs, task):
         return self.predict_cognates.delay(
             self,
+            mode,
             word_pairs,
             task)

@@ -5638,6 +5638,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         truth_threshold = graphene.Float()
         only_orphans_flag = graphene.Boolean()
         group_field_id = LingvodocID()
+        mode = graphene.String(required=True)
 
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
@@ -5655,6 +5656,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
             truth_threshold,
             only_orphans_flag,
             group_field_id,
+            mode,
             storage,
             host_url,
             cache_kwargs,
@@ -5744,6 +5746,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
             )
 
             NeuroCognatesEngine.index(
+                mode,
                 input_pairs_list,
                 TaskStatus(user_id, 'Neuro cognates computation', '\n\n'.join(dictionary_name_list), input_len)
             )
@@ -5765,6 +5768,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         truth_threshold=0.97,
         only_orphans_flag=True,
         group_field_id=(66, 25),
+        mode='neuro_suggestions',
         input_pairs=None,
         debug_flag=False,
         intermediate_flag=False):
@@ -5865,6 +5869,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
                 truth_threshold,
                 only_orphans_flag,
                 group_field_id,
+                mode,
                 storage,
                 host_url,
                 cache_kwargs,
