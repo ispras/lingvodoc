@@ -277,7 +277,8 @@ class NeuroCognates:
                  host_url,
                  cache_kwargs,
                  truth_threshold=0.97,
-                 only_orphans_flag=True):
+                 only_orphans_flag=True,
+                 suggestion_field_id=(66, 25)):
 
         self.compare_lists = compare_lists
         self.input_index = input_index
@@ -289,6 +290,7 @@ class NeuroCognates:
         self.host_url = host_url
         self.cache_kwargs = cache_kwargs
         self.only_orphans_flag = only_orphans_flag
+        self.suggestion_field_id = suggestion_field_id
 
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
@@ -383,7 +385,8 @@ class NeuroCognates:
                     perspective_name_list=self.perspective_name_list,
                     transcription_count=compare_len * current_stage,
                     group_count=f"{group_count} filtered" if self.only_orphans_flag else "non-filtered",
-                    source_perspective_id=self.source_perspective_id
+                    source_perspective_id=self.source_perspective_id,
+                    suggestion_field_id=self.suggestion_field_id
                 )
 
                 storage_dir = os.path.join(self.storage['path'], 'neuro_cognates')
