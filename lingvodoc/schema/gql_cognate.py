@@ -5638,6 +5638,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         truth_threshold = graphene.Float()
         only_orphans_flag = graphene.Boolean()
         group_field_id = LingvodocID()
+        mode = graphene.String(required=True)
 
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
@@ -5655,6 +5656,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
             truth_threshold,
             only_orphans_flag,
             group_field_id,
+            mode,
             storage,
             host_url,
             cache_kwargs,
@@ -5731,6 +5733,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
             message = f"Too many words to compare: {compare_len}"
         else:
             NeuroCognatesEngine = NeuroCognates(
+                mode,
                 compare_pairs_list,
                 input_index,
                 source_perspective_id,
@@ -5740,12 +5743,13 @@ class NeuroCognateAnalysis(graphene.Mutation):
                 host_url,
                 cache_kwargs,
                 truth_threshold,
-                only_orphans_flag
+                only_orphans_flag,
+                group_field_id
             )
 
             NeuroCognatesEngine.index(
                 input_pairs_list,
-                TaskStatus(user_id, 'Neuro cognates computation', '\n\n'.join(dictionary_name_list), input_len)
+                TaskStatus(user_id, f'Neuro {mode} computation', '\n\n'.join(dictionary_name_list), input_len)
             )
 
         result_dict = (
@@ -5765,6 +5769,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         truth_threshold=0.97,
         only_orphans_flag=True,
         group_field_id=(66, 25),
+        mode='cognates',
         input_pairs=None,
         debug_flag=False,
         intermediate_flag=False):
@@ -5865,6 +5870,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
                 truth_threshold,
                 only_orphans_flag,
                 group_field_id,
+                mode,
                 storage,
                 host_url,
                 cache_kwargs,

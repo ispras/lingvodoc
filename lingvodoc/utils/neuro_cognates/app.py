@@ -175,8 +175,9 @@ def process_batch(args):
 
     base_word_tensor = self._process_text(input_word)
     base_tran_tensor = self._process_text(input_tran)
+    inference_url = "10.100.192.136:8001" if self.mode == 'cognates' else "10.100.192.136:8003"
 
-    with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
+    with grpcclient.InferenceServerClient(url=inference_url) as triton_client:
     #with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
 
         for i, compare_list in enumerate(self.compare_lists):
@@ -268,6 +269,7 @@ def process_batch(args):
 
 class NeuroCognates:
     def __init__(self,
+                 mode,
                  compare_lists,
                  input_index,
                  source_perspective_id,
@@ -277,8 +279,10 @@ class NeuroCognates:
                  host_url,
                  cache_kwargs,
                  truth_threshold=0.97,
-                 only_orphans_flag=True):
+                 only_orphans_flag=True,
+                 suggestion_field_id=(66, 25)):
 
+        self.mode = mode
         self.compare_lists = compare_lists
         self.input_index = input_index
         self.source_perspective_id = source_perspective_id
@@ -289,6 +293,7 @@ class NeuroCognates:
         self.host_url = host_url
         self.cache_kwargs = cache_kwargs
         self.only_orphans_flag = only_orphans_flag
+        self.suggestion_field_id = suggestion_field_id
 
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
@@ -383,7 +388,8 @@ class NeuroCognates:
                     perspective_name_list=self.perspective_name_list,
                     transcription_count=compare_len * current_stage,
                     group_count=f"{group_count} filtered" if self.only_orphans_flag else "non-filtered",
-                    source_perspective_id=self.source_perspective_id
+                    source_perspective_id=self.source_perspective_id,
+                    suggestion_field_id=self.suggestion_field_id
                 )
 
                 storage_dir = os.path.join(self.storage['path'], 'neuro_cognates')
@@ -433,7 +439,10 @@ class NeuroCognates:
                     if i:
                         sleep(1)
 
-                    metrics_req = requests.get("http://10.100.192.136:8002/metrics")
+                    metrics_req = (
+                        requests.get("http://10.100.192.136:8002/metrics")
+                        if self.mode == 'cognates' else
+                        requests.get("http://10.100.192.136:8005/metrics"))
                     #metrics_req = requests.get("http://10.100.192.136:8082/metrics")
 
                     if metrics_req.status_code != 200:
