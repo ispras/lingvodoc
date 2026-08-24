@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 
 # Имя подпапки с pth файлом
 model_path = "model"
@@ -10,6 +11,27 @@ config = checkpoint.get('config')
 char_to_index = checkpoint['char_to_index']
 max_len = config.get('max_len')
 vocab_size = len(char_to_index)
+
+
+class TransformerEncoderBlock(nn.Module):
+    def __init__(self, embed_dim, num_heads, ff_dim, dropout=0.1):
+        super().__init__()
+        self.attn = nn.MultiheadAttention(embed_dim, num_heads, dropout=dropout, batch_first=True)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.ff = nn.Sequential(
+            nn.Linear(embed_dim, ff_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(ff_dim, embed_dim)
+        )
+        self.norm2 = nn.LayerNorm(embed_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        attn_out, _ = self.attn(x, x, x)
+        x = self.norm1(x + self.dropout(attn_out))
+        ff_out = self.ff(x)
+        return self.norm2(x + self.dropout(ff_out))
 
 
 class DualPathSiamese(nn.Module):
