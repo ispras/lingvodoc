@@ -175,8 +175,9 @@ def process_batch(args):
 
     base_word_tensor = self._process_text(input_word)
     base_tran_tensor = self._process_text(input_tran)
+    inference_url = "10.100.192.136:8001" if self.mode == 'cognates' else "10.100.192.136:8003"
 
-    with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
+    with grpcclient.InferenceServerClient(url=inference_url) as triton_client:
     #with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
 
         for i, compare_list in enumerate(self.compare_lists):
@@ -268,6 +269,7 @@ def process_batch(args):
 
 class NeuroCognates:
     def __init__(self,
+                 mode,
                  compare_lists,
                  input_index,
                  source_perspective_id,
@@ -280,6 +282,7 @@ class NeuroCognates:
                  only_orphans_flag=True,
                  suggestion_field_id=(66, 25)):
 
+        self.mode = mode
         self.compare_lists = compare_lists
         self.input_index = input_index
         self.source_perspective_id = source_perspective_id
@@ -343,7 +346,7 @@ class NeuroCognates:
         return result, links
 
     @celery.task
-    def predict_cognates(self, mode, word_pairs, task):
+    def predict_cognates(self, word_pairs, task):
 
         start_time = now()
         results = []
@@ -436,7 +439,10 @@ class NeuroCognates:
                     if i:
                         sleep(1)
 
-                    metrics_req = requests.get("http://10.100.192.136:8002/metrics")
+                    metrics_req = (
+                        requests.get("http://10.100.192.136:8002/metrics")
+                        if self.mode == 'cognates' else
+                        requests.get("http://10.100.192.136:8005/metrics"))
                     #metrics_req = requests.get("http://10.100.192.136:8082/metrics")
 
                     if metrics_req.status_code != 200:
@@ -505,9 +511,8 @@ class NeuroCognates:
 
         return results
 
-    def index(self, mode, word_pairs, task):
+    def index(self, word_pairs, task):
         return self.predict_cognates.delay(
             self,
-            mode,
             word_pairs,
             task)

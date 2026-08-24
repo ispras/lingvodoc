@@ -5733,6 +5733,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
             message = f"Too many words to compare: {compare_len}"
         else:
             NeuroCognatesEngine = NeuroCognates(
+                mode,
                 compare_pairs_list,
                 input_index,
                 source_perspective_id,
@@ -5747,9 +5748,8 @@ class NeuroCognateAnalysis(graphene.Mutation):
             )
 
             NeuroCognatesEngine.index(
-                mode,
                 input_pairs_list,
-                TaskStatus(user_id, 'Neuro cognates computation', '\n\n'.join(dictionary_name_list), input_len)
+                TaskStatus(user_id, f'Neuro {mode} computation', '\n\n'.join(dictionary_name_list), input_len)
             )
 
         result_dict = (
@@ -5769,7 +5769,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         truth_threshold=0.97,
         only_orphans_flag=True,
         group_field_id=(66, 25),
-        mode='neuro_suggestions',
+        mode='cognates',
         input_pairs=None,
         debug_flag=False,
         intermediate_flag=False):
