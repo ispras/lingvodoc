@@ -1,7 +1,7 @@
 import torch
 
 # Имя подпапки с pth файлом
-model_path = "1"
+model_path = "model"
 
 # Загрузка модели
 device = torch.device('cuda')
