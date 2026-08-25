@@ -1,0 +1,14 @@
+{
+  "semantic_vocab_size": 260,
+  "semantic_pad_id": 0,
+  "word_pad_id": 0,
+  "max_word_length": 64,
+  "max_translation_bytes": 128,
+  "semantic_dim": 128,
+  "semantic_blocks": 2,
+  "semantic_heads": 4,
+  "semantic_ffn_multiplier": 3,
+  "semantic_dropout": 0.12,
+  "item_dim": 160,
+  "pair_hidden_dim": 320
+}
