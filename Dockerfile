@@ -68,4 +68,4 @@ RUN \
 
 # Some final steps
 RUN \
-  pip3 install setuptools==58.0
+  pip3 install setuptools==64.0 #58.0
