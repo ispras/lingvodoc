@@ -1407,7 +1407,7 @@ def graphql(request):
             log.warning(f'Graphql errors: ${errors}')
 
         if (result.get('data') or {}).get('language_tree'):
-            log.warning(f"!!! >>> Returned {'REMOTE' if proxy is not None else 'LOCAL'} response")
+            log.warning(f"!!! >>> Received {'REMOTE' if proxy is not None else 'LOCAL'} response")
 
         return result
 

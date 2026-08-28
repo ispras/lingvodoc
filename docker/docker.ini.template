@@ -128,3 +128,10 @@ debug = 0
 [signup]
 approve = False
 address = al@somestuff.ru
+
+[app:proxy]
+proxy = false
+paired = no
+local = isp
+# debugging
+xal_server = http://localhost:4200/
