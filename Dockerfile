@@ -35,7 +35,7 @@ RUN \
   ln -sf $(which python3.10) /usr/bin/python3 && \
   ln -sf /etc/mecabrc /usr/local/etc/mecabrc && \
   curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 && \
-  pip3 install pip==20.3.2 setuptools==44.0
+  pip3 install pip==20.3.3 setuptools==44.0
 
 # Installing python packages
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -43,10 +43,16 @@ RUN --mount=type=cache,target=/root/.cache/pip \
   pip3 install -r server-requirements-final.txt
 
 # Special steps for apertium parsers
+
+# These steps are for getting dependencies from official repository
+#RUN locale-gen en_US.UTF-8 && update-locale && \
+#curl -sS https://apertium.projectjj.com/apt/install-nightly.sh | bash
+
+# This way is for inner ispras mirror
 RUN \
-  locale-gen en_US.UTF-8 && update-locale && \
-  ( curl -sS https://apertium.projectjj.com/apt/install-nightly.sh | bash ) && \
-  apt install -y lttoolbox apertium-dev apertium-lex-tools apertium-separable hfst libhfst-dev cg3 cg3-dev autoconf
+  echo 'deb [trusted=yes] https://mirror.ispras.ru/repos/apertium-nightly-jammy/ jammy main' >> /etc/apt/sources.list && \
+  apt update && \
+  apt install -y lttoolbox apertium-all-dev apertium-lex-tools apertium-separable hfst libhfst-dev cg3 cg3-dev autoconf
 
 # Special steps for liboslon.so
 RUN \
@@ -56,10 +62,10 @@ RUN \
   ldconfig
 
 # Special steps for fasttext model
-RUN \
-  curl https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ru.300.vec.gz --create-dirs -o /opt/fasttext/cc.ru.300.vec.gz && \
-  gzip -d /opt/fasttext/cc.ru.300.vec.gz
+#RUN \
+#  curl https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ru.300.vec.gz --create-dirs -o /opt/fasttext/cc.ru.300.vec.gz && \
+#  gzip -d /opt/fasttext/cc.ru.300.vec.gz
 
 # Some final steps
 RUN \
-  pip3 install setuptools==58.0
+  pip3 install setuptools==64.0 #58.0
