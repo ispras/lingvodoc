@@ -887,6 +887,7 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
             }
 
             # Query
+            log.warning("Trying to request remote server...")
             remote_resp = session.post(client_path, **req_args)
             resp_status = remote_resp.status_code
             remote_result.update((remote_resp.json()

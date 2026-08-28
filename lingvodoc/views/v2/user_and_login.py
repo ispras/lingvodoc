@@ -422,6 +422,7 @@ def desk_signin(request):
         # Get client info and auth_tokens
         client_req = {**request.json_body, 'desktop': True}
         client_path = isp_server + 'api/signin'
+        log.warning("Trying to request remote server...")
         client_resp = session.post(client_path, json=client_req)  # request
         client_json = client_resp.json()
         client_dict = client_json if type(client_json) is dict else json.loads(client_json)
@@ -513,6 +514,7 @@ def new_client(request):
     session.mount('http://', adapter)
     # with open('authentication_data.json', 'r') as f:
     #     cookies = json.loads(f.read())
+    log.warning("Trying to request remote server...")
     status = session.post(path, cookies=json.loads(request.cookies.get('server_cookies')))
     cookies = status.cookies.get_dict()
     client_id = status.json()['client_id']
