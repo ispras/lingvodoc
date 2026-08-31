@@ -12,7 +12,7 @@ class ProxyPass(Exception):
     def __init__(self, request, sync_between=('isp', 'xal'), message=None):
         try:
             settings = request.registry.settings
-            paired = strtobool(settings['proxy']['paired'])
+            paired = strtobool(settings['proxy'].get('paired', 'no'))
 
             if not paired:
                 log.warning("We have no paired servers")
