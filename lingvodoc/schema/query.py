@@ -56,6 +56,7 @@ import sklearn.metrics
 import sklearn.mixture
 
 import sqlalchemy
+import requests
 
 from sqlalchemy import (
     and_,
@@ -297,6 +298,7 @@ from lingvodoc.schema.gql_translationgist import (
 
 from lingvodoc.schema.gql_user import (
     ActivateDeactivateUser,
+    AllowSyncDicts,
     CreateUser,
     UpdateUser,
     User)
@@ -321,6 +323,14 @@ from lingvodoc.schema.gql_markups import (
     SaveMarkupGroups,
     Markup,
     MarkupGroup)
+
+from lingvodoc.schema.gql_sync_xal import (
+    CheckPermissions,
+    CheckPerspective,
+    ListChanges,
+    MergeChanges,
+    ListRoles,
+    MergeRoles)
 
 from lingvodoc.schema.gql_twins_diff import DiffEntities, TwinsXlsx
 
@@ -381,6 +391,8 @@ from lingvodoc.views.v2.utils import (
 from operator import attrgetter
 
 from lingvodoc.scripts.list_cognates import entities_getter
+from lingvodoc.utils.proxy import ProxyPass
+from lingvodoc.views.v2.user_and_login import subdict
 
 from pdb import set_trace as A
 
@@ -672,7 +684,6 @@ class Query(graphene.ObjectType):
     language_toc = graphene.List(Language)
 
     language_tree = (
-
         graphene.Field(
             LanguageTree,
             dictionary_category = graphene.Int(),
@@ -682,6 +693,7 @@ class Query(graphene.ObjectType):
             grant_id = graphene.Int(),
             by_organizations = graphene.Boolean(),
             organization_id = graphene.Int(),
+            proxy = graphene.Boolean(),
             debug_flag = graphene.Boolean()))
 
     fill_logs = graphene.String(worker = graphene.Int())
@@ -717,6 +729,27 @@ class Query(graphene.ObjectType):
             graphene.String,
             pers_id = LingvodocID(required = True)))
 
+    list_changes = (
+        graphene.Field(
+            ObjectVal,
+            remote = graphene.String(required = True),
+            sync_between = graphene.List(graphene.String, required = True),
+            perspective_id = LingvodocID(required = True),
+            action = graphene.String(required = True),
+            sync_point = graphene.Float(),
+            debug_flag = graphene.Boolean()))
+
+    check_permissions = (
+        graphene.Field(
+            graphene.Boolean,
+            subject_id = LingvodocID(required = True),
+            proxy = graphene.Boolean()))
+
+    check_permissions_bulk = (
+        graphene.Field(
+            ObjectVal,
+            category = graphene.Int(required = True)))
+
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
         client_id = info.context.client_id
@@ -742,10 +775,10 @@ class Query(graphene.ObjectType):
         grant_id = None,
         by_organizations = False,
         organization_id = None,
+        proxy = False,
         debug_flag = False):
 
         try:
-
             language_field_asts = []
 
             for field in info.field_asts:
@@ -853,7 +886,7 @@ class Query(graphene.ObjectType):
                                 dbGrant.grant_number,
                                 dbGrant.id)
 
-                            .all())
+                            .all()) if id_list else []
 
                 else:
 
@@ -872,7 +905,7 @@ class Query(graphene.ObjectType):
                             .order_by(
                                 dbOrganization.id)
 
-                            .all())
+                            .all()) if id_list else []
 
                 id_str_list = [
 
@@ -974,10 +1007,14 @@ class Query(graphene.ObjectType):
                         tree_object, width = 144))
 
             return (
-
                 LanguageTree(
                     tree = tree_object,
                     languages = gql_language_list))
+
+        # ProxyPass exception is used to skip other computations in schema
+        # and to keep data from remote host. This exception block is important
+        except ProxyPass:
+            raise
 
         except Exception as exception:
 
@@ -1804,10 +1841,30 @@ class Query(graphene.ObjectType):
         tasks = [Task(**task_dict) for task_dict in tasks_dicts]
         return tasks
 
-    def resolve_permission_lists(self, info, proxy):
+    def resolve_permission_lists(self, info, proxy, debug_flag=True):
+
+        permission_lists = collections.defaultdict(list)
+
+        def fill_permission_list(input_list, list_name, to_exclude=tuple()):
+            existing = list()
+
+            for dbperspective in input_list:
+                is_dbobject = type(dbperspective) is not dict
+
+                dbperspective_id = (
+                    [dbperspective.client_id, dbperspective.object_id] if is_dbobject else dbperspective['id'])
+
+                if dbperspective_id not in to_exclude:
+                    perspective = Perspective(id=dbperspective_id)
+                    if is_dbobject:
+                        perspective.dbObject = dbperspective
+                    perspective.list_name = list_name
+                    permission_lists[list_name].append(perspective)
+                    existing.append(dbperspective_id)
+
+            return tuple(existing)
+
         request = info.context.request
-        if proxy:
-            try_proxy(request)
         client_id = info.context.client_id
 
         subreq = Request.blank('/translation_service_search')
@@ -1825,13 +1882,6 @@ class Query(graphene.ObjectType):
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
 
-        subreq = Request.blank('/translation_service_search')
-        subreq.method = 'POST'
-        subreq.headers = request.headers
-        headers = dict()
-        if request.headers.get('Cookie'):
-            headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
         subreq.json = {'searchstring': 'Limited access'}  # todo: fix
         resp = request.invoke_subrequest(subreq)
 
@@ -1840,6 +1890,7 @@ class Query(graphene.ObjectType):
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
 
+        ### Limited permissions ###
 
         dblimited = DBSession.query(dbPerspective).filter(
             and_(dbPerspective.state_translation_gist_client_id == limited_gist_client_id,
@@ -1847,35 +1898,29 @@ class Query(graphene.ObjectType):
         )
 
         # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
-        limited = list()
-        for dbperspective in dblimited.all():
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='limited'
-            limited.append(perspective)
-            # fulfill_permissions_on_perspectives(intermediate, pers, limited_perms)
+        fill_permission_list(dblimited.all(), 'limited')
 
+        ### View permissions ###
 
         dbpublished = DBSession.query(dbPerspective).filter(
             and_(dbPerspective.state_translation_gist_client_id == published_gist_client_id,
                  dbPerspective.state_translation_gist_object_id == published_gist_object_id)
         )
-        existing = list()
-        view = list()
-        for dbperspective in dbpublished.all():
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='view'
-            view.append(perspective)
-            existing.append([dbperspective.client_id, dbperspective.object_id])
+
+        existing = fill_permission_list(dbpublished.all(), 'view')
 
         if not client_id:
-            return Permissions(limited=limited, view=view, edit=list(), publish=list())
+            return Permissions(**permission_lists, edit=list(), publish=list())
 
         user = DBSession.query(Client).filter(client_id == Client.id).first()
+
         if not user:
             return None
+
         user_id = user.user_id
+
+        ### Edit permissions ###
+
         editor_basegroup = DBSession.query(dbBaseGroup).filter(
             and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
         editable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
@@ -1884,12 +1929,13 @@ class Query(graphene.ObjectType):
             and_(dbUser.id == user_id,
                  dbGroup.base_group_id == editor_basegroup.id,
                  dbPerspective.marked_for_deletion == False)).all()
-        edit = list()
-        for dbperspective in editable_perspectives:
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='edit'
-            edit.append(perspective)
+
+        fill_permission_list(editable_perspectives, 'edit')
+
+        ### View personal permissions ###
+
+        # Cleaning up view permissions
+        permission_lists['view'] = list()
 
         reader_basegroup = DBSession.query(dbBaseGroup).filter(
             and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
@@ -1898,13 +1944,9 @@ class Query(graphene.ObjectType):
             dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
             and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
 
-        view = list()
-        for dbperspective in readable_perspectives:
-            if [dbperspective.client_id, dbperspective.object_id] not in existing:
-                perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-                perspective.dbObject = dbperspective
-                perspective.list_name='view'
-                view.append(perspective)
+        fill_permission_list(readable_perspectives, 'view', existing)
+
+        ### Publish permissions ###
 
         publisher_basegroup = DBSession.query(dbBaseGroup).filter(
             and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
@@ -1913,14 +1955,13 @@ class Query(graphene.ObjectType):
             dbPerspective.client_id == dbGroup.subject_client_id,
             dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
             and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
-        publish = list()
-        for dbperspective in approvable_perspectives:
-            perspective = Perspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            perspective.list_name='publish'
-            publish.append(perspective)
-        return Permissions(limited=limited, view=view, edit=edit, publish=publish)
 
+        fill_permission_list(approvable_perspectives, 'publish')
+
+        if debug_flag:
+            log.warning("Calculated proxy permission")
+
+        return Permissions(**permission_lists)
 
     def resolve_advanced_search(
         self,
@@ -2157,10 +2198,12 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        '''
         request = info.context.request
+
         if proxy:
             try_proxy(request)
-
+        '''
         client_id = info.context.client_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
@@ -5392,6 +5435,53 @@ class Query(graphene.ObjectType):
     def resolve_twins_xlsx(self, info, pers_id):
         return TwinsXlsx(info, pers_id, debug_flag=False)
 
+    def resolve_list_changes(self, info, **args):
+        return ListChanges(info, **args)
+
+    def resolve_check_permissions(self, info, subject_id, proxy=None):
+
+        if proxy is None:
+            local_permission = CheckPermissions(info, subject_id)
+            proxy_permission = False
+
+            try:
+                # Call remote request
+                request = info.context.request
+                try_proxy(request)
+
+            except ProxyPass as e:
+                proxy_permission = ((e.response_json
+                                    .get('data') or {})
+                                    .get('check_permissions'))
+
+            return local_permission and proxy_permission
+
+        # Remotely we check if perspective exists
+        return CheckPerspective(subject_id)
+
+    def resolve_check_permissions_bulk(self, info, category):
+
+        log.warning("Calculating local permissions...")
+
+        subject_id_list = (
+            DBSession
+                .query(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
+                .filter(
+                    dbPerspective.marked_for_deletion == False,
+                    dbPerspective.parent_id == dbDictionary.id,
+                    dbDictionary.marked_for_deletion == False,
+                    dbDictionary.category == category)
+                .all())
+
+        result = {}
+        for subject_id in subject_id_list:
+            subject_id_str = ','.join(map(str, subject_id))
+            result[subject_id_str] = CheckPermissions(info, subject_id)
+
+        return result
+
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
     field_id = LingvodocID()
@@ -5399,6 +5489,43 @@ class PerspectivesAndFields(graphene.InputObjectType):
 class StarlingEtymologyObject(graphene.InputObjectType):
     starling_perspective_id = LingvodocID()
     perspectives_and_fields = graphene.List(PerspectivesAndFields)
+
+
+class ApplySync(graphene.Mutation):
+    class Arguments:
+
+        perspective_id = LingvodocID(required=True)
+        sync_between = graphene.List(graphene.String, required=True)
+        perspective_name = graphene.String()
+        action = graphene.String()
+        debug_flag = graphene.Boolean()
+
+    message = graphene.List(graphene.String)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        client_id = info.context.client_id
+
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if not client:
+            raise ResponseError('Only registered users can apply synchronization.')
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        if not user:
+            raise ResponseError("This client id is orphaned. Try to logout and then login once more.")
+
+        if user.id != 1 and not (user.additional_metadata or {}).get('allowed_sync'):
+            raise ResponseError("This client has no permissions to apply synchronization.")
+
+        result = MergeChanges(info, **args)
+
+        if isinstance(result, dict):
+            return ApplySync(**result)
+        else:
+            raise ResponseError("We can't perform synchronization")
+
 
 class StarlingEtymology(graphene.Mutation):
 
@@ -7710,7 +7837,7 @@ class BidirectionalLinks(graphene.Mutation):
                                   link_id=from_id)
                     fixed += 1
 
-                print(f'\nTotal fixed links: {fixed}')
+                log.info(f'\nTotal fixed links: {fixed}')
 
         except Exception as exception:
 
@@ -9180,6 +9307,54 @@ class Tsakorpus(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
+class SyncRoles(graphene.Mutation):
+    class Arguments:
+
+        user_id = graphene.Int(required=True)
+        proxy = graphene.Boolean()
+        debug_flag = graphene.Boolean()
+
+    roles_data = ObjectVal()
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(
+        root,
+        info,
+        user_id,
+        proxy=None,
+        debug_flag=False):
+
+        if proxy is None:
+            roles_data = None
+
+            # Get data remotely
+            try:
+                request = info.context.request
+                try_proxy(request)
+
+            except ProxyPass as e:
+                roles_data = e.response_json.get('data')
+
+            if roles_data:
+                MergeRoles(
+                    roles_data['sync_roles']['roles_data'],
+                    debug_flag)
+
+            return (
+                SyncRoles(
+                    roles_data=None,
+                    triumph=True))
+
+        # Get data locally on remote host
+        roles_data = ListRoles(user_id, None, debug_flag)
+
+        return (
+            SyncRoles(
+                roles_data=roles_data,
+                triumph=True))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -9187,6 +9362,7 @@ class MyMutations(graphene.ObjectType):
     create_field = gql_field.CreateField.Field()
     for more beautiful imports
     """
+    apply_sync = ApplySync.Field()
     convert_starling = starling_converter.GqlStarling.Field()
     convert_plain_text = plain_text_converter.GqlParallelCorpora.Field()
     convert_dialeqt = ConvertDictionary.Field()
@@ -9207,6 +9383,7 @@ class MyMutations(graphene.ObjectType):
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
     activate_deactivate_user = ActivateDeactivateUser.Field()
+    allow_sync_dicts = AllowSyncDicts.Field()
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     update_language_atom = UpdateLanguageAtom.Field()
@@ -9301,6 +9478,7 @@ class MyMutations(graphene.ObjectType):
     save_markup_groups = SaveMarkupGroups.Field()
     stop_mutation = StopMutation.Field()
     save_suggestions_state = SaveSuggestionsState.Field()
+    sync_roles = SyncRoles.Field()
 
 schema = graphene.Schema(
     query=Query,

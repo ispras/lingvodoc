@@ -36,7 +36,7 @@ from pyramid_mailer.message import Message
 
 import requests
 
-from sqlalchemy import or_
+from sqlalchemy import or_, literal
 import sqlalchemy.exc
 
 # Project imports.
@@ -57,10 +57,15 @@ from lingvodoc.views.v2.utils import (
     get_user_by_client_id
 )
 from lingvodoc.utils.creation import add_user_to_group
+from pdb import set_trace as A
 
 
 # Setting up logging.
 log = logging.getLogger(__name__)
+
+
+def subdict(source, *keys):
+    return dict((k, source[k]) for k in keys if k in source)
 
 
 @view_config(route_name='signup', renderer='templates/signup.pt', request_method='GET')
@@ -328,6 +333,7 @@ def signin(request):
     login = req['login']
     password = req['password']
     desktop = req.get('desktop', False)
+    proxy = req.get('proxy', False)
 
     user = DBSession.query(User).filter_by(login=login).first()
 
@@ -348,11 +354,11 @@ def signin(request):
             locale_id = 1
         response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
         response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
-        result = dict()
-        result['client_id'] = client.id
+        # result = dict()
+        result = client.__dict__
+        result.update({'client_id': client.id})
         request.response.status = HTTPOk.code
-
-        return HTTPOk(headers=response.headers, json_body=result)
+        return HTTPOk(headers=response.headers, json_body=json.dumps(result, default=str))
 
     return HTTPUnauthorized(location=request.route_url('login'))
 
@@ -376,62 +382,93 @@ def sync_signin(request):
 @view_config(route_name='desk_signin', renderer='json', request_method='POST')
 def desk_signin(request):
     import requests
-    req = request.json_body
-    req['desktop'] = True
-    settings = request.registry.settings
+
+    def response(cookies):
+        client_id = cookies['client_id']
+        locale_id = cookies['locale_id']
+
+        common_args = {'max_age': datetime.timedelta(days=3650), 'samesite': 'lax'}
+        resp = Response()
+
+        resp.headers = remember(request, userid=client_id, max_age=315360000)
+        resp.set_cookie('locale_id', value=str(locale_id), **common_args)
+        resp.set_cookie('client_id', value=str(client_id), **common_args)
+        resp.set_cookie('server_cookies', value=json.dumps(cookies), **common_args)
+
+        return resp
+
+    def new_in_base(*filters):
+        exists = (
+            DBSession
+                .query(
+                    DBSession
+                        .query(literal(1))
+                        .filter(*filters)
+                        .exists())
+                    .scalar())
+
+        return not exists
+
     try:
-        path = settings['desktop']['central_server'] + 'signin'
+        settings = request.registry.settings
+        isp_server = settings['proxy']['isp_server']
+        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+
+        # Get and set session
         session = requests.Session()
         session.headers.update({'Connection': 'Keep-Alive'})
-        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
         session.mount('http://', adapter)
-        status = session.post(path, json=req)
-        client_id = status.json()['client_id']
-        cookies = status.cookies.get_dict()
 
-        response = Response()
-        headers = remember(request, userid=client_id, max_age=315360000)
-        response.headers = headers
-        locale_id = cookies['locale_id']
-        response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-        response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-        response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
-        sub_headers = response.headers
-        sub_headers = dict(sub_headers)
-        sub_headers['Cookie'] = sub_headers['Set-Cookie']
-        # with open('authentication_data.json', 'w') as f:
-        #     f.write(json.dumps(cookies))
-        if status.status_code == 200:
-            path = request.route_url('basic_sync')
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            # sub_cookies = request.headers['Cookie']
-            # print(sub_cookies)
-            # sub_cookies += '; server_cookies=\'%s\'' % json.dumps(cookies)
-            # print('subcookies:', sub_cookies)
-            # sub_headers = {'Cookie': sub_cookies}
-            subreq.headers = sub_headers
-            print('headers', subreq.headers)
-            resp = request.invoke_subrequest(subreq)
-            if resp.status_code == 200:
-                headers = remember(request, userid=client_id, max_age=315360000)
-                response = Response()
-                response.headers = headers
-                locale_id = cookies['locale_id']
-                response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-                response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
-                response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
-                result = dict()
-                result['client_id'] = client_id
-                request.response.status = HTTPOk.code
-                # request.response.headers = headers
-                # return response
-                return HTTPOk(headers=response.headers, json_body=result)
-            # return result
+        # Get client info and auth_tokens
+        client_req = {**request.json_body, 'desktop': True}
+        client_path = isp_server + 'api/signin'
+        log.warning("Trying to request remote server...")
+        client_resp = session.post(client_path, json=client_req)  # request
+        client_json = client_resp.json()
+        client_dict = client_json if type(client_json) is dict else json.loads(client_json)
+
+        resp_status = client_resp.status_code
+        resp_cookies = client_resp.cookies.get_dict()
+
+        if resp_status == 200:
+            user_path = isp_server + 'api/user'
+            user_json = session.get(user_path).json()
+            user_dict = user_json if type(user_json) is dict else json.loads(user_json)
+
+            DBSession.rollback()
+
+            # Storing to database co-named values from user_dict
+            if new_in_base(User.id == user_dict['id']):
+                DBSession.add(
+                    User(
+                        **subdict(
+                            user_dict, 'id', 'login', 'name', 'intl_name',
+                            'birthday', 'is_active', 'default_locale_id',
+                            'additional_metadata')))
+
+            if new_in_base(Email.user_id == user_dict['id']):
+                DBSession.add(
+                    Email(
+                        **{
+                            'user_id': user_dict['id'],
+                            'email': user_dict['email']}))
+
+            # Storing to database co-named values from client_dict
+            if new_in_base(Client.id == client_dict['id']):
+                DBSession.add(
+                    Client(
+                        **subdict(
+                            client_dict, 'id', 'user_id', 'is_browser_client')))
+
+            DBSession.flush()
+
+            request.response.status = HTTPOk.code
+            return HTTPOk(headers=response(resp_cookies).headers, json_body=client_json)
+
     except HTTPUnauthorized:
         return HTTPUnauthorized(json_body={'error': 'Login or password is wrong, please retry'})
-    # except Exception:
-    #     return HTTPServiceUnavailable(json_body={'error': 'You have no internet connection or Lingvodoc server is unavailable; please retry later.'})
+    except Exception:
+        return HTTPInternalServerError(json_body={'error': 'You have no internet connection or Lingvodoc server is unavailable; please retry later.'})
 
 
 @view_config(route_name='new_client_server', renderer='json', request_method='POST')
@@ -470,13 +507,14 @@ def new_client_server(request):
 def new_client(request):
     settings = request.registry.settings
 
-    path = settings['desktop']['central_server'] + 'sync/client/server'
+    path = settings['proxy']['isp_server'] + 'api/sync/client/server'
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
     # with open('authentication_data.json', 'r') as f:
     #     cookies = json.loads(f.read())
+    log.warning("Trying to request remote server...")
     status = session.post(path, cookies=json.loads(request.cookies.get('server_cookies')))
     cookies = status.cookies.get_dict()
     client_id = status.json()['client_id']
@@ -619,6 +657,9 @@ def get_user_info(request):  # tested
     response['birthday'] = str(user.birthday)
     response['created_at'] = user.created_at
     response['is_active'] = user.is_active
+    response['allowed_sync'] = (
+            user.additional_metadata or {}).get('allowed_sync')
+    response['additional_metadata'] = user.additional_metadata
     if user.email:
         response['email'] = user.email.email
     meta = None

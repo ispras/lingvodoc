@@ -903,6 +903,12 @@ def main(global_config, **settings):
             storage[k] = v
         settings['desktop'] = storage
 
+    if parser.has_section('app:proxy'):
+        storage = dict()
+        for k, v in parser.items('app:proxy'):
+            storage[k] = v
+        settings['proxy'] = storage
+
     # TODO: Find a more neat way
     try:
         cache_kwargs = dict()

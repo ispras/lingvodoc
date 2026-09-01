@@ -536,7 +536,7 @@ gql_none_value = object()
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
     """
-    This magic decorator, which the resolve_* functions have, sets the dbObject atribute
+    This magic decorator, which the resolve_* functions have, sets the dbObject attribute
     after execution of a request to a DB or force the function to return attribute by attrib_name.
     class must have dbType and dbObject attributes
     example:

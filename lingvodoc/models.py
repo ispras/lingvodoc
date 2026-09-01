@@ -257,11 +257,12 @@ class UUIDType(TypeDecorator):
         return value
 
 
-class CreatedAtMixin(object):
+class ModifiedAtMixin(object):
     """
     It's used for automatically set created_at column.
     """
     created_at = Column(EpochType, default=datetime.datetime.utcnow, nullable=False)
+    updated_at = Column(EpochType, default=datetime.datetime.utcnow, nullable=False)
 
 
 class IdMixin(object):
@@ -865,7 +866,13 @@ class TranslationMixin(PrimeTableArgs):
             session)
 
 
-class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedForDeletionMixin):
+class TranslationGist(
+    CompositeIdMixin,
+    Base,
+    TableNameMixin,
+    ModifiedAtMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin):
     """
     This is base of translations
     """
@@ -889,7 +896,7 @@ class TranslationAtom(
     TableNameMixin,
     CompositeIdMixin,
     ParentMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     MarkedForDeletionMixin,
     AdditionalMetadataMixin,
     Base):
@@ -906,7 +913,7 @@ class Language(
     CompositeIdMixin,
     ParentMixin,
     TableNameMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     TranslationMixin,
     MarkedForDeletionMixin,
     AdditionalMetadataMixin,
@@ -922,7 +929,7 @@ class Locale(
     TableNameMixin,
     IdMixin,
     ParentMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     Base):
     """
     This entity specifies list of available translations (for words in dictionaries and for UI).
@@ -1005,7 +1012,7 @@ class Dictionary(
     CompositeIdMixin,
     TableNameMixin,
     ParentMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     TranslationMixin,
     StateMixin,
     MarkedForDeletionMixin,
@@ -1027,7 +1034,7 @@ class DictionaryPerspective(
     CompositeIdMixin,
     TableNameMixin,
     ParentMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     TranslationMixin,
     StateMixin,
     MarkedForDeletionMixin,
@@ -1510,12 +1517,13 @@ class LinkMixin(PrimeTableArgs):
 class DictionaryPerspectiveToField(
     CompositeIdMixin,
     TableNameMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     ParentMixin,
     SelfMixin,
     FieldMixin,
     LinkMixin,
     MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
     Base):
     """
     """
@@ -1614,7 +1622,7 @@ class DataTypeMixin(PrimeTableArgs):
 class Field(
     CompositeIdMixin,
     TableNameMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     TranslationMixin,
     DataTypeMixin,
     MarkedForDeletionMixin,
@@ -1658,7 +1666,7 @@ class LexicalEntry(
     CompositeIdMixin,
     TableNameMixin,
     ParentMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     MarkedForDeletionMixin,
     AdditionalMetadataMixin,
     ReprIdMixin,
@@ -1901,7 +1909,7 @@ class LexicalEntry(
 class Entity(
     CompositeIdMixin,
     TableNameMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     ParentMixin,
     SelfMixin,
     FieldMixin,
@@ -1950,7 +1958,8 @@ class Entity(
 
 class PublishingEntity(
     TableNameMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
+    AdditionalMetadataMixin,
     Base):
 
     # NOTE:
@@ -2016,7 +2025,7 @@ user_to_organization_association = Table('user_to_organization_association', Bas
                                          )
 
 
-class User(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
+class User(Base, TableNameMixin, IdMixin, ModifiedAtMixin, AdditionalMetadataMixin):
     login = Column(UnicodeText, unique=True, nullable=False)
     name = Column(UnicodeText)
     # this stands for name in English
@@ -2035,7 +2044,7 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixi
         # TODO: last_sync_datetime
 
 
-class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+class BaseGroup(Base, TableNameMixin, IdMixin, ModifiedAtMixin):
     name = Column(UnicodeText, nullable=False)  # readable name
     groups = relationship('Group', backref=backref("BaseGroup"))
     subject = Column(UnicodeText, nullable=False)
@@ -2044,7 +2053,7 @@ class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     perspective_default = Column(Boolean, default=False, nullable=False)
 
 
-class Group(Base, TableNameMixin, CreatedAtMixin):
+class Group(Base, TableNameMixin, ModifiedAtMixin):
     __parentname__ = 'BaseGroup'
     # old_id = Column(SLBigInteger(), autoincrement=True)
     id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
@@ -2102,6 +2111,16 @@ class Group(Base, TableNameMixin, CreatedAtMixin):
             Composite_Id_Comparator(
                 cls.subject_client_id,
                 cls.subject_object_id))
+
+
+class UserToGroupAssociation(Base):
+    __table__ = user_to_group_association
+    __mapper_args__ = {
+        'primary_key': [
+            __table__.c.user_id,
+            __table__.c.group_id
+        ]
+    }
 
 
 class AboutMixin(PrimeTableArgs):
@@ -2184,7 +2203,7 @@ class Organization(
     Base,
     TableNameMixin,
     IdMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     MarkedForDeletionMixin,
     AdditionalMetadataMixin,
     TranslationMixin,
@@ -2195,7 +2214,7 @@ class Organization(
                          backref=backref("organizations"))
 
 
-class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+class Passhash(Base, TableNameMixin, IdMixin, ModifiedAtMixin):
     user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
     hash = Column(UnicodeText, nullable=False)
 
@@ -2203,13 +2222,13 @@ class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
         self.hash = bcrypt.encrypt(password)
 
 
-class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+class Email(Base, TableNameMixin, IdMixin, ModifiedAtMixin):
     user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
     email = Column(UnicodeText, unique=True)
     user = relationship("User", backref=backref('email', uselist=False))
 
 
-class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
+class Client(Base, TableNameMixin, IdMixin, ModifiedAtMixin, AdditionalMetadataMixin):
     user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
     # creation_time = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     is_browser_client = Column(Boolean, default=True, nullable=False)
@@ -2270,7 +2289,7 @@ class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMi
         return self.counter
 
 
-class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedForDeletionMixin,
+class UserBlobs(CompositeIdMixin, Base, TableNameMixin, ModifiedAtMixin, MarkedForDeletionMixin,
                 AdditionalMetadataMixin):  # TODO: decide what is nullable
     name = Column(UnicodeText, nullable=False)
     # content holds url for the object
@@ -2297,7 +2316,7 @@ Index('parent_language_idx', Language.parent_client_id, Language.parent_object_i
 class Grant(
     IdMixin,
     TableNameMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     TranslationMixin,
     AdditionalMetadataMixin,
     Base):
@@ -2369,7 +2388,7 @@ class Grant(
                 cls.issuer_translation_gist_object_id))
 
 
-class UserRequest(IdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
+class UserRequest(IdMixin, Base, TableNameMixin, ModifiedAtMixin, AdditionalMetadataMixin):
     sender_id = Column(SLBigInteger(), nullable=False)
     recipient_id = Column(SLBigInteger(), nullable=False)
     broadcast_uuid = Column(String(36), nullable=False)
@@ -2617,7 +2636,7 @@ class ApproveAllAcl(object):
 class Parser(
     TableNameMixin,
     CompositeIdMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     AdditionalMetadataMixin,
     Base):
 
@@ -2631,7 +2650,7 @@ class ParserResult(
     CompositeIdMixin,
     EntityMixin,
     ParserMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     MarkedForDeletionMixin,
     AdditionalMetadataMixin,
     Base):
@@ -2643,7 +2662,7 @@ class ParserResult(
 
 class UnstructuredData(
     Base,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     AdditionalMetadataMixin):
 
     __tablename__ = 'unstructured_data'
@@ -2769,7 +2788,7 @@ class MarkupGroup(
     Base,
     TableNameMixin,
     CompositeIdMixin,
-    CreatedAtMixin,
+    ModifiedAtMixin,
     MarkedForDeletionMixin):
 
     type = Column(UnicodeText, nullable = False)

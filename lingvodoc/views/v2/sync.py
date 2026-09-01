@@ -76,6 +76,8 @@ from pdb import set_trace
 from lingvodoc.cache.caching import TaskStatus
 from sqlalchemy.orm.attributes import flag_modified
 
+from pdb import set_trace as A
+
 log = logging.getLogger(__name__)
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
 dict2ids = lambda r: {'client_id': r['client_id'], 'object_id': r['object_id']}
@@ -310,9 +312,9 @@ def basic_sync(request):
 
 @view_config(route_name='basic_sync_server', renderer='json', request_method='GET')
 def basic_sync_server(request):
-    client =DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     if client:
-        user =DBSession.query(User).filter_by(id=client.user_id).first()
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
         return basic_tables_content(user.id)
     request.response.status = HTTPNotFound.code
     return {'error': str("Try to login again")}
@@ -320,9 +322,9 @@ def basic_sync_server(request):
 
 @view_config(route_name='basic_sync_desktop', renderer='json', request_method='GET')
 def basic_sync_desktop(request):
-    client =DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     if client:
-        user =DBSession.query(User).filter_by(id=client.user_id).first()
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
         return basic_tables_content(user.id, client_id=client.id)
     request.response.status = HTTPNotFound.code
     return {'error': str("Try to login again")}

@@ -8,6 +8,7 @@ from time import sleep, time as now
 from lingvodoc.queue.celery import celery
 from lingvodoc.cache.caching import TaskStatus, initialize_cache
 import tritonclient.grpc as grpcclient
+from tritonclient.utils import InferenceServerException
 import numpy as np
 import requests
 import re
@@ -278,10 +279,6 @@ def load_fasttext_model(path: str):
 
 
 def process_batch(args):
-    self, ft_model, input_word, input_tran, input_id, input_links = args
-    similarities = []
-    inferring_duration = 0
-    rerank_duration = 0
 
     base_word_tensor = self._process_word(input_word)
     base_tran_tensor = self._process_translation(input_tran)

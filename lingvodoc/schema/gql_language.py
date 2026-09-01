@@ -84,9 +84,14 @@ from lingvodoc.utils.search import (
     recursive_sort,
     translation_gist_search)
 
+from pdb import set_trace as A
+
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
+
+from pdb import set_trace as A
 
 
 class Language(LingvodocObjectType):
@@ -965,6 +970,8 @@ class DeleteLanguage(graphene.Mutation):
 
 
 class LanguageTree(graphene.ObjectType):
+    local = graphene.Boolean()
+    proxy = graphene.Boolean()
     tree = ObjectVal()
     languages = graphene.List(Language)
 
@@ -1591,7 +1598,6 @@ class Language_Resolver(object):
                         deleted = None,
                         category = None,
                         published = None))
-
                 ls.dictionaries = d
 
                 for argument in field.arguments:
@@ -2691,6 +2697,7 @@ class Language_Resolver(object):
         if ls.translations_flag:
             join_count += 1
 
+        '''
         # If we are returning languages in tree order and at the same time getting a translation, we have to
         # use a CTE because otherwise order by of translation's distinct on messes up tree order preliminary
         # order by.
@@ -2702,6 +2709,16 @@ class Language_Resolver(object):
             self.args.in_tree_order and ls.translation_flag or
             self.grant_or_organization or
             join_count > 1)
+        '''
+
+        # As of now always using CTE due to its simplicity, currently don't have time to fully test and
+        # debug all edge cases, one of which started cropping up in the current development.
+        #
+        # If in the future would have more time, or would need more optimization here, could return to more
+        # granular CTE usage, would need to properly accurately ensure it works in all circumstances though,
+        # in all cases without CTE too.
+
+        ls.cte_flag = True
 
         ls.join_flag = (
             join_count >= 1)
@@ -2826,7 +2843,7 @@ class Language_Resolver(object):
                 where S.id = {
                   self.args.grant_id
                     if self.args.grant_id is not None else
-                    self.args.organization_id};
+                    self.args.organization_id}
 
                 '''
 
@@ -2838,9 +2855,7 @@ class Language_Resolver(object):
 
                     .columns(
                         client_id = SLBigInteger,
-                        object_id = SLBigInteger)
-
-                    .alias())
+                        object_id = SLBigInteger))
 
             self.dictionary_id_c = (
                 dictionary_id_query.c)
@@ -2886,11 +2901,8 @@ class Language_Resolver(object):
                 # Othwerwise, if we'll need to filter based on dictionary ids when getting dictionary
                 # counts, we turn dictionary id query into a CTE.
 
-                dictionary_id_cte = (
-                    dictionary_id_query.cte())
-
                 self.dictionary_id_c = (
-                    dictionary_id_cte.c)
+                    dictionary_id_query.cte().c)
 
             # Getting languages bottom-up from dictionaries through recursive CTE.
 
@@ -3429,20 +3441,12 @@ class Language_Resolver(object):
                         aggregate_count_query.c.aggregate_count))
 
         # If we require languages in the language tree order, we establish preliminary ordering.
-
         if self.args.in_tree_order:
-
-            ls.query = (
-
-                ls.query
-
-                    .order_by(
-                        ls.c.additional_metadata['younger_siblings'],
-                        ls.c.client_id.desc(),
-                        ls.c.object_id.desc()))
+            order_fields = [ls.c.additional_metadata['younger_siblings']] if ls.cte_flag else []
+            order_fields += [ls.c.client_id.desc(), ls.c.object_id.desc()]
+            ls.query = ls.query.order_by(*order_fields)
 
         # Getting language data.
-
         result_list = ls.query.all()
 
         if self.debug_flag:

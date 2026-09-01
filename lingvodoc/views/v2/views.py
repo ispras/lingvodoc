@@ -76,13 +76,13 @@ from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.schema.query import schema, Context
 
 from lingvodoc.utils.creation import translationgist_contents
-from lingvodoc.utils.proxy import ProxyPass
 from lingvodoc.utils.verification import check_client_id
+from lingvodoc.utils.proxy import try_proxy, ProxyPass
 
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
     view_field_from_object)
-
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -869,7 +869,7 @@ def all_locales(request):
 @view_config(route_name='all_locales_desktop', renderer='json', request_method='GET')
 def all_locales_desktop(request):
     settings = request.registry.settings
-    path = settings['desktop']['central_server'] + 'all_locales'
+    path = settings['proxy']['isp_server'] + 'all_locales'
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
@@ -1167,214 +1167,221 @@ def graphql(request):
     sp = request.tm.savepoint()
 
     try:
+        variables = request.json_body.get('variables', {})
+        proxy = variables.get('proxy')
 
-        batch = False
-        variable_values = {}
+        try:
+            t_start_real, t_start_process = (
+                time.time(), time.process_time())
 
-        client_id = (
-            request.authenticated_userid or None)
+            if proxy:
+                log.warning('!!! >>> Calling try_proxy...')
+                try_proxy(request)
 
-        locale_id = (
-            int(request.cookies.get('locale_id') or ENGLISH_LOCALE))
+            batch = False
+            variable_values = {}
 
-        if (
-            request.content_type in [
-                'application/x-www-form-urlencoded', 'multipart/form-data'] and
-            type(request.POST) == MultiDict):
+            client_id = (
+                request.authenticated_userid or None)
 
-            data = request.POST
+            locale_id = (
+                int(request.cookies.get('locale_id') or ENGLISH_LOCALE))
 
-            if not data:
-                return {'errors': [{"message": 'empty request'}]}
-            elif "operations" not in data:
-                return {'errors': [{"message": 'operations key not found'}]}
-            elif "query" not in data["operations"]:
-                return {'errors': [{"message": 'query key not found in operations'}]}
-            elif "1" not in data:
-                return {'errors': [{"message": '1 key not found'}]}
+            if (
+                request.content_type in [
+                    'application/x-www-form-urlencoded', 'multipart/form-data'] and
+                type(request.POST) == MultiDict):
 
-            request_string = (
-                request.POST.pop("operations").rstrip())
+                data = request.POST
 
-            json_req = (
-                json.loads(request_string))
+                if not data:
+                    return {'errors': [{"message": 'empty request'}]}
+                elif "operations" not in data:
+                    return {'errors': [{"message": 'operations key not found'}]}
+                elif "query" not in data["operations"]:
+                    return {'errors': [{"message": 'query key not found in operations'}]}
+                elif "1" not in data:
+                    return {'errors': [{"message": '1 key not found'}]}
 
-            if "query" not in json_req:
-                return {'errors': [{"message": 'query key not found'}]}
+                request_string = (
+                    request.POST.pop("operations").rstrip())
 
-            request_string = (
-                json_req["query"].rstrip())
-
-            if "variables" in json_req:
-                variable_values = json_req["variables"]
-
-            '''
-            if data and "file" in data and "graphene" in data:
-                # We can get next file from the list inside file upload mutation resolve
-                # use request.POST.popitem()
-                request_string = request.POST.popitem()  # data["graphene"]
-                # todo: file usage
-                # files = data.getall("file")
-            else:
-                request.response.status = HTTPBadRequest.code
-                return {'errors': [{"message": 'wrong data'}]}
-
-            '''
-
-        elif (
-            request.content_type == "application/graphql" and
-            type(request.POST) == NoVars):
-
-            request_string = request.body.decode("utf-8")
-
-        elif (
-            request.content_type == "application/json" and
-            type(request.POST) == NoVars):
-
-            json_req = (
-
-                json.loads(
-                    request.body.decode('utf-8')))
-
-            if type(json_req) is not list:
+                json_req = (
+                    json.loads(request_string))
 
                 if "query" not in json_req:
                     return {'errors': [{"message": 'query key not found'}]}
 
-                request_string = json_req["query"]
+                request_string = (
+                    json_req["query"].rstrip())
 
                 if "variables" in json_req:
                     variable_values = json_req["variables"]
 
+                '''
+                if data and "file" in data and "graphene" in data:
+                    # We can get next file from the list inside file upload mutation resolve
+                    # use request.POST.popitem()
+                    request_string = request.POST.popitem()  # data["graphene"]
+                    # todo: file usage
+                    # files = data.getall("file")
+                else:
+                    request.response.status = HTTPBadRequest.code
+                    return {'errors': [{"message": 'wrong data'}]}
+    
+                '''
+
+            elif (
+                request.content_type == "application/graphql" and
+                type(request.POST) == NoVars):
+
+                request_string = request.body.decode("utf-8")
+
+            elif (
+                request.content_type == "application/json" and
+                type(request.POST) == NoVars):
+
+                json_req = (
+
+                    json.loads(
+                        request.body.decode('utf-8')))
+
+                if type(json_req) is not list:
+
+                    if "query" not in json_req:
+                        return {'errors': [{"message": 'query key not found'}]}
+
+                    request_string = json_req["query"]
+
+                    if "variables" in json_req:
+                        variable_values = json_req["variables"]
+
+                else:
+
+                    batch = True
+
             else:
 
-                batch = True
+                request.response.status = HTTPBadRequest.code
+                return {'errors': [{"message": 'wrong content type'}]}
 
-        else:
+            # Executing query / queries.
 
-            request.response.status = HTTPBadRequest.code
-            return {'errors': [{"message": 'wrong content type'}]}
+            context = (
 
-        # Executing query / queries.
+                Context({
+                    'client_id': client_id,
+                    'locale_id': locale_id,
+                    'request': request,
+                    'headers': request.headers,
+                    'cookies': dict(request.cookies)}))
 
-        context = (
+            if batch:
 
-            Context({
-                'client_id': client_id,
-                'locale_id': locale_id,
-                'request': request,
-                'headers': request.headers,
-                'cookies': dict(request.cookies)}))
+                # Multiple queries.
 
-        t_start_real, t_start_process = (
-            time.time(), time.process_time())
+                result = []
+                error_flag = False
 
-        if batch:
+                for query in json_req:
 
-            # Multiple queries.
+                    if "query" not in query:
+                        return {'errors': [{"message": 'query key not found'}]}
 
-            result = []
-            error_flag = False
+                    result_item = (
 
-            for query in json_req:
+                        schema.execute(
+                            query["query"],
+                            context_value = context,
+                            variable_values = query.get("variables", {})))
 
-                if "query" not in query:
-                    return {'errors': [{"message": 'query key not found'}]}
+                    if result_item.invalid:
 
-                result_item = (
+                        sp.rollback()
 
-                    schema.execute(
-                        query["query"],
-                        context_value = context,
-                        variable_values = query.get("variables", {})))
+                        result = {
+                            'errors': [{"message": str(e)} for e in result_item.errors]}
 
-                if result_item.invalid:
-
-                    sp.rollback()
-
-                    result = {
-                        'errors': [{"message": str(e)} for e in result_item.errors]}
-
-                    error_flag = True
-                    break
-
-                if result.errors:
-
-                    sp.rollback()
-
-                    result = {
-                        "data": None,
-                        'errors': [{"message": str(e)} for e in result_item.errors]}
-
-                    error_flag = True
-                    break
-
-                result.append(result_item.data)
-
-            if not error_flag:
-
-                result = {'data': result}
-
-        else:
-
-            # Single query.
-
-            result = (
-
-                schema.execute(
-                    request_string,
-                    context_value = context,
-                    variable_values = variable_values))
-
-            if result.invalid:
-
-                sp.rollback()
-
-                result = {
-                    'errors': [{'message': str(e)} for e in result.errors]}
-
-            elif result.errors:
-
-                more_than_one = (
-                    len(result.errors) > 1)
-
-                error_list = []
-
-                for error in result.errors:
-
-                    # If it's a proxy error, we return it directly apparently?
-
-                    if (hasattr(error, 'original_error') and
-                        type(error.original_error) == ProxyPass):
-
-                        result = json.loads(error.original_error.response_body.decode("utf-8"))
+                        error_flag = True
                         break
 
-                    # If we had an attempt to proceed with failed transaction because of another error,
-                    # we don't need its superfluous error info.
+                    if result.errors:
 
-                    if (not more_than_one or
+                        sp.rollback()
 
-                        not isinstance(
-                            error.original_error,
-                            sqlalchemy.exc.InternalError) or
+                        result = {
+                            "data": None,
+                            'errors': [{"message": str(e)} for e in result_item.errors]}
 
-                        not isinstance(
-                            error.original_error.orig,
-                            psycopg2.errors.InFailedSqlTransaction)):
+                        error_flag = True
+                        break
 
-                        error_list.append(error)
+                    result.append(result_item.data)
 
-                sp.rollback()
+                if not error_flag:
 
-                result = {
-                    'data': None,
-                    'errors': [{'message': str(e)} for e in error_list]}
+                    result = {'data': result}
 
             else:
 
-                result = {
-                    'data': result.data}
+                # Single query.
+
+                result = (
+                    schema.execute(
+                        request_string,
+                        context_value = context,
+                        variable_values = variable_values))
+
+                if result.invalid:
+
+                    sp.rollback()
+
+                    result = {
+                        'errors': [{'message': str(e)} for e in result.errors]}
+
+                elif result.errors:
+
+                    more_than_one = (
+                        len(result.errors) > 1)
+
+                    error_list = []
+
+                    for error in result.errors:
+
+                        # If we had an attempt to proceed with failed transaction because of another error,
+                        # we don't need its superfluous error info.
+
+                        if (not more_than_one or
+
+                            not isinstance(
+                                error.original_error,
+                                sqlalchemy.exc.InternalError) or
+
+                            not isinstance(
+                                error.original_error.orig,
+                                psycopg2.errors.InFailedSqlTransaction)):
+
+                            error_list.append(error)
+
+                    else:
+                        # The following works if no break was in the loop
+
+                        sp.rollback()
+
+                        result = {
+                            'data': None,
+                            'errors': [{'message': str(e)} for e in error_list]}
+
+                else:
+
+                    result = {
+                        'data': result.data}
+
+        except ProxyPass as e:
+            response = e.response_json
+            result = {
+                'data': response.get('data'),
+                'errors': response.get('errors')}
 
         t_end_real, t_end_process = (
             time.time(), time.process_time())
@@ -1396,10 +1403,13 @@ def graphql(request):
         result['time_real'] = t_elapsed_real
         result['time_process'] = t_elapsed_process
 
-        return result
+        if errors := result.get('errors'):
+            log.warning(f'Graphql errors: ${errors}')
 
-    except ProxyPass as e:
-        return e.response_body
+        if (result.get('data') or {}).get('language_tree'):
+            log.warning(f"!!! >>> Received {'REMOTE' if proxy is not None else 'LOCAL'} response")
+
+        return result
 
     except KeyError as e:
         # request.response.status = HTTPBadRequest.code

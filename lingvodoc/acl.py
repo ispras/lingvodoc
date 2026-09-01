@@ -41,6 +41,9 @@ def get_effective_client_id(client_id, request):
     if request.registry.settings.get("desktop") and request.registry.settings["desktop"].get("desktop"):
         return request.cookies.get('client_id')
 
+    if request.registry.settings.get("proxy", {}).get("proxy"):
+        return request.cookies.get('client_id')
+
     else:
         return client_id
 
