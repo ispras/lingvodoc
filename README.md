@@ -65,6 +65,23 @@ pserve development.ini
 
 ```
 
+Some known issues and solutions:
+```
+1) Error: operator class "gin_trgm_ops" does not exist for access method "gin"
+Solution: run this command for "lingvodoc" database:
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+2) Error: insert or update on table "parser" violates foreign key constraint "parser_client_id_fkey"
+Solution: comment these rows in alembic migration file:
+ALTER TABLE parser ADD CONSTRAINT parser_client_id_fkey
+FOREIGN KEY (client_id) REFERENCES client (id);
+# then run
+alembic upgrade head
+# and after database initialization with
+initialize_lingvodoc_db development.ini
+# run the disabled command manually
+```
+
 Installing as server (full-speed) environment for Ubuntu.
 ---------------
 

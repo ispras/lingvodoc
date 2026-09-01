@@ -1,0 +1,52 @@
+platform: "pytorch_libtorch"
+max_batch_size: 100000
+
+input: [
+  {
+    name: "word1"
+    data_type: TYPE_INT32
+    dims: [43]
+  },
+  {
+    name: "trans1"
+    data_type: TYPE_INT32
+    dims: [43]
+  },
+  {
+    name: "word2"
+    data_type: TYPE_INT32
+    dims: [43]
+  },
+  {
+    name: "trans2"
+    data_type: TYPE_INT32
+    dims: [43]
+  }
+]
+
+output: [
+  {
+    name: "output"
+    data_type: TYPE_FP32
+    dims: [1]
+  }
+]
+
+instance_group: [
+  {
+    count: 4
+    kind: KIND_GPU
+  }
+]
+
+dynamic_batching: {
+  max_queue_delay_microseconds: 10000
+}
+
+parameters: {
+  key: "ENABLE_CACHE_CLEANING"
+  value: {
+    string_value:"true"
+  }
+}
+

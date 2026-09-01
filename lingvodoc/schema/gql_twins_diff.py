@@ -1,5 +1,6 @@
 import re
 import io
+import os
 import collections
 import numpy as np
 from difflib import Differ
@@ -76,14 +77,14 @@ def is_twin(word1, word2):
 
 
 def get_dist(i1, i2, max_shape):
-    skip = 4  # no more than four words between
-    dist = abs(i1 - i2)
+    skip = 2  # no more than two words between
+    dist = i2 - i1  # moved right if dist > 0
 
     # Returns extra-big distance if we are not neighbours yet,
     # a real distance if we are neighbours now and
     # None if we are not neighbours already
     return (
-        dist if dist <= skip + 1 else
+        dist if abs(dist) <= skip + 1 else
         max_shape if i2 < i1 else
         None)
 
@@ -91,6 +92,24 @@ def get_dist(i1, i2, max_shape):
 def key2str(*key):
     return ','.join([str(k) for k in key])
 
+
+def pretty(diffs):
+    result = []
+
+    for diff in diffs:
+        if len(diff or []) < 2 or not sum(map(lambda d: len(d), diff)):
+            continue
+
+        d1, d2 = diff
+
+        if not len(d1):
+            result.append(f"+{d2}")
+        elif not len(d2):
+            result.append(f"-{d1}")
+        else:
+            result.append(f"{d1} -> {d2}")
+
+    return ", ".join(result)
 
 def diff_sentences(
         text_base=debug_base,
@@ -118,8 +137,9 @@ def diff_sentences(
     if debug_flag:
         print(line)
 
-    for t, (twin_id, text) in enumerate(text_vars):
-        twin_id = key2str(*twin_id)
+    for t, (twin_id, text) in enumerate(text_vars, 1):
+        # checking if no entities is in current cell as well
+        twin_id = key2str(*twin_id) if twin_id else f'empty_{t}'
         word_vars = split_words(text)
         mains_num = len(word_bases)
         twins_num = len(word_vars)
@@ -147,30 +167,39 @@ def diff_sentences(
             twin_word = None
 
             for i2, (p2, word2) in enumerate(word_vars):
-                # Number of holes before i2(!)
-                delta1 = sum([(i < i2) for i in list(holes2)])
-                # Number of holes before i1(!)
-                delta2 = sum([(j < i1) for j in list(holes1)])
+                # if potential twins
+                if i1 not in holes1 and i2 not in holes2:
+                    # Number of holes before i2(!)
+                    delta1 = sum([(i < i2) for i in list(holes2)])
+                    # Number of holes before i1(!)
+                    delta2 = sum([(j < i1) for j in list(holes1)])
 
-                cur_dist = get_dist(i1 + delta1, i2 + delta2, max_shape)
+                    cur_dist = get_dist(i1 + delta1, i2 + delta2, max_shape)
 
-                # If we are neighbours now or will be in future and
-                # current distance is less than a found one
-                if cur_dist is not None and cur_dist < twin_dist:
-                    if word_match[i1, i2]:
-                        twin_dist = cur_dist
-                        twin_numb = i2
-                        twin_posn = p2
-                        twin_word = word2
-                # None or a bigger distance value
-                elif cur_dist != max_shape:
-                    break
+                    # If we are neighbours now or will be in future and
+                    # current distance is less than a found one
+                    if cur_dist is not None and abs(cur_dist) < abs(twin_dist):
+                        if word_match[i1, i2]:
+                            twin_dist = cur_dist
+                            twin_numb = i2
+                            twin_posn = p2
+                            twin_word = word2
+                    # None or a bigger distance value
+                    elif cur_dist != max_shape:
+                        break
 
             orig_numb, orig_posn, orig_word = i1, p1, word1
             main_key = key2str(orig_posn, len(orig_word))
 
+            # If this is a real replacement, or we have no twins
+            if twin_dist != 0:
+                holes1.add(orig_numb)
+                # kill all self and nonnative twins
+                word_match[orig_numb] = np.zeros(twins_num, dtype=int)
+                holes2.update([j for j, col in enumerate(np.transpose(word_match)) if not sum(col)])
+
             # If we have twins
-            if twin_dist < max_shape:
+            if twin_dist != max_shape:
                 twin_key = key2str(twin_posn, len(twin_word))
                 twin_diff = diff_words(orig_word, twin_word)
 
@@ -194,37 +223,42 @@ def diff_sentences(
                     if twin_dist:
                         xlsx_value += f" <shifted by {twin_dist}>"
                     if twin_diff:
-                        xlsx_value += f" <changed by {twin_diff}>"
+                        xlsx_value += f" <changed by {pretty(twin_diff)}>"
                     # mark that xlsx row describes changes
                     set_xlsx_cell(orig_numb, 0, orig_word)
-                    set_xlsx_cell(orig_numb, t+1, xlsx_value)
+                    set_xlsx_cell(orig_numb, t, xlsx_value)
 
                 else:
                     twin_equals.append(twin_key)
+                    # this empty value is important for
+                    # fields ordering within result dictionary
+                    main_sentence[main_key][twin_id] = []
                     # store twin_word into xlsx row,
                     # but it may describe no changes,
                     # so we don't set xlsx_column'0 here
-                    set_xlsx_cell(orig_numb, t+1, "<same>")
+                    set_xlsx_cell(orig_numb, t, "<same>")
 
                 # Collect diffs
                 if twin_diffs is not None and twin_diff is not None:
                     for diff in twin_diff:
                         twin_diffs[diff].add((orig_word, twin_word))
 
-                # If this is a real replacement
-                if twin_dist > 0:
-                    holes1.add(orig_numb)
-                    holes2.add(twin_numb)
-
                 if debug_flag:
-                    dist = '>' if twin_dist else '='
+                    dist = '>' if twin_dist > 0 else '<' if twin_dist < 0 else '='
                     diff_ = f"(+/-) {twin_diff}" if twin_diff else ""
                     print(f"{orig_numb:>2}: {_(orig_word)} ({dist}) {twin_numb:>2}: {_(twin_word)} {diff_}")
             else:
-                main_sentence[main_key][twin_id] = None
-                # mark that xlsx row describes changes
-                set_xlsx_cell(orig_numb, 0, orig_word)
-                set_xlsx_cell(orig_numb, t+1, "<none>")
+                if twins_num:
+                    main_sentence[main_key][twin_id] = None
+                    # mark that xlsx row describes changes
+                    set_xlsx_cell(orig_numb, 0, orig_word)
+                    set_xlsx_cell(orig_numb, t, "<none>")
+                # if no entities is in current cell
+                else:
+                    # this empty value is important for
+                    # fields ordering within result dictionary
+                    main_sentence[main_key][twin_id] = []
+                    set_xlsx_cell(orig_numb, t, "<empty>")
 
                 if debug_flag:
                     print(f"{orig_numb:>2}: {_(orig_word)} (-)  {dash}")
@@ -235,7 +269,7 @@ def diff_sentences(
                 twin_sentence[twin_key][main_id] = None
                 # mark that xlsx row describes changes
                 set_xlsx_cell(i2, 0, "<none>")
-                set_xlsx_cell(i2, t+1, word2)
+                set_xlsx_cell(i2, t, word2)
 
                 if debug_flag:
                     print(f" {dash:<15} (+) {(i2 - mains_num):>2}: {_(word2)}")
@@ -258,16 +292,20 @@ def diff_sentences(
     return list_sentence, xlsx_table
 
 
-def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=False):
+def TwinsXlsx(info, pers_id, xlsx_table=None, twin_diffs=None, debug_flag=False):
+    import pickle
+    import gzip
     from xlsxwriter import Workbook
-    from lingvodoc.models import DBSession, Entity as dbEntity
+    from lingvodoc.schema.gql_holders import ResponseError
     from lingvodoc.schema.gql_parserresult import ValencyVerbCases as ReusedMethods
     import lingvodoc.utils as utils
 
     # Reusing the static method
     save_xlsx_file = ReusedMethods.save_xlsx_file
 
-    def write_xlsx(info, table, xlsx_diffs, debug_flag=False):
+    # Sub-functions
+
+    def write_xlsx(xlsx_table, xlsx_diffs):
 
         workbook_stream = (
             io.BytesIO())
@@ -278,7 +316,7 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
         wb_config = [{
             'worksheet': workbook.add_worksheet(
                 utils.sanitize_worksheet_name("By translation")),
-            'content': table,
+            'content': xlsx_table,
             'with_toc': False
         }, {
             'worksheet': workbook.add_worksheet(
@@ -352,6 +390,74 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
 
         return xlsx_url
 
+    # Main function's body
+
+    try:
+        request = info.context.request
+        storage = request.registry.settings['storage']
+
+        storage_dir = os.path.join(storage['path'], 'twin_diffs')
+        pickle_path = os.path.join(storage_dir, key2str(*pers_id))
+        os.makedirs(storage_dir, exist_ok=True)
+
+    except Exception as e:
+        return ResponseError(f'Cannot prepare pickle file for twin diffs: {e}')
+
+    if xlsx_table is not None and twin_diffs is not None:
+        xlsx_diffs = [[_('Difference'), _('Word1'), _('Word2')]]
+
+        for delta, word_set in twin_diffs.items():
+            part1, part2 = delta
+            delta = (
+                f"{part1} -> {part2}" if len(part1) and len(part2) else
+                f"+ {part2}" if not len(part1) else
+                f"- {part1}"
+            )
+
+            xlsx_diffs.append([_(delta), _(), _()])
+            for word1, word2 in word_set:
+                xlsx_diffs.append([_(), _(word1), _(word2)])
+
+        xlsx_dict = {
+            'xlsx_table': xlsx_table,
+            'xlsx_diffs': xlsx_diffs
+        }
+
+        try:
+            with gzip.open(pickle_path, 'wb') as f:
+                pickle.dump(xlsx_dict, f)
+
+            if debug_flag:
+                print(f'{pickle_path=}')
+
+            return None
+
+        except Exception as e:
+            return ResponseError(f'Cannot write file \'{pickle_path}\': {e}')
+    else:
+        try:
+            with gzip.open(pickle_path, 'rb') as f:
+                xlsx_dict = pickle.load(f)
+
+            xlsx_url = write_xlsx(**xlsx_dict)
+
+            if debug_flag:
+                for row in xlsx_dict.get('xlsx_table', []) + [""] + xlsx_dict.get('xlsx_diffs', []):
+                    print(row)
+                print(xlsx_url)
+            else:
+                pass
+                #os.remove(pickle_path)
+
+            return xlsx_url
+
+        except Exception as e:
+            return ResponseError(f'Cannot read file \'{pickle_path}\': {e}')
+
+
+def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, pers_id, debug_flag=False):
+    from lingvodoc.models import DBSession, Entity as dbEntity
+
     def get_content(cid, oid):
         entity = DBSession.query(dbEntity).filter_by(client_id=cid, object_id=oid).first()
         return entity.content if entity else ""
@@ -376,31 +482,10 @@ def DiffEntities(info, main_ids, twin_ids, entry_ids, field_names, debug_flag=Fa
 
         xlsx_table.extend([(cell or __('<none>')) for cell in row] for row in rows.values() if row[0] is not None)
 
-    xlsx_diffs = [[_('Difference'), _('Word1'), _('Word2')]]
+    # Storing result to pickle for further xlsx
+    response = TwinsXlsx(info, pers_id, xlsx_table, twin_diffs, debug_flag)
 
-    for delta, word_set in twin_diffs.items():
-        part1, part2 = delta
-        delta = (
-            f"{part1} -> {part2}" if len(part1) and len(part2) else
-            f"+ {part2}" if not len(part1) else
-            f"- {part1}"
-        )
-
-        xlsx_diffs.append([_(delta), _(), _()])
-        for word1, word2 in word_set:
-            xlsx_diffs.append([_(), _(word1), _(word2)])
-
-    xlsx_url = write_xlsx(info, xlsx_table, xlsx_diffs)
-
-    if debug_flag:
-        for row in xlsx_table + [""] + xlsx_diffs:
-            print(row)
-        print(xlsx_url)
-
-    return {
-        'diffs': result,
-        'xlsx_url': xlsx_url
-    }
+    return result if response is None else response
 
 
 if __name__ == "__main__":

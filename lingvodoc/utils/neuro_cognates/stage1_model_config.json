@@ -1,0 +1,16 @@
+{
+  "vocab_size": 7994,
+  "pad_id": 0,
+  "max_word_length": 64,
+  "max_translit_length": 64,
+  "token_embedding_dim": 128,
+  "model_dim": 192,
+  "projection_dim": 128,
+  "number_of_blocks": 3,
+  "number_of_heads": 6,
+  "ffn_multiplier": 4,
+  "conv_kernel_size": 7,
+  "dropout": 0.12,
+  "pair_hidden_dim": 384,
+  "alignment_dim": 64
+}

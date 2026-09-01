@@ -38,7 +38,7 @@ period_regexp = (r'^\w{3} ('
                  r'\w{10}$')
 
 # setting 'None' to disable filtering by date
-#period_regexp = None
+period_regexp = None
 
 def entity_of_fields(*fields):
     return [

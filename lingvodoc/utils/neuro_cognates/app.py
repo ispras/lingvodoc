@@ -12,6 +12,8 @@ from tritonclient.utils import InferenceServerException
 import numpy as np
 import requests
 import re
+import json
+import unicodedata
 
 from lingvodoc.utils.neuro_cognates.rerank import RerankerSingleWord
 from pdb import set_trace as A
@@ -132,6 +134,114 @@ class DualPathSiamese(nn.Module):
 '''
 
 
+def _load_json(path):
+    with open(path, encoding='utf-8') as source:
+        return json.load(source)
+
+
+class Stage2TextPreprocessor:
+    PAD = '<PAD>'
+    UNK = '<UNK>'
+    BOS = '<BOS>'
+    EOS = '<EOS>'
+
+    TRANSLATION_PAD = 0
+    TRANSLATION_BOS = 1
+    TRANSLATION_EOS = 2
+    TRANSLATION_SEP = 3
+    TRANSLATION_BYTE_OFFSET = 4
+
+    def __init__(self, model_dir):
+        word_data = _load_json(
+            os.path.join(model_dir, 'word_tokenizer.json'))
+        stage1_config = _load_json(
+            os.path.join(model_dir, 'stage1_model_config.json'))
+        stage2_config = _load_json(
+            os.path.join(model_dir, 'stage2_model_config.json'))
+
+        self.word_token_to_id = {
+            token: index
+            for index, token in enumerate(word_data['tokens'])
+        }
+        for token in (self.PAD, self.UNK, self.BOS, self.EOS):
+            if token not in self.word_token_to_id:
+                raise ValueError(
+                    f'word_tokenizer.json has no {token} token')
+
+        self.unicode_form = word_data.get('unicode_form', 'NFC')
+        self.casefold = bool(word_data.get('casefold', True))
+        self.max_word_length = int(stage1_config['max_word_length'])
+        self.max_translation_bytes = int(
+            stage2_config['max_translation_bytes'])
+
+    @staticmethod
+    def _truncate_middle(values, available):
+        if len(values) <= available:
+            return values
+        left_count = (available + 1) // 2
+        right_count = available - left_count
+        return values[:left_count] + (
+            values[-right_count:] if right_count else [])
+
+    def encode_word(self, value):
+        if value is None:
+            text = ''
+        else:
+            text = str(value)
+            if text.casefold() in {'nan', 'none', 'null', '-'}:
+                text = ''
+        text = unicodedata.normalize(self.unicode_form, text)
+        text = re.sub(r'\s+', ' ', text.strip())
+        if self.casefold:
+            text = text.casefold()
+
+        unknown = self.word_token_to_id[self.UNK]
+        body = [
+            self.word_token_to_id.get(character, unknown)
+            for character in text
+        ]
+        body = self._truncate_middle(
+            body, self.max_word_length - 2)
+        indices = [
+            self.word_token_to_id[self.BOS],
+            *body,
+            self.word_token_to_id[self.EOS],
+        ]
+        indices += [self.word_token_to_id[self.PAD]] * (
+            self.max_word_length - len(indices))
+        return torch.tensor(indices, dtype=torch.int32)
+
+    def encode_translation(self, value):
+        if value is None:
+            text = ''
+        else:
+            text = unicodedata.normalize(
+                'NFC', str(value)).casefold().strip()
+        text = re.sub(r'\s*[;/|]+\s*', ' ; ', text)
+        text = re.sub(r'\s*,\s*', ' , ', text)
+        text = re.sub(r'\s+', ' ', text)
+        text = text.replace(
+            ' ; ', ' <SEP> ').replace(' , ', ' <SEP> ')
+
+        body = []
+        for index, piece in enumerate(text.split('<SEP>')):
+            if index:
+                body.append(self.TRANSLATION_SEP)
+            body.extend(
+                byte + self.TRANSLATION_BYTE_OFFSET
+                for byte in piece.strip().encode('utf-8'))
+        body = self._truncate_middle(
+            body, self.max_translation_bytes - 2)
+        indices = [
+            self.TRANSLATION_BOS,
+            *body,
+            self.TRANSLATION_EOS,
+        ]
+        indices += [self.TRANSLATION_PAD] * (
+            self.max_translation_bytes - len(indices))
+        return torch.tensor(indices, dtype=torch.int32)
+
+
 ## fast text отдельно
 def load_fasttext_model(path: str):
     """
@@ -170,116 +280,113 @@ def load_fasttext_model(path: str):
 
 def process_batch(args):
 
-    try:
-        self, ft_model, input_word, input_tran, input_id, input_links = args
-        similarities = []
-        inferring_duration = 0
-        rerank_duration = 0
+    base_word_tensor = self._process_word(input_word)
+    base_tran_tensor = self._process_translation(input_tran)
 
-        base_word_tensor = self._process_text(input_word)
-        base_tran_tensor = self._process_text(input_tran)
+    with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
 
-        with grpcclient.InferenceServerClient(url="10.100.192.136:8001") as triton_client:
-        #with grpcclient.InferenceServerClient(url="10.100.192.136:8081") as triton_client:
+        for i, compare_list in enumerate(self.compare_lists):
+            if not compare_list:
+                continue
 
-            for i, compare_list in enumerate(self.compare_lists):
-                if not compare_list:
-                    continue
+            (compare_words, compare_trans, compare_ids, _), links = (
+                self.split_items(compare_list, input_links))
 
-                (compare_words, compare_trans, compare_ids, _), links = (
-                    self.split_items(compare_list, input_links))
+            # Batch creation
+            batch_size = len(compare_words)
+            batch = {
+                'word1': base_word_tensor.repeat(batch_size, 1),
+                'trans1': base_tran_tensor.repeat(batch_size, 1),
+                'word2': torch.stack([
+                    self._process_word(w)
+                    for w in compare_words
+                ]),
+                'trans2': torch.stack([
+                    self._process_translation(t)
+                    for t in compare_trans
+                ])
+            }
 
-                # Batch creation
-                batch_size = len(compare_words)
+            inputs = []
 
-                print(f"{batch_size=}")
+            for field, tensor in batch.items():
+                inputs.append(grpcclient.InferInput(
+                    field,
+                    list(tensor.shape),
+                    "INT32"
+                ))
+                inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
 
-                batch = {
-                    'word1': base_word_tensor.repeat(batch_size, 1),
-                    'trans1': base_tran_tensor.repeat(batch_size, 1),
-                    'word2': torch.stack([self._process_text(w) for w in compare_words]),
-                    'trans2': torch.stack([self._process_text(t) for t in compare_trans])
-                }
+            # Prediction
+            #print(f"{'':<15}{'Inferring...':<15}", end="", flush=True)
+            inferring_start = now()
+            with torch.no_grad():
+                outputs = triton_client.infer(f"neuro_{self.mode}", inputs)
+                logits = torch.from_numpy(
+                    outputs.as_numpy('output')
+                ).reshape(-1)
+                probs = torch.sigmoid(logits).cpu().numpy()
+            inferring_duration += now() - inferring_start
+            #print("DONE", flush=True)
 
-                inputs = []
+            outputs = []
 
-                for field, tensor in batch.items():
-                    inputs.append(grpcclient.InferInput(field, [batch_size, self.max_len], "INT32"))
-                    inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
+            for word, trans, ids, prob in zip(compare_words, compare_trans, compare_ids, [p.item() for p in probs]):
+                if prob >= self.truth_threshold:
+                    outputs.append({
+                        'word': word,
+                        'trans': trans,
+                        'ids': ids,
+                        'prob': prob
+                    })
 
-                # Prediction
-                #print(f"{'':<15}{'Inferring...':<15}", end="", flush=True)
-                inferring_start = now()
-                with torch.no_grad():
-                    outputs = triton_client.infer("neuro_cognates", inputs)
-                    #probs = torch.sigmoid(outputs).squeeze()
-                    probs = torch.sigmoid(torch.tensor([out[0] for out in outputs.as_numpy('output')])).cpu().numpy().flatten()
-                inferring_duration += now() - inferring_start
-                #print("DONE", flush=True)
+            """
+            # Init reranker
+            #print(f"{'':<15}{'Init reranker':<15}", end="", flush=True)
+            rerank_start = now()
+            reranker = RerankerSingleWord(
+                ft_model,
+                self.language_name_list[self.input_index],
+                self.language_name_list[i]
+            )
+            #print("DONE", flush=True)
 
-                outputs = []
+            # Compute rerank value
+            #print(f"{'':<15}{'Reranking...':<15}", flush=True)
+            ranks = reranker.rerank(
+                f"{input_word}:{input_tran}",
+                [f"{outputs[j]['word']}:{outputs[j]['trans']}" for j in range(len(outputs))]
+            )
+            rerank_duration += now() - rerank_start
+            #print(f"{'':<30}Reranked!", flush=True)
+            """
+            # Dirty hack
+            ranks = [[0, 0, 0, 0]] * len(outputs)
 
-                for word, trans, ids, prob in zip(compare_words, compare_trans, compare_ids, [p.item() for p in probs]):
-                    if prob > self.truth_threshold:
-                        outputs.append({
-                            'word': word,
-                            'trans': trans,
-                            'ids': ids,
-                            'prob': prob
-                        })
+            for n in range(len(outputs)):
+                similarities.append((
+                    i,
+                    [outputs[n]['word'], outputs[n]['trans']],
+                    outputs[n]['ids'],
+                    f"{(outputs[n]['prob'] + ranks[n][3]):.4f}"
+                ))
 
-                """
-                # Init reranker
-                #print(f"{'':<15}{'Init reranker':<15}", end="", flush=True)
-                rerank_start = now()
-                reranker = RerankerSingleWord(
-                    ft_model,
-                    self.language_name_list[self.input_index],
-                    self.language_name_list[i]
-                )
-                #print("DONE", flush=True)
-    
-                # Compute rerank value
-                #print(f"{'':<15}{'Reranking...':<15}", flush=True)
-                ranks = reranker.rerank(
-                    f"{input_word}:{input_tran}",
-                    [f"{outputs[j]['word']}:{outputs[j]['trans']}" for j in range(len(outputs))]
-                )
-                rerank_duration += now() - rerank_start
-                #print(f"{'':<30}Reranked!", flush=True)
-                """
-                # Dirty hack
-                ranks = [[0, 0, 0, 0]] * len(outputs)
+    similarities.sort(key=lambda s: s[3], reverse=True)
 
-                for n in range(len(outputs)):
-                    similarities.append((
-                        i,
-                        [outputs[n]['word'], outputs[n]['trans']],
-                        outputs[n]['ids'],
-                        f"{(outputs[n]['prob'] + ranks[n][3]):.4f}"
-                    ))
-
-        similarities.sort(key=lambda s: s[3], reverse=True)
-
-        return (
-            [(
-                self.input_index,
-                f"{input_word} '{input_tran}'",
-                input_id,
-                None,
-                similarities[:5],
-                []
-            )] if similarities else [], links, inferring_duration, rerank_duration)
-
-    except InferenceServerException as e:
-        import traceback
-        import sys
-        print("!!!Triton worker exception ", file=sys.stderr)
-        print(traceback.format_exc(), file=sys.stderr)
+    return (
+        [(
+            self.input_index,
+            f"{input_word} '{input_tran}'",
+            input_id,
+            None,
+            similarities[:5],
+            []
+        )] if similarities else [], links, inferring_duration, rerank_duration)
 
 
 class NeuroCognates:
     def __init__(self,
+                 mode,
                  compare_lists,
                  input_index,
                  source_perspective_id,
@@ -288,29 +395,42 @@ class NeuroCognates:
                  storage,
                  host_url,
                  cache_kwargs,
-                 truth_threshold=0.97,
-                 only_orphans_flag=True):
+                 truth_threshold=None,
+                 only_orphans_flag=True,
+                 suggestion_field_id=(66, 25)):
 
+        self.mode = mode
         self.compare_lists = compare_lists
         self.input_index = input_index
         self.source_perspective_id = source_perspective_id
-        self.truth_threshold = truth_threshold
         self.perspective_name_list = perspective_name_list
         self.language_name_list = language_name_list
         self.storage = storage
         self.host_url = host_url
         self.cache_kwargs = cache_kwargs
         self.only_orphans_flag = only_orphans_flag
+        self.suggestion_field_id = suggestion_field_id
 
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
 
-        # Load model
-        checkpoint = torch.load(os.path.join(script_dir, 'best_model.pth'))  # map_location=self.device)
-        config = checkpoint.get('config', {})
-
-        self.max_len = config.get('max_len', 43)
-        self.char_to_index = checkpoint['char_to_index']
+        if self.mode == 'borrowing':
+            self.preprocessor = Stage2TextPreprocessor(script_dir)
+            calibration = _load_json(
+                os.path.join(script_dir, 'calibration.json'))
+            self.truth_threshold = float(
+                calibration['threshold']
+                if truth_threshold is None
+                else truth_threshold
+            )
+        elif self.mode == 'cognates':
+            checkpoint = torch.load(
+                os.path.join(script_dir, 'best_model.pth'))
+            config = checkpoint.get('config', {})
+            self.max_len = config.get('max_len', 43)
+            self.char_to_index = checkpoint['char_to_index']
+            self.truth_threshold = float(
+                0.97 if truth_threshold is None else truth_threshold)
         self.inferring_sumtime = 0
         self.rerank_sumtime = 0
 
@@ -335,10 +455,20 @@ class NeuroCognates:
         self.model.eval()
         '''
 
-    def _process_text(self, text):
+    def _process_legacy_text(self, text):
         indices = [self.char_to_index.get(c, 1) for c in text.lower()[:self.max_len]]
         indices += [0] * (self.max_len - len(indices))
         return torch.tensor(indices, dtype=torch.int32)  # device=self.device)
+
+    def _process_word(self, text):
+        if self.mode == 'borrowing':
+            return self.preprocessor.encode_word(text)
+        return self._process_legacy_text(text)
+
+    def _process_translation(self, text):
+        if self.mode == 'borrowing':
+            return self.preprocessor.encode_translation(text)
+        return self._process_legacy_text(text)
 
     @staticmethod
     def split_items(items, input_links=None):
@@ -395,7 +525,8 @@ class NeuroCognates:
                     perspective_name_list=self.perspective_name_list,
                     transcription_count=compare_len * current_stage,
                     group_count=f"{group_count} filtered" if self.only_orphans_flag else "non-filtered",
-                    source_perspective_id=self.source_perspective_id
+                    source_perspective_id=self.source_perspective_id,
+                    suggestion_field_id=self.suggestion_field_id
                 )
 
                 storage_dir = os.path.join(self.storage['path'], 'neuro_cognates')
@@ -446,7 +577,6 @@ class NeuroCognates:
                         sleep(1)
 
                     metrics_req = requests.get("http://10.100.192.136:8002/metrics")
-                    #metrics_req = requests.get("http://10.100.192.136:8082/metrics")
 
                     if metrics_req.status_code != 200:
                         raise ConnectionRefusedError("Server is not available now. Please ask administrator.")

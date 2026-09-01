@@ -1836,18 +1836,24 @@ class CognateAnalysis(graphene.Mutation):
             raw_list = single_list
 
             def f(index, tt_tuple):
-                """
-                Gets entry id by its perspective index, translations and transcriptions.
-                """
+                try:
+                    """
+                    Gets entry id by its perspective index, translations and transcriptions.
+                    """
 
-                transcription_str, translation_str = tt_tuple
+                    transcription_str, translation_str = tt_tuple
 
-                return (
+                    return (
 
-                    entry_id_dict[(
-                        index,
-                        transcription_str + (
-                            ' ' + translation_str if translation_str else ''))])
+                        entry_id_dict[(
+                            index,
+                            transcription_str + (
+                                ' ' + translation_str if translation_str else ''))])
+
+                except KeyError as e:
+                    log.warning(f'No such key was collected earlier: {e}')
+
+                    return None
 
             single_list = [
                 (index, tt_tuple, f(index, tt_tuple))
@@ -5632,6 +5638,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         truth_threshold = graphene.Float()
         only_orphans_flag = graphene.Boolean()
         group_field_id = LingvodocID()
+        mode = graphene.String(required=True)
 
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
@@ -5649,6 +5656,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
             truth_threshold,
             only_orphans_flag,
             group_field_id,
+            mode,
             storage,
             host_url,
             cache_kwargs,
@@ -5725,6 +5733,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
             message = f"Too many words to compare: {compare_len}"
         else:
             NeuroCognatesEngine = NeuroCognates(
+                mode,
                 compare_pairs_list,
                 input_index,
                 source_perspective_id,
@@ -5734,12 +5743,13 @@ class NeuroCognateAnalysis(graphene.Mutation):
                 host_url,
                 cache_kwargs,
                 truth_threshold,
-                only_orphans_flag
+                only_orphans_flag,
+                group_field_id
             )
 
             NeuroCognatesEngine.index(
                 input_pairs_list,
-                TaskStatus(user_id, 'Neuro cognates computation', '\n\n'.join(dictionary_name_list), input_len)
+                TaskStatus(user_id, f'Neuro {mode} computation', '\n\n'.join(dictionary_name_list), input_len)
             )
 
         result_dict = (
@@ -5759,6 +5769,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
         truth_threshold=0.97,
         only_orphans_flag=True,
         group_field_id=(66, 25),
+        mode='cognates',
         input_pairs=None,
         debug_flag=False,
         intermediate_flag=False):
@@ -5774,8 +5785,10 @@ class NeuroCognateAnalysis(graphene.Mutation):
             return ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
-        # Here are: administrator, Julia Normanskaya, Viktoria Kukanova or Irina Novak
-        allowed_users = [1, 5, 180, 317]
+        # Here are: administrator,
+        # Julia Normanskaya, Viktoria Kukanova, Irina Novak,
+        # Svetlana Nagurnaya and Maria Kosheleva
+        allowed_users = [1, 5, 180, 317, 779, 789]
 
         # For now only allowed_users can use neuro cognates tool
         if user.id not in allowed_users:
@@ -5857,6 +5870,7 @@ class NeuroCognateAnalysis(graphene.Mutation):
                 truth_threshold,
                 only_orphans_flag,
                 group_field_id,
+                mode,
                 storage,
                 host_url,
                 cache_kwargs,
