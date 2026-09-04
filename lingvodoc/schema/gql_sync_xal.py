@@ -341,7 +341,8 @@ def ListRoles(user_id, subject_ids, debug_flag=False):
     # Debugging
     except Exception as e:
         if debug_flag:
-            A()
+            pass
+            #A()
         raise
 
 
@@ -371,7 +372,8 @@ def MergeRoles(roles_data, debug_flag=False):
         DBSession.rollback()
         transaction.abort()
         if debug_flag:
-            A()
+            pass
+            #A()
         raise
 
 '''
@@ -492,7 +494,9 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
             if u is None:
                 continue
             if hasattr(u, 'timestamp'):
-                ut = u.timestamp()
+                # Datetime object from PostgreSQL have no information
+                # about timezone, so we have to set it manually
+                ut = u.replace(tzinfo=timezone.utc).timestamp()
             else:
                 ut = float(u)
             if ut > sp:
@@ -1245,7 +1249,8 @@ def MergeChangesAsync(
 
         except Exception as e:
             if debug_flag:
-                A()
+                pass
+                #A()
             raise
 
         task_status.set(1, 90, 'Getting maximal update time for local changes...')
@@ -1303,14 +1308,14 @@ def MergeChangesAsync(
 
                     action = None
 
-                    # We don't add deleted element
-                    if (db_object is None and
-                          not foreign_deleted):
-                        # Add new object
-                        db_object = model(**foreign_dict)
-                        DBSession.add(db_object)
+                    if db_object is None:
+                        # We don't add deleted element
+                        if not foreign_deleted:
+                            # Add new object
+                            db_object = model(**foreign_dict)
+                            DBSession.add(db_object)
 
-                        action = 'added'
+                            action = 'added'
 
                     elif foreign_update > local_update:
                         # Delete client_id and object_id
@@ -1334,7 +1339,8 @@ def MergeChangesAsync(
 
                 except Exception as e:
                     if debug_flag:
-                        A()
+                        pass
+                        #A()
                     raise
 
                 next_synced_at = max(next_synced_at, foreign_update)
@@ -1360,6 +1366,9 @@ def MergeChangesAsync(
         if next_synced_at > current_synced_at:
             set_synced_at(next_synced_at)
             DBSession.flush()
+            # On async run we have to perform transaction.commit()
+            # otherwise changes are not stored
+            transaction.commit()
 
         task_status.set(tables_num + 2, 50, f'Final steps')
 
