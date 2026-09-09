@@ -1167,8 +1167,13 @@ def graphql(request):
     sp = request.tm.savepoint()
 
     try:
-        variables = request.json_body.get('variables', {})
-        proxy = variables.get('proxy')
+        try:
+            decoded_text = request.body.decode('utf-8', errors='replace')
+            variables = json.loads(decoded_text).get('variables', {})
+            proxy = variables.get('proxy')
+
+        except ValueError:
+            proxy = False
 
         try:
             t_start_real, t_start_process = (
@@ -1399,7 +1404,7 @@ def graphql(request):
         request.response.headerlist.append((
             'Server-Timing',
             f'real;dur={t_elapsed_real:.6f}, process;dur={t_elapsed_process:.6f}'))
-                        
+
         result['time_real'] = t_elapsed_real
         result['time_process'] = t_elapsed_process
 
@@ -1413,17 +1418,21 @@ def graphql(request):
 
     except KeyError as e:
         # request.response.status = HTTPBadRequest.code
+        log.error(f"Failed graphql request: {str(e)}")
         return {'error': str(e)}
 
     except IntegrityError as e:
         # request.response.status = HTTPInternalServerError.code
+        log.error(f"Failed graphql request: {str(e)}")
         return {'error': str(e)}
 
     except CommonException as e:
         # request.response.status = HTTPConflict.code
+        log.error(f"Failed graphql request: {str(e)}")
         return {'error': str(e)}
 
     except ValueError as e:
         # request.response.status = HTTPConflict.code
+        log.error(f"Failed graphql request: {str(e)}")
         return {'error': str(e)}
 
