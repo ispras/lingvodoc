@@ -279,6 +279,10 @@ def load_fasttext_model(path: str):
 
 
 def process_batch(args):
+    self, ft_model, input_word, input_tran, input_id, input_links = args
+    similarities = []
+    inferring_duration = 0
+    rerank_duration = 0
 
     base_word_tensor = self._process_word(input_word)
     base_tran_tensor = self._process_translation(input_tran)
