@@ -296,53 +296,64 @@ def process_batch(args):
             (compare_words, compare_trans, compare_ids, _), links = (
                 self.split_items(compare_list, input_links))
 
-            # Batch creation
-            batch_size = len(compare_words)
-            batch = {
-                'word1': base_word_tensor.repeat(batch_size, 1),
-                'trans1': base_tran_tensor.repeat(batch_size, 1),
-                'word2': torch.stack([
-                    self._process_word(w)
-                    for w in compare_words
-                ]),
-                'trans2': torch.stack([
-                    self._process_translation(t)
-                    for t in compare_trans
-                ])
-            }
-
-            inputs = []
-
-            for field, tensor in batch.items():
-                inputs.append(grpcclient.InferInput(
-                    field,
-                    list(tensor.shape),
-                    "INT32"
-                ))
-                inputs[-1].set_data_from_numpy(np.array(tensor, dtype=np.int32))
-
-            # Prediction
-            #print(f"{'':<15}{'Inferring...':<15}", end="", flush=True)
-            inferring_start = now()
-            with torch.no_grad():
-                outputs = triton_client.infer(f"neuro_{self.mode}", inputs)
-                logits = torch.from_numpy(
-                    outputs.as_numpy('output')
-                ).reshape(-1)
-                probs = torch.sigmoid(logits).cpu().numpy()
-            inferring_duration += now() - inferring_start
-            #print("DONE", flush=True)
-
             outputs = []
+            # Process the full compare_list in smaller Triton requests.
+            chunk_size = 8192
 
-            for word, trans, ids, prob in zip(compare_words, compare_trans, compare_ids, [p.item() for p in probs]):
-                if prob >= self.truth_threshold:
-                    outputs.append({
-                        'word': word,
-                        'trans': trans,
-                        'ids': ids,
-                        'prob': prob
-                    })
+            for start in range(0, len(compare_words), chunk_size):
+                end = start + chunk_size
+                chunk_words = compare_words[start:end]
+                chunk_trans = compare_trans[start:end]
+                chunk_ids = compare_ids[start:end]
+                current_size = len(chunk_words)
+
+                batch = {
+                    'word1': base_word_tensor.repeat(current_size, 1),
+                    'trans1': base_tran_tensor.repeat(current_size, 1),
+                    'word2': torch.stack([
+                        self._process_word(w)
+                        for w in chunk_words
+                    ]),
+                    'trans2': torch.stack([
+                        self._process_translation(t)
+                        for t in chunk_trans
+                    ])
+                }
+
+                inputs = []
+
+                for field, tensor in batch.items():
+                    inputs.append(grpcclient.InferInput(
+                        field,
+                        list(tensor.shape),
+                        "INT32"
+                    ))
+                    inputs[-1].set_data_from_numpy(
+                        np.array(tensor, dtype=np.int32))
+
+                # Prediction
+                # print(f"{'':<15}{'Inferring...':<15}", end="", flush=True)
+                inferring_start = now()
+                with torch.no_grad():
+                    result = triton_client.infer(
+                        f"neuro_{self.mode}", inputs)
+                    logits = torch.from_numpy(
+                        result.as_numpy('output')
+                    ).reshape(-1)
+                    probs = torch.sigmoid(logits).cpu().numpy()
+                inferring_duration += now() - inferring_start
+                # print("DONE", flush=True)
+
+                for word, trans, ids, prob in zip(
+                        chunk_words, chunk_trans, chunk_ids,
+                        [p.item() for p in probs]):
+                    if prob >= self.truth_threshold:
+                        outputs.append({
+                            'word': word,
+                            'trans': trans,
+                            'ids': ids,
+                            'prob': prob
+                        })
 
             """
             # Init reranker
