@@ -608,7 +608,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                    and D.object_id = dpf_walk.self_object_id
                    {md_str.replace('marked_for_deletion', 'D.marked_for_deletion')}
             )
-            select * dpf_walk
+            select * from dpf_walk
         """)
 
         dpf_rows = DBSession.execute(dpf_sql, {'pcid': pcid, 'poid': poid}).fetchall()
