@@ -71,7 +71,7 @@ class ProxyPass(Exception):
             }
 
             log.warning("Trying to request remote server...")
-            status = session.post(path, json=json_data, headers=session.headers, cookies=cookies)
+            status = session.post(path, json=json_data, headers=session.headers, cookies=cookies, verify=False)
             self.response_body = status.content
             self.response_json = status.json() if status.status_code == 200 else {}
 

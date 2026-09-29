@@ -47,6 +47,7 @@ from lingvodoc.models import (
     DictionaryPerspective as dbPerspective,
     DictionaryPerspectiveToField as dbColumn,
     ENGLISH_LOCALE,
+    RUSSIAN_LOCALE,
     Entity as dbEntity,
     Field as dbField,
     Group as dbGroup,
@@ -1499,101 +1500,119 @@ class DictionaryPerspective(LingvodocObjectType):
                                 start_date=None, end_date=None, position=1,
                                 **query_args):
 
-        if self.check_is_hidden_for_client(info):
-            return []
+        try:
+            if self.check_is_hidden_for_client(info):
+                return []
 
-        if mode == 'all':
-            publish = None
-            accept = True
-            delete = False
-            info.context.acl_check('view', 'lexical_entries_and_entities',
-                                   (self.dbObject.client_id, self.dbObject.object_id))
-        elif mode == 'published':
-            publish = True
-            accept = True
-            delete = False
-        elif mode == 'unpublished':
-            publish = False
-            accept = True
-            delete = False
-        elif mode == 'not_accepted':
-            publish = None
-            accept = False
-            delete = False
-        elif mode == 'deleted':
-            publish = None
-            accept = None
-            delete = True
-            info.context.acl_check('view', 'lexical_entries_and_entities',
-                                   (self.dbObject.client_id, self.dbObject.object_id))
-        elif mode == 'all_with_deleted':
-            publish = None
-            accept = None
-            delete = None
-            info.context.acl_check('view', 'lexical_entries_and_entities',
-                                   (self.dbObject.client_id, self.dbObject.object_id))
-        elif mode == 'debug':
-            publish = None
-            accept = True
-            delete = False
-            info.context.acl_check('view', 'lexical_entries_and_entities',
-                                   (self.dbObject.client_id, self.dbObject.object_id))
-        else:
-            raise ResponseError(message="mode: <all|published|unpublished|not_accepted|deleted|all_with_deleted>")
-
-        lexes = (
-
-            DBSession
-
-                .query(
-                    dbLexicalEntry.client_id,
-                    dbLexicalEntry.object_id)
-
-                .filter(
-                    dbLexicalEntry.parent == self.dbObject))
-
-        if ids is not None:
-            id_info = list(ids)
-            if len(ids) > 2:
-                id_info = ids_to_id_query(id_info)
-            lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(id_info))
-        if authors or start_date or end_date:
-            lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
-
-        if delete is not None:
-            if authors or start_date or end_date:
-                lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
+            if mode == 'all':
+                publish = None
+                accept = True
+                delete = False
+                info.context.acl_check('view', 'lexical_entries_and_entities',
+                                       (self.dbObject.client_id, self.dbObject.object_id))
+            elif mode == 'published':
+                publish = True
+                accept = True
+                delete = False
+            elif mode == 'unpublished':
+                publish = False
+                accept = True
+                delete = False
+            elif mode == 'not_accepted':
+                publish = None
+                accept = False
+                delete = False
+            elif mode == 'deleted':
+                publish = None
+                accept = None
+                delete = True
+                info.context.acl_check('view', 'lexical_entries_and_entities',
+                                       (self.dbObject.client_id, self.dbObject.object_id))
+            elif mode == 'all_with_deleted':
+                publish = None
+                accept = None
+                delete = None
+                info.context.acl_check('view', 'lexical_entries_and_entities',
+                                       (self.dbObject.client_id, self.dbObject.object_id))
+            elif mode == 'debug':
+                publish = None
+                accept = True
+                delete = False
+                info.context.acl_check('view', 'lexical_entries_and_entities',
+                                       (self.dbObject.client_id, self.dbObject.object_id))
             else:
-                lexes = lexes.filter(dbLexicalEntry.marked_for_deletion == delete)
-        if authors:
-            lexes = lexes.join(dbClient, dbEntity.client_id == dbClient.id).join(dbClient.user).filter(dbUser.id.in_(authors))
-        if start_date:
-            lexes = lexes.filter(dbEntity.created_at >= start_date)
-        if end_date:
-            lexes = lexes.filter(dbEntity.created_at <= end_date)
+                raise ResponseError(message="mode: <all|published|unpublished|not_accepted|deleted|all_with_deleted>")
 
-        db_la_gist = translation_gist_search('Limited access')
-        limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+            lexes = (
 
-        if (self.dbObject.state_translation_gist_client_id == limited_client_id and
-                self.dbObject.state_translation_gist_object_id == limited_object_id and
-                mode != 'not_accepted'):
+                DBSession
 
-            if not info.context.acl_check_if('view', 'lexical_entries_and_entities',
-                                             (self.dbObject.client_id, self.dbObject.object_id)):
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
 
-                lexes = lexes.limit(20)
+                    .filter(
+                        dbLexicalEntry.parent == self.dbObject))
 
-        lexical_entries, self.entries_total = (
-            entries_with_entities(lexes, mode, accept=accept, delete=delete, publish=publish,
-                                  check_perspective = False, **query_args))
+            if ids is not None:
+                id_info = list(ids)
+                if len(ids) > 2:
+                    id_info = ids_to_id_query(id_info)
+                lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(id_info))
+            if authors or start_date or end_date:
+                lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
 
-        # If we were asked for specific lexical entries, we try to return them in creation order.
+            if delete is not None:
+                if authors or start_date or end_date:
+                    lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
+                else:
+                    lexes = lexes.filter(dbLexicalEntry.marked_for_deletion == delete)
+            if authors:
+                lexes = lexes.join(dbClient, dbEntity.client_id == dbClient.id).join(dbClient.user).filter(dbUser.id.in_(authors))
+            if start_date:
+                lexes = lexes.filter(dbEntity.created_at >= start_date)
+            if end_date:
+                lexes = lexes.filter(dbEntity.created_at <= end_date)
 
-        if ids is not None:
-            lexical_entries.sort(key = lambda e: (e.dbObject.created_at, e.dbObject.object_id))
+            # If we have just created and initialized database,
+            # maybe we have no some important translations yet
+            if db_la_gist := translation_gist_search('Limited access'):
+                limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+            else:
+                limited_client_id, limited_object_id = create_gists_with_atoms(
+                    [
+                        {"locale_id": ENGLISH_LOCALE, "content": 'Limited access'},
+                        {"locale_id": RUSSIAN_LOCALE, "content": 'Ограниченный доступ'}
+                    ],
+                    None,
+                    [info.context.client_id, None],
+                    "Service",
+                    DBSession=DBSession)
 
-        return lexical_entries
+            if (self.dbObject.state_translation_gist_client_id == limited_client_id and
+                    self.dbObject.state_translation_gist_object_id == limited_object_id and
+                    mode != 'not_accepted'):
+
+                if not info.context.acl_check_if('view', 'lexical_entries_and_entities',
+                                                 (self.dbObject.client_id, self.dbObject.object_id)):
+
+                    lexes = lexes.limit(20)
+
+            lexical_entries, self.entries_total = (
+                entries_with_entities(lexes, mode, accept=accept, delete=delete, publish=publish,
+                                      check_perspective = False, **query_args))
+
+            # If we were asked for specific lexical entries, we try to return them in creation order.
+
+            if ids is not None:
+                lexical_entries.sort(key = lambda e: (e.dbObject.created_at, e.dbObject.object_id))
+
+            return lexical_entries
+
+        except Exception as e:
+            log.error(str(e))
+            #A()
+            raise
 
     def resolve_perspective_page(
             self,

@@ -420,7 +420,7 @@ def _get_or_build_fk_query(model, suff, action):
 '''
 
 def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
-                           client_ids, subject_ids):
+                           client_ids, subject_ids, get_empty=False):
     """Bulk-query equivalent of the process_db_objects Python recursion.
 
     Replaces ~N per-FK-node queries (where N scales with entity count) with
@@ -445,6 +445,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
     parser_ids = set()       # Parser IDs
     field_ids = set()        # Field IDs
     gist_ids = set()         # TranslationGist IDs (collected from many sources)
+    pers_ids = set()         # Linked perspectives IDs
 
     def _row_to_dict(r):
         """Convert ORM instance OR SQLA RowProxy to plain column-name -> value dict.
@@ -571,181 +572,198 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                    and L.object_id = lang_walk.parent_object_id
                    {md_str.replace('marked_for_deletion', 'L.marked_for_deletion')}
             )
-            select client_id, object_id from lang_walk
+            select * from lang_walk
         """)
-        lang_id_rows = DBSession.execute(
+
+        lang_rows = DBSession.execute(
             lang_sql, {'start_cid': lang_root[0], 'start_oid': lang_root[1]}
         ).fetchall()
+
+        """
         lang_id_pairs = [(r.client_id, r.object_id) for r in lang_id_rows]
         if lang_id_pairs:
             lang_filt = [_id_pairs_in(dbLanguage, 'client_id', 'object_id', lang_id_pairs)]
             if action == 'create':
                 lang_filt.append(dbLanguage.marked_for_deletion == False)
             lang_rows = DBSession.query(dbLanguage).filter(*lang_filt).all()
-            _add('Language', _filter_changed(lang_rows), also_subject=True)
-            for L in lang_rows:
-                if L.translation_gist_client_id is not None:
-                    gist_ids.add((L.translation_gist_client_id, L.translation_gist_object_id))
+        """
 
-    # --- Stage 5: DictionaryPerspectiveToField (with self_ recursion) ---
-    dpf_sql = text(f"""
-        with recursive dpf_walk as (
-            select * from dictionaryperspectivetofield
-             where parent_client_id = :pcid and parent_object_id = :poid
-               {md_str}
-            union
-            select D.* from dictionaryperspectivetofield D, dpf_walk
-             where D.client_id = dpf_walk.self_client_id
-               and D.object_id = dpf_walk.self_object_id
-               {md_str.replace('marked_for_deletion', 'D.marked_for_deletion')}
-        )
-        select client_id, object_id from dpf_walk
-    """)
-    dpf_id_rows = DBSession.execute(dpf_sql, {'pcid': pcid, 'poid': poid}).fetchall()
-    dpf_id_pairs = [(r.client_id, r.object_id) for r in dpf_id_rows]
-    if dpf_id_pairs:
-        dpf_filt = [_id_pairs_in(dbDictionaryPerspectiveToField, 'client_id', 'object_id', dpf_id_pairs)]
-        if action == 'create':
-            dpf_filt.append(dbDictionaryPerspectiveToField.marked_for_deletion == False)
-        dpf_rows = DBSession.query(dbDictionaryPerspectiveToField).filter(*dpf_filt).all()
-        _add('DictionaryPerspectiveToField', _filter_changed(dpf_rows))
+        for L in lang_rows:
+            if L.translation_gist_client_id is not None:
+                gist_ids.add((L.translation_gist_client_id, L.translation_gist_object_id))
+
+        _add('Language', _filter_changed(lang_rows), also_subject=True)
+
+    # We get only perspective itself if we need linked one for another perspective
+    if not get_empty:
+        # --- Stage 5: DictionaryPerspectiveToField (with self_ recursion) ---
+        dpf_sql = text(f"""
+            with recursive dpf_walk as (
+                select * from dictionaryperspectivetofield
+                 where parent_client_id = :pcid and parent_object_id = :poid
+                   {md_str}
+                union
+                select D.* from dictionaryperspectivetofield D, dpf_walk
+                 where D.client_id = dpf_walk.self_client_id
+                   and D.object_id = dpf_walk.self_object_id
+                   {md_str.replace('marked_for_deletion', 'D.marked_for_deletion')}
+            )
+            select * dpf_walk
+        """)
+
+        dpf_rows = DBSession.execute(dpf_sql, {'pcid': pcid, 'poid': poid}).fetchall()
+
+        """
+        dpf_id_pairs = [(r.client_id, r.object_id) for r in dpf_id_rows]
+        if dpf_id_pairs:
+            dpf_filt = [_id_pairs_in(dbDictionaryPerspectiveToField, 'client_id', 'object_id', dpf_id_pairs)]
+            if action == 'create':
+                dpf_filt.append(dbDictionaryPerspectiveToField.marked_for_deletion == False)
+            dpf_rows = DBSession.query(dbDictionaryPerspectiveToField).filter(*dpf_filt).all()
+        """
+
         for D in dpf_rows:
             if D.field_client_id is not None:
                 field_ids.add((D.field_client_id, D.field_object_id))
+            if D.link_client_id is not None:
+                A()
+                pers_ids.add((D.link_client_id, D.link_object_id))
 
-    # --- Stage 6: Field ---
-    if field_ids:
-        f_filt = [_id_pairs_in(dbField, 'client_id', 'object_id', list(field_ids))]
+        _add('DictionaryPerspectiveToField', _filter_changed(dpf_rows))
+
+        # --- Stage 6: Field ---
+        if field_ids:
+            f_filt = [_id_pairs_in(dbField, 'client_id', 'object_id', list(field_ids))]
+            if action == 'create':
+                f_filt.append(dbField.marked_for_deletion == False)
+            field_rows = DBSession.query(dbField).filter(*f_filt).all()
+            _add('Field', _filter_changed(field_rows))
+            for F in field_rows:
+                for cid, oid in [
+                    (F.translation_gist_client_id, F.translation_gist_object_id),
+                    (F.data_type_translation_gist_client_id, F.data_type_translation_gist_object_id),
+                ]:
+                    if cid is not None and oid is not None:
+                        gist_ids.add((cid, oid))
+
+        # --- Stage 7: LexicalEntry for the perspective ---
+        le_filt = [
+            dbLexicalEntry.parent_client_id == pcid,
+            dbLexicalEntry.parent_object_id == poid,
+        ]
         if action == 'create':
-            f_filt.append(dbField.marked_for_deletion == False)
-        field_rows = DBSession.query(dbField).filter(*f_filt).all()
-        _add('Field', _filter_changed(field_rows))
-        for F in field_rows:
-            for cid, oid in [
-                (F.translation_gist_client_id, F.translation_gist_object_id),
-                (F.data_type_translation_gist_client_id, F.data_type_translation_gist_object_id),
-            ]:
-                if cid is not None and oid is not None:
-                    gist_ids.add((cid, oid))
+            le_filt.append(dbLexicalEntry.marked_for_deletion == False)
+        le_rows = DBSession.query(dbLexicalEntry).filter(*le_filt).all()
+        _add('LexicalEntry', _filter_changed(le_rows))
+        for LE in le_rows:
+            le_ids.add((LE.client_id, LE.object_id))
 
-    # --- Stage 7: LexicalEntry for the perspective ---
-    le_filt = [
-        dbLexicalEntry.parent_client_id == pcid,
-        dbLexicalEntry.parent_object_id == poid,
-    ]
-    if action == 'create':
-        le_filt.append(dbLexicalEntry.marked_for_deletion == False)
-    le_rows = DBSession.query(dbLexicalEntry).filter(*le_filt).all()
-    _add('LexicalEntry', _filter_changed(le_rows))
-    for LE in le_rows:
-        le_ids.add((LE.client_id, LE.object_id))
+        # --- Stage 8: Entity (recursive: self_, link_) ---
+        # Use a temp table to avoid round-tripping 69K IDs Python<->SQL.
+        # The recursive CTE populates the temp table directly; then the
+        # ORM query JOINs against it to hydrate full Entity rows.
+        # PublishingEntity stage below also JOINs against the same temp table.
+        ent_ids_table = None
+        if le_ids:
+            ent_ids_table = 'xal_ent_ids_' + uuid.uuid4().hex
+            le_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in le_ids)
+            # Postgres requires the recursive part of a recursive CTE to be a
+            # single SELECT (or UNION of selects, but not mixed with the
+            # non-recursive anchor). Combine self_ + link_ traversal into
+            # one recursive arm with OR.
+            # Anchor arm: optional "AND e.marked_for_deletion = false"
+            e_md_anchor = (
+                "and e.marked_for_deletion = false" if action == 'create' else "")
+            # Recursive arm: optional "e.marked_for_deletion = false AND " prefix
+            e_md_recur = (
+                "e.marked_for_deletion = false and " if action == 'create' else "")
+            # Store FULL entity rows in the temp table (not just IDs). Then we
+            # can read them back with raw SELECT — skipping the JOIN AND skipping
+            # ORM hydration. RowProxy._asdict() produces the same dict shape
+            # as ORM as_dict() for standard column types.
+            ent_sql = text(f"""
+                create temporary table {ent_ids_table}
+                    on commit drop as
+                with recursive
+                  le_seed (cid, oid) as (values {le_values}),
+                  ent_walk as (
+                    select e.* from entity e, le_seed
+                     where e.parent_client_id = le_seed.cid
+                       and e.parent_object_id = le_seed.oid
+                       {e_md_anchor}
+                    union
+                    select e.* from entity e, ent_walk
+                     where {e_md_recur}(
+                             (e.client_id = ent_walk.self_client_id
+                              and e.object_id = ent_walk.self_object_id)
+                          or (e.parent_client_id = ent_walk.link_client_id
+                              and e.parent_object_id = ent_walk.link_object_id)
+                           )
+                  )
+                select * from ent_walk
+            """)
+            DBSession.execute(ent_sql)
 
-    # --- Stage 8: Entity (recursive: self_, link_) ---
-    # Use a temp table to avoid round-tripping 69K IDs Python<->SQL.
-    # The recursive CTE populates the temp table directly; then the
-    # ORM query JOINs against it to hydrate full Entity rows.
-    # PublishingEntity stage below also JOINs against the same temp table.
-    ent_ids_table = None
-    if le_ids:
-        ent_ids_table = 'xal_ent_ids_' + uuid.uuid4().hex
-        le_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in le_ids)
-        # Postgres requires the recursive part of a recursive CTE to be a
-        # single SELECT (or UNION of selects, but not mixed with the
-        # non-recursive anchor). Combine self_ + link_ traversal into
-        # one recursive arm with OR.
-        # Anchor arm: optional "AND e.marked_for_deletion = false"
-        e_md_anchor = (
-            "and e.marked_for_deletion = false" if action == 'create' else "")
-        # Recursive arm: optional "e.marked_for_deletion = false AND " prefix
-        e_md_recur = (
-            "e.marked_for_deletion = false and " if action == 'create' else "")
-        # Store FULL entity rows in the temp table (not just IDs). Then we
-        # can read them back with raw SELECT — skipping the JOIN AND skipping
-        # ORM hydration. RowProxy._asdict() produces the same dict shape
-        # as ORM as_dict() for standard column types.
-        ent_sql = text(f"""
-            create temporary table {ent_ids_table}
-                on commit drop as
-            with recursive
-              le_seed (cid, oid) as (values {le_values}),
-              ent_walk as (
-                select e.* from entity e, le_seed
-                 where e.parent_client_id = le_seed.cid
-                   and e.parent_object_id = le_seed.oid
-                   {e_md_anchor}
-                union
-                select e.* from entity e, ent_walk
-                 where {e_md_recur}(
-                         (e.client_id = ent_walk.self_client_id
-                          and e.object_id = ent_walk.self_object_id)
-                      or (e.parent_client_id = ent_walk.link_client_id
-                          and e.parent_object_id = ent_walk.link_object_id)
-                       )
-              )
-            select * from ent_walk
-        """)
-        DBSession.execute(ent_sql)
+            # Pull only the link_'d LE IDs we don't yet have (small set):
+            linked_le_rows = DBSession.execute(text(
+                f"select distinct link_client_id, link_object_id "
+                f"  from {ent_ids_table} "
+                f" where link_client_id is not null")).fetchall()
+            for r in linked_le_rows:
+                le_ids.add((r.link_client_id, r.link_object_id))
 
-        # Pull only the link_'d LE IDs we don't yet have (small set):
-        linked_le_rows = DBSession.execute(text(
-            f"select distinct link_client_id, link_object_id "
-            f"  from {ent_ids_table} "
-            f" where link_client_id is not null")).fetchall()
-        for r in linked_le_rows:
-            le_ids.add((r.link_client_id, r.link_object_id))
+            # Read all entity rows directly from the temp table as RowProxy —
+            # no JOIN, no ORM hydration. _asdict() via as_dict() yields the
+            # same dict shape downstream consumers expect.
+            ent_rows = DBSession.execute(
+                text(f"select * from {ent_ids_table}")).fetchall()
+            _add('Entity', _filter_changed(ent_rows))
+            for E in ent_rows:
+                ent_ids.add((E.client_id, E.object_id))
 
-        # Read all entity rows directly from the temp table as RowProxy —
-        # no JOIN, no ORM hydration. _asdict() via as_dict() yields the
-        # same dict shape downstream consumers expect.
-        ent_rows = DBSession.execute(
-            text(f"select * from {ent_ids_table}")).fetchall()
-        _add('Entity', _filter_changed(ent_rows))
-        for E in ent_rows:
-            ent_ids.add((E.client_id, E.object_id))
+        # --- Stage 9: Re-fetch all LEs (now including link_'d ones) ---
+        if le_ids:
+            le_full_filt = [_id_pairs_in(dbLexicalEntry, 'client_id', 'object_id', list(le_ids))]
+            if action == 'create':
+                le_full_filt.append(dbLexicalEntry.marked_for_deletion == False)
+            le_rows_full = DBSession.query(dbLexicalEntry).filter(*le_full_filt).all()
+            # Append-only update — already-added entries get overwritten with same data
+            _add('LexicalEntry', _filter_changed(le_rows_full))
 
-    # --- Stage 9: Re-fetch all LEs (now including link_'d ones) ---
-    if le_ids:
-        le_full_filt = [_id_pairs_in(dbLexicalEntry, 'client_id', 'object_id', list(le_ids))]
-        if action == 'create':
-            le_full_filt.append(dbLexicalEntry.marked_for_deletion == False)
-        le_rows_full = DBSession.query(dbLexicalEntry).filter(*le_full_filt).all()
-        # Append-only update — already-added entries get overwritten with same data
-        _add('LexicalEntry', _filter_changed(le_rows_full))
+        # --- Stage 10: PublishingEntity (1:1 by id with Entity) ---
+        # Raw SELECT joined against the entity-ids temp table — RowProxy
+        # path, same shape as the Entity stage above.
+        if ent_ids and ent_ids_table is not None:
+            pe_rows = DBSession.execute(text(f"""
+                select pe.* from publishingentity pe, {ent_ids_table} t
+                 where pe.client_id = t.client_id
+                   and pe.object_id = t.object_id
+            """)).fetchall()
+            _add('PublishingEntity', _filter_changed(pe_rows))
 
-    # --- Stage 10: PublishingEntity (1:1 by id with Entity) ---
-    # Raw SELECT joined against the entity-ids temp table — RowProxy
-    # path, same shape as the Entity stage above.
-    if ent_ids and ent_ids_table is not None:
-        pe_rows = DBSession.execute(text(f"""
-            select pe.* from publishingentity pe, {ent_ids_table} t
-             where pe.client_id = t.client_id
-               and pe.object_id = t.object_id
-        """)).fetchall()
-        _add('PublishingEntity', _filter_changed(pe_rows))
+        # --- Stage 11: ParserResult under entities (via entity_ FK) ---
+        # Raw SELECT joined against the entity-ids temp table.
+        if ent_ids and ent_ids_table is not None:
+            pr_md = "and pr.marked_for_deletion = false" if action == 'create' else ""
+            pr_rows = DBSession.execute(text(f"""
+                select pr.* from parserresult pr, {ent_ids_table} t
+                 where pr.entity_client_id = t.client_id
+                   and pr.entity_object_id = t.object_id
+                   {pr_md}
+            """)).fetchall()
+            _add('ParserResult', _filter_changed(pr_rows))
+            for PR in pr_rows:
+                if PR.parser_client_id is not None:
+                    parser_ids.add((PR.parser_client_id, PR.parser_object_id))
 
-    # --- Stage 11: ParserResult under entities (via entity_ FK) ---
-    # Raw SELECT joined against the entity-ids temp table.
-    if ent_ids and ent_ids_table is not None:
-        pr_md = "and pr.marked_for_deletion = false" if action == 'create' else ""
-        pr_rows = DBSession.execute(text(f"""
-            select pr.* from parserresult pr, {ent_ids_table} t
-             where pr.entity_client_id = t.client_id
-               and pr.entity_object_id = t.object_id
-               {pr_md}
-        """)).fetchall()
-        _add('ParserResult', _filter_changed(pr_rows))
-        for PR in pr_rows:
-            if PR.parser_client_id is not None:
-                parser_ids.add((PR.parser_client_id, PR.parser_object_id))
-
-    # --- Stage 12: Parser ---
-    if parser_ids:
-        pa_filt = [_id_pairs_in(dbParser, 'client_id', 'object_id', list(parser_ids))]
-        # Parser has no marked_for_deletion (or does it?) — apply if available
-        if hasattr(dbParser, 'marked_for_deletion') and action == 'create':
-            pa_filt.append(dbParser.marked_for_deletion == False)
-        pa_rows = DBSession.query(dbParser).filter(*pa_filt).all()
-        _add('Parser', _filter_changed(pa_rows))
+        # --- Stage 12: Parser ---
+        if parser_ids:
+            pa_filt = [_id_pairs_in(dbParser, 'client_id', 'object_id', list(parser_ids))]
+            # Parser has no marked_for_deletion (or does it?) — apply if available
+            if hasattr(dbParser, 'marked_for_deletion') and action == 'create':
+                pa_filt.append(dbParser.marked_for_deletion == False)
+            pa_rows = DBSession.query(dbParser).filter(*pa_filt).all()
+            _add('Parser', _filter_changed(pa_rows))
 
     # --- Stage 13: TranslationGist (all collected) ---
     if gist_ids:
@@ -765,6 +783,11 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         ta_rows = DBSession.query(dbTranslationAtom).filter(*ta_filt).all()
         _add('TranslationAtom', _filter_changed(ta_rows), also_subject=True)
 
+    # Now we create empty perspecives if any is linked to current one
+    # We get even marked_for_deletion perspectives/dictionaries/languages
+    for id in pers_ids:
+        _walk_perspective_bulk(id, sync_point, 'edit', local_result,
+                               client_ids, subject_ids, get_empty=True)
 
 def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=False):
 
@@ -892,7 +915,7 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
 
             # Query
             log.warning("Trying to request remote server...")
-            remote_resp = session.post(client_path, **req_args)
+            remote_resp = session.post(client_path, **req_args, verify=False)
             resp_status = remote_resp.status_code
             remote_result.update((remote_resp.json()
                                  .get('data') or {})
@@ -1172,19 +1195,25 @@ def MergeChangesAsync(
     task_status.set(1, 20, 'Getting stored data...')
 
     def set_synced_at(synced_at):
-        db_perspective = (
-            DBSession
-                .query(
-                    dbDictionaryPerspective)
-                .filter_by(
-                    client_id = perspective_id[0],
-                    object_id = perspective_id[1])
-                .one())
+        try:
+            db_perspective = (
+                DBSession
+                    .query(
+                        dbDictionaryPerspective)
+                    .filter_by(
+                        client_id = perspective_id[0],
+                        object_id = perspective_id[1])
+                    .one())
 
-        perspective_metadata = db_perspective.additional_metadata or {}
-        db_perspective.additional_metadata = {
-            **perspective_metadata,
-            f'{remote}_synced_at': synced_at}
+            perspective_metadata = db_perspective.additional_metadata or {}
+            db_perspective.additional_metadata = {
+                **perspective_metadata,
+                f'{remote}_synced_at': synced_at}
+
+        except Exception as e:
+            log.error(str(e))
+            #A()
+            raise
 
     local_pickle_path = os.path.join(
         storage_path,
@@ -1242,6 +1271,7 @@ def MergeChangesAsync(
                         DBSession.add(client)
 
                 DBSession.flush()
+                transaction.commit()
 
         except (UniqueViolation, IntegrityError, ResourceClosedError):
             DBSession.rollback()
@@ -1274,12 +1304,41 @@ def MergeChangesAsync(
                 print(f"Memory usage: {psutil.virtual_memory().percent}%")
                 time.sleep(1)
 
-            # Sorting within groups by recursion field to make None values before any other
             if table in ['Entity', 'DictionaryPerspectiveToField']:
+                # Sorting within groups by recursion field to make None values before any other
                 table_data = dict(sorted(
                     table_data.items(), key=lambda item: bool(item[1]['self_client_id'])))
+
             elif table in ['Language']:
+                # Sorting languages from parents to children
+                swap_data = {}
+                while len(table_data):
+                    # Getting current copy for iteration by
+                    rest_data = table_data.copy()
+                    delta = 0
+
+                    for coid, data in rest_data.items():
+                        if key2str(data['parent_client_id'], data['parent_object_id']) in (
+                                swap_data or [key2str(None, None)]):
+                            swap_data[coid] = data
+                            # Delete an element to decrease next loop
+                            del table_data[coid]
+                            delta += 1
+
+                    # Break extra condition
+                    if not delta:
+                        break
+
+                # Getting result
+                table_data = swap_data
+
+            else:
+                # Reverse dicts to get linked perspectives first
                 table_data = dict(reversed(table_data.items()))
+
+            if table == "DictionaryPerspective":
+                print(f"\n!!! >>> Table '{table}'")
+                print([(value['client_id'], value['object_id'], value['created_at']) for value in table_data.values()])
 
             table_data_size = len(table_data)
 
@@ -1328,14 +1387,29 @@ def MergeChangesAsync(
 
                         action = 'updated'
 
+                    else:
+                        continue
+
                     DBSession.flush()
                     transaction.commit()
 
-                # Some entities correspond to corrupted fields, we'll skip them
-                except (UniqueViolation, IntegrityError, ResourceClosedError):
+                #except (UniqueViolation, IntegrityError, ResourceClosedError) as e:
+                except IntegrityError as e:
+                    # Some entities correspond to wrong fields, we'll skip them
+                    if "entity_field_client_id_field_object_id_fkey" in str(e):
+                        DBSession.rollback()
+                        transaction.abort()
+                        log.warning("Rolled back session due to wrong field")
+                    else:
+                        if debug_flag:
+                            pass
+                            #A()
+                        raise
+
+                except UniqueViolation as e:
                     DBSession.rollback()
                     transaction.abort()
-                    log.warning("Rolled back session")
+                    log.warning(str(e))
 
                 except Exception as e:
                     if debug_flag:
@@ -1345,7 +1419,7 @@ def MergeChangesAsync(
 
                 next_synced_at = max(next_synced_at, foreign_update)
 
-                if debug_flag and action and False:
+                if debug_flag and False:
                     report({
                         ('Sync time', 20): current_synced_at,
                         ('Foreign update', 20): foreign_update,
@@ -1359,7 +1433,7 @@ def MergeChangesAsync(
 
                 if count % CHUNK_SIZE == 0:
                     DBSession.expunge_all()
-                    log.warning('Cleared session')
+                    log.debug('Cleared session')
 
         task_status.set(tables_num + 2, 10, f'Final steps')
 
