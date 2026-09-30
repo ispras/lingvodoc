@@ -696,7 +696,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
 
             # We are looking if lexical entry or field is not deleted
             ent_filt = [
-                _id_pairs_in(dbEntity, 'parent_client_id', 'papent_object_id', list(le_ids)),
+                _id_pairs_in(dbEntity, 'parent_client_id', 'parent_object_id', list(le_ids)),
                 _id_pairs_in(dbEntity, 'field_client_id', 'field_object_id', list(field_ids))]
 
             # Read all entity rows directly from the temp table as RowProxy —
