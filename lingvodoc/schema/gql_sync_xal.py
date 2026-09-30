@@ -695,15 +695,25 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                 le_ids.add((r.link_client_id, r.link_object_id))
 
             # We are looking if lexical entry or field is not deleted
-            ent_filt = [
-                _id_pairs_in(dbEntity, 'parent_client_id', 'parent_object_id', list(le_ids)),
-                _id_pairs_in(dbEntity, 'field_client_id', 'field_object_id', list(field_ids))]
+            # Build WHERE conditions for the SQL query
+            le_ids_list = list(le_ids)
+            field_ids_list = list(field_ids)
+
+            where_conditions = []
+            if le_ids_list:
+                le_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in le_ids_list)
+                where_conditions.append(f"(parent_client_id, parent_object_id) in (values {le_values})")
+            if field_ids_list:
+                field_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in field_ids_list)
+                where_conditions.append(f"(field_client_id, field_object_id) in (values {field_values})")
+
+            where_clause = " or ".join(where_conditions) if where_conditions else "true"
 
             # Read all entity rows directly from the temp table as RowProxy —
             # no JOIN, no ORM hydration. _asdict() via as_dict() yields the
             # same dict shape downstream consumers expect.
             ent_rows = DBSession.execute(
-                text(f"select * from {ent_ids_table}")).filter(*ent_filt).fetchall()
+                text(f"select * from {ent_ids_table} where {where_clause}")).fetchall()
 
             _add('Entity', _filter_changed(ent_rows))
 
