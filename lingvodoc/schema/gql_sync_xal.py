@@ -1134,14 +1134,13 @@ def MergeChanges(
         'task_key': task_status.key
     }
 
-    #MergeChangesAsync.delay(perspective_id, **async_func_args, **args)
-    MergeChangesAsync(perspective_id, **async_func_args, **args)
+    MergeChangesAsync.delay(perspective_id, **async_func_args, **args)
     # We return success result, but async
     # function may end not successfully
     return {'triumph': True, 'message': ""}
 
 
-#@celery.task
+@celery.task
 def MergeChangesAsync(
         perspective_id,
         local,
@@ -1368,7 +1367,7 @@ def MergeChangesAsync(
                     else:
                         if debug_flag:
                             pass
-                            A()
+                            #A()
                         raise
 
                 except Exception as e:
