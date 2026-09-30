@@ -527,8 +527,10 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
     if action == 'create':
         persp_filt.append(dbDictionaryPerspective.marked_for_deletion == False)
     persp_rows = DBSession.query(dbDictionaryPerspective).filter(*persp_filt).all()
+
     if not persp_rows:
         return  # nothing to do
+
     _add('DictionaryPerspective', _filter_changed(persp_rows), also_subject=True)
     persp = persp_rows[0]
     for cid, oid in [
@@ -547,6 +549,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         dict_filt.append(dbDictionary.marked_for_deletion == False)
     dict_rows = DBSession.query(dbDictionary).filter(*dict_filt).all()
     _add('Dictionary', _filter_changed(dict_rows), also_subject=True)
+
     if dict_rows:
         d = dict_rows[0]
         for cid, oid in [
@@ -578,21 +581,11 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         lang_rows = DBSession.execute(
             lang_sql, {'start_cid': lang_root[0], 'start_oid': lang_root[1]}
         ).fetchall()
-
-        """
-        lang_id_pairs = [(r.client_id, r.object_id) for r in lang_id_rows]
-        if lang_id_pairs:
-            lang_filt = [_id_pairs_in(dbLanguage, 'client_id', 'object_id', lang_id_pairs)]
-            if action == 'create':
-                lang_filt.append(dbLanguage.marked_for_deletion == False)
-            lang_rows = DBSession.query(dbLanguage).filter(*lang_filt).all()
-        """
+        _add('Language', _filter_changed(lang_rows), also_subject=True)
 
         for L in lang_rows:
             if L.translation_gist_client_id is not None:
                 gist_ids.add((L.translation_gist_client_id, L.translation_gist_object_id))
-
-        _add('Language', _filter_changed(lang_rows), also_subject=True)
 
     # We get only perspective itself if we need linked one for another perspective
     if not get_empty:
@@ -612,24 +605,13 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         """)
 
         dpf_rows = DBSession.execute(dpf_sql, {'pcid': pcid, 'poid': poid}).fetchall()
-
-        """
-        dpf_id_pairs = [(r.client_id, r.object_id) for r in dpf_id_rows]
-        if dpf_id_pairs:
-            dpf_filt = [_id_pairs_in(dbDictionaryPerspectiveToField, 'client_id', 'object_id', dpf_id_pairs)]
-            if action == 'create':
-                dpf_filt.append(dbDictionaryPerspectiveToField.marked_for_deletion == False)
-            dpf_rows = DBSession.query(dbDictionaryPerspectiveToField).filter(*dpf_filt).all()
-        """
+        _add('DictionaryPerspectiveToField', _filter_changed(dpf_rows))
 
         for D in dpf_rows:
             if D.field_client_id is not None:
                 field_ids.add((D.field_client_id, D.field_object_id))
             if D.link_client_id is not None:
-                A()
                 pers_ids.add((D.link_client_id, D.link_object_id))
-
-        _add('DictionaryPerspectiveToField', _filter_changed(dpf_rows))
 
         # --- Stage 6: Field ---
         if field_ids:
@@ -712,12 +694,19 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
             for r in linked_le_rows:
                 le_ids.add((r.link_client_id, r.link_object_id))
 
+            # We are looking if lexical entry or field is not deleted
+            ent_filt = [
+                _id_pairs_in(dbEntity, 'parent_client_id', 'papent_object_id', list(le_ids)),
+                _id_pairs_in(dbEntity, 'field_client_id', 'field_object_id', list(field_ids))]
+
             # Read all entity rows directly from the temp table as RowProxy —
             # no JOIN, no ORM hydration. _asdict() via as_dict() yields the
             # same dict shape downstream consumers expect.
             ent_rows = DBSession.execute(
-                text(f"select * from {ent_ids_table}")).fetchall()
+                text(f"select * from {ent_ids_table}")).filter(*ent_filt).fetchall()
+
             _add('Entity', _filter_changed(ent_rows))
+
             for E in ent_rows:
                 ent_ids.add((E.client_id, E.object_id))
 
@@ -887,18 +876,18 @@ def ListChanges(info, perspective_id, remote, sync_between, action, debug_flag=F
 
         remote_result = {'warns': []}
 
+        # Get and set session
+        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+        session = requests.Session()
+        session.headers.update({'Connection': 'Keep-Alive'})
+        session.mount('http://', adapter)
+
         try:
             # Changing req_path and req_data to query from remote server
             if remote_server := settings['proxy'].get(f'{remote}_server'):
                 client_path = remote_server + 'api' + request.path
             else:
                 raise NotImplementedError
-
-            # Get and set session
-            adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
-            session = requests.Session()
-            session.headers.update({'Connection': 'Keep-Alive'})
-            session.mount('http://', adapter)
 
             variables = {
                 **request.json_body.get('variables', {}),
@@ -1394,22 +1383,18 @@ def MergeChangesAsync(
                     transaction.commit()
 
                 #except (UniqueViolation, IntegrityError, ResourceClosedError) as e:
+
                 except IntegrityError as e:
-                    # Some entities correspond to wrong fields, we'll skip them
-                    if "entity_field_client_id_field_object_id_fkey" in str(e):
+                    # This case maybe due to race condition, so we skip it
+                    if isinstance(e.orig, UniqueViolation):
                         DBSession.rollback()
                         transaction.abort()
-                        log.warning("Rolled back session due to wrong field")
+                        log.warning(str(e))
                     else:
                         if debug_flag:
                             pass
                             #A()
                         raise
-
-                except UniqueViolation as e:
-                    DBSession.rollback()
-                    transaction.abort()
-                    log.warning(str(e))
 
                 except Exception as e:
                     if debug_flag:
