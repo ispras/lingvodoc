@@ -545,8 +545,6 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         dbDictionary.client_id == persp.parent_client_id,
         dbDictionary.object_id == persp.parent_object_id,
     ]
-    if action == 'create':
-        dict_filt.append(dbDictionary.marked_for_deletion == False)
     dict_rows = DBSession.query(dbDictionary).filter(*dict_filt).all()
     _add('Dictionary', _filter_changed(dict_rows), also_subject=True)
 
@@ -568,12 +566,10 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
             with recursive lang_walk as (
                 select * from language
                  where client_id = :start_cid and object_id = :start_oid
-                   {md_str}
                 union
                 select L.* from language L, lang_walk
                  where L.client_id = lang_walk.parent_client_id
                    and L.object_id = lang_walk.parent_object_id
-                   {md_str.replace('marked_for_deletion', 'L.marked_for_deletion')}
             )
             select * from lang_walk
         """)
@@ -593,13 +589,13 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         dpf_sql = text(f"""
             with recursive dpf_walk as (
                 select * from dictionaryperspectivetofield
-                 where parent_client_id = :pcid and parent_object_id = :poid
+                 where parent_client_id = :pcid
+                   and parent_object_id = :poid
                    {md_str}
                 union
                 select D.* from dictionaryperspectivetofield D, dpf_walk
                  where D.client_id = dpf_walk.self_client_id
                    and D.object_id = dpf_walk.self_object_id
-                   {md_str.replace('marked_for_deletion', 'D.marked_for_deletion')}
             )
             select * from dpf_walk
         """)
@@ -616,8 +612,6 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         # --- Stage 6: Field ---
         if field_ids:
             f_filt = [_id_pairs_in(dbField, 'client_id', 'object_id', list(field_ids))]
-            if action == 'create':
-                f_filt.append(dbField.marked_for_deletion == False)
             field_rows = DBSession.query(dbField).filter(*f_filt).all()
             _add('Field', _filter_changed(field_rows))
             for F in field_rows:
@@ -649,6 +643,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         if le_ids:
             ent_ids_table = 'xal_ent_ids_' + uuid.uuid4().hex
             le_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in le_ids)
+            field_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in field_ids)
             # Postgres requires the recursive part of a recursive CTE to be a
             # single SELECT (or UNION of selects, but not mixed with the
             # non-recursive anchor). Combine self_ + link_ traversal into
@@ -668,66 +663,42 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                     on commit drop as
                 with recursive
                   le_seed (cid, oid) as (values {le_values}),
+                  field_seed (cid, oid) as (values {field_values}),
                   ent_walk as (
                     select e.* from entity e, le_seed
                      where e.parent_client_id = le_seed.cid
                        and e.parent_object_id = le_seed.oid
+                       and e.field_client_id = field_seed.cid
+                       and e.field_object_id = field_seed.oid
                        {e_md_anchor}
                     union
                     select e.* from entity e, ent_walk
-                     where {e_md_recur}(
-                             (e.client_id = ent_walk.self_client_id
-                              and e.object_id = ent_walk.self_object_id)
-                          or (e.parent_client_id = ent_walk.link_client_id
-                              and e.parent_object_id = ent_walk.link_object_id)
-                           )
+                     where e.client_id = ent_walk.self_client_id
+                       and e.object_id = ent_walk.self_object_id
                   )
                 select * from ent_walk
             """)
             DBSession.execute(ent_sql)
 
-            # Pull only the link_'d LE IDs we don't yet have (small set):
-            linked_le_rows = DBSession.execute(text(
-                f"select distinct link_client_id, link_object_id "
-                f"  from {ent_ids_table} "
-                f" where link_client_id is not null")).fetchall()
-            for r in linked_le_rows:
-                le_ids.add((r.link_client_id, r.link_object_id))
-
-            # We are looking if lexical entry or field is not deleted
-            # Build WHERE conditions for the SQL query
-            le_ids_list = list(le_ids)
-            field_ids_list = list(field_ids)
-
-            where_conditions = []
-            if le_ids_list:
-                le_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in le_ids_list)
-                where_conditions.append(f"(parent_client_id, parent_object_id) in (values {le_values})")
-            if field_ids_list:
-                field_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in field_ids_list)
-                where_conditions.append(f"(field_client_id, field_object_id) in (values {field_values})")
-
-            where_clause = " or ".join(where_conditions) if where_conditions else "true"
-
             # Read all entity rows directly from the temp table as RowProxy —
             # no JOIN, no ORM hydration. _asdict() via as_dict() yields the
             # same dict shape downstream consumers expect.
             ent_rows = DBSession.execute(
-                text(f"select * from {ent_ids_table} where {where_clause}")).fetchall()
-
+                text(f"select * from {ent_ids_table}")).fetchall()
             _add('Entity', _filter_changed(ent_rows))
 
             for E in ent_rows:
                 ent_ids.add((E.client_id, E.object_id))
 
         # --- Stage 9: Re-fetch all LEs (now including link_'d ones) ---
-        if le_ids:
-            le_full_filt = [_id_pairs_in(dbLexicalEntry, 'client_id', 'object_id', list(le_ids))]
-            if action == 'create':
-                le_full_filt.append(dbLexicalEntry.marked_for_deletion == False)
-            le_rows_full = DBSession.query(dbLexicalEntry).filter(*le_full_filt).all()
-            # Append-only update — already-added entries get overwritten with same data
-            _add('LexicalEntry', _filter_changed(le_rows_full))
+        # Pull only the link_'d LE IDs we don't yet have (small set):
+        if ent_ids and ent_ids_table is not None:
+            linked_le_rows = DBSession.execute(text(f"""
+                select distinct * from lexicalentry le, {ent_ids_table} t
+                 where le.client_id = t.link_client_id
+                   and le.object_id = t.link_object_id
+            """)).fetchall()
+            _add('LexicalEntry', _filter_changed(linked_le_rows))
 
         # --- Stage 10: PublishingEntity (1:1 by id with Entity) ---
         # Raw SELECT joined against the entity-ids temp table — RowProxy
@@ -758,32 +729,27 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         # --- Stage 12: Parser ---
         if parser_ids:
             pa_filt = [_id_pairs_in(dbParser, 'client_id', 'object_id', list(parser_ids))]
-            # Parser has no marked_for_deletion (or does it?) — apply if available
-            if hasattr(dbParser, 'marked_for_deletion') and action == 'create':
-                pa_filt.append(dbParser.marked_for_deletion == False)
             pa_rows = DBSession.query(dbParser).filter(*pa_filt).all()
             _add('Parser', _filter_changed(pa_rows))
 
     # --- Stage 13: TranslationGist (all collected) ---
     if gist_ids:
         tg_filt = [_id_pairs_in(dbTranslationGist, 'client_id', 'object_id', list(gist_ids))]
-        if action == 'create':
-            tg_filt.append(dbTranslationGist.marked_for_deletion == False)
         tg_rows = DBSession.query(dbTranslationGist).filter(*tg_filt).all()
         _add('TranslationGist', _filter_changed(tg_rows), also_subject=True)
 
     # --- Stage 14: TranslationAtom (children of those gists) ---
     if gist_ids:
-        ta_filt = [
-            tuple_(dbTranslationAtom.parent_client_id, dbTranslationAtom.parent_object_id)
-                .in_(ids_to_id_query(list(gist_ids)))]
+        ta_filt = [_id_pairs_in(dbTranslationAtom,
+                                'parent_client_id', 'parent_object_id', list(gist_ids))]
         if action == 'create':
             ta_filt.append(dbTranslationAtom.marked_for_deletion == False)
         ta_rows = DBSession.query(dbTranslationAtom).filter(*ta_filt).all()
         _add('TranslationAtom', _filter_changed(ta_rows), also_subject=True)
 
-    # Now we create empty perspecives if any is linked to current one
-    # We get even marked_for_deletion perspectives/dictionaries/languages
+    # --- Stage 15: LinkedPerspectives (children of current one) ---
+    # Now we create empty perspecives if any DictionaryPerspectiveToField has link_coid
+    # So we have to create langs/dicts/pers/gists/atoms. We'll get even marked_for_deletion ones
     for id in pers_ids:
         _walk_perspective_bulk(id, sync_point, 'edit', local_result,
                                client_ids, subject_ids, get_empty=True)
@@ -1168,13 +1134,14 @@ def MergeChanges(
         'task_key': task_status.key
     }
 
-    MergeChangesAsync.delay(perspective_id, **async_func_args, **args)
+    #MergeChangesAsync.delay(perspective_id, **async_func_args, **args)
+    MergeChangesAsync(perspective_id, **async_func_args, **args)
     # We return success result, but async
     # function may end not successfully
     return {'triumph': True, 'message': ""}
 
 
-@celery.task
+#@celery.task
 def MergeChangesAsync(
         perspective_id,
         local,
@@ -1392,18 +1359,16 @@ def MergeChangesAsync(
                     DBSession.flush()
                     transaction.commit()
 
-                #except (UniqueViolation, IntegrityError, ResourceClosedError) as e:
-
-                except IntegrityError as e:
+                except (IntegrityError, UniqueViolation, ResourceClosedError) as e:
                     # This case maybe due to race condition, so we skip it
                     if isinstance(e.orig, UniqueViolation):
                         DBSession.rollback()
                         transaction.abort()
-                        log.warning(str(e))
+                        log.debug(str(e))
                     else:
                         if debug_flag:
                             pass
-                            #A()
+                            A()
                         raise
 
                 except Exception as e:
