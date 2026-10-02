@@ -583,6 +583,19 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
             if L.translation_gist_client_id is not None:
                 gist_ids.add((L.translation_gist_client_id, L.translation_gist_object_id))
 
+    # --- Stage 4: LexicalEntry for the perspective ---
+    # We get lexical entries a little earlier to have linked lexes if any
+    le_filt = [
+        dbLexicalEntry.parent_client_id == pcid,
+        dbLexicalEntry.parent_object_id == poid,
+    ]
+    if action == 'create':
+        le_filt.append(dbLexicalEntry.marked_for_deletion == False)
+    le_rows = DBSession.query(dbLexicalEntry).filter(*le_filt).all()
+    _add('LexicalEntry', _filter_changed(le_rows))
+    for LE in le_rows:
+        le_ids.add((LE.client_id, LE.object_id))
+
     # We get only perspective itself if we need linked one for another perspective
     if not get_empty:
         # --- Stage 5: DictionaryPerspectiveToField (with self_ recursion) ---
@@ -622,19 +635,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                     if cid is not None and oid is not None:
                         gist_ids.add((cid, oid))
 
-        # --- Stage 7: LexicalEntry for the perspective ---
-        le_filt = [
-            dbLexicalEntry.parent_client_id == pcid,
-            dbLexicalEntry.parent_object_id == poid,
-        ]
-        if action == 'create':
-            le_filt.append(dbLexicalEntry.marked_for_deletion == False)
-        le_rows = DBSession.query(dbLexicalEntry).filter(*le_filt).all()
-        _add('LexicalEntry', _filter_changed(le_rows))
-        for LE in le_rows:
-            le_ids.add((LE.client_id, LE.object_id))
-
-        # --- Stage 8: Entity (recursive: self_, link_) ---
+        # --- Stage 7: Entity (recursive: self_, link_) ---
         # Use a temp table to avoid round-tripping 69K IDs Python<->SQL.
         # The recursive CTE populates the temp table directly; then the
         # ORM query JOINs against it to hydrate full Entity rows.
@@ -665,7 +666,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                   le_seed (cid, oid) as (values {le_values}),
                   field_seed (cid, oid) as (values {field_values}),
                   ent_walk as (
-                    select e.* from entity e, le_seed
+                    select e.* from entity e, le_seed, field_seed
                      where e.parent_client_id = le_seed.cid
                        and e.parent_object_id = le_seed.oid
                        and e.field_client_id = field_seed.cid
@@ -690,7 +691,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
             for E in ent_rows:
                 ent_ids.add((E.client_id, E.object_id))
 
-        # --- Stage 9: Re-fetch all LEs (now including link_'d ones) ---
+        # --- Stage 8: Re-fetch all LEs (now including link_'d ones) ---
         # Pull only the link_'d LE IDs we don't yet have (small set):
         if ent_ids and ent_ids_table is not None:
             linked_le_rows = DBSession.execute(text(f"""
@@ -700,7 +701,14 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
             """)).fetchall()
             _add('LexicalEntry', _filter_changed(linked_le_rows))
 
-        # --- Stage 10: PublishingEntity (1:1 by id with Entity) ---
+            # Found out if linked lexical entry is in another perspective
+            for LLE in linked_le_rows:
+                if (linked_pers_id := (LLE.parent_client_id, LLE.parent_object_id)) != tuple(perspective_id):
+                    pers_ids.add(linked_pers_id)
+                else:
+                    print(">>> !!! Linked lex is in current perspective")
+
+        # --- Stage 9: PublishingEntity (1:1 by id with Entity) ---
         # Raw SELECT joined against the entity-ids temp table — RowProxy
         # path, same shape as the Entity stage above.
         if ent_ids and ent_ids_table is not None:
@@ -711,7 +719,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
             """)).fetchall()
             _add('PublishingEntity', _filter_changed(pe_rows))
 
-        # --- Stage 11: ParserResult under entities (via entity_ FK) ---
+        # --- Stage 10: ParserResult under entities (via entity_ FK) ---
         # Raw SELECT joined against the entity-ids temp table.
         if ent_ids and ent_ids_table is not None:
             pr_md = "and pr.marked_for_deletion = false" if action == 'create' else ""
@@ -726,19 +734,19 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                 if PR.parser_client_id is not None:
                     parser_ids.add((PR.parser_client_id, PR.parser_object_id))
 
-        # --- Stage 12: Parser ---
+        # --- Stage 11: Parser ---
         if parser_ids:
             pa_filt = [_id_pairs_in(dbParser, 'client_id', 'object_id', list(parser_ids))]
             pa_rows = DBSession.query(dbParser).filter(*pa_filt).all()
             _add('Parser', _filter_changed(pa_rows))
 
-    # --- Stage 13: TranslationGist (all collected) ---
+    # --- Stage 12: TranslationGist (all collected) ---
     if gist_ids:
         tg_filt = [_id_pairs_in(dbTranslationGist, 'client_id', 'object_id', list(gist_ids))]
         tg_rows = DBSession.query(dbTranslationGist).filter(*tg_filt).all()
         _add('TranslationGist', _filter_changed(tg_rows), also_subject=True)
 
-    # --- Stage 14: TranslationAtom (children of those gists) ---
+    # --- Stage 13: TranslationAtom (children of those gists) ---
     if gist_ids:
         ta_filt = [_id_pairs_in(dbTranslationAtom,
                                 'parent_client_id', 'parent_object_id', list(gist_ids))]
@@ -747,7 +755,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         ta_rows = DBSession.query(dbTranslationAtom).filter(*ta_filt).all()
         _add('TranslationAtom', _filter_changed(ta_rows), also_subject=True)
 
-    # --- Stage 15: LinkedPerspectives (children of current one) ---
+    # --- Stage 14: LinkedPerspectives (children of current one) ---
     # Now we create empty perspecives if any DictionaryPerspectiveToField has link_coid
     # So we have to create langs/dicts/pers/gists/atoms. We'll get even marked_for_deletion ones
     for id in pers_ids:
@@ -1301,10 +1309,6 @@ def MergeChangesAsync(
                 # Reverse dicts to get linked perspectives first
                 table_data = dict(reversed(table_data.items()))
 
-            if table == "DictionaryPerspective":
-                print(f"\n!!! >>> Table '{table}'")
-                print([(value['client_id'], value['object_id'], value['created_at']) for value in table_data.values()])
-
             table_data_size = len(table_data)
 
             for j, (obj_coid, foreign_dict) in enumerate(table_data.items()):
@@ -1317,7 +1321,7 @@ def MergeChangesAsync(
                 local_update = local_dict.get('updated_at', min_date)
                 foreign_update = foreign_dict.get('updated_at')
                 foreign_content = foreign_dict.get('content', '')
-                foreign_deleted = foreign_dict.get('marked_for_deletion')
+                #foreign_deleted = foreign_dict.get('marked_for_deletion')
 
                 client_id, object_id = obj_coid.split(',')
 
@@ -1334,12 +1338,12 @@ def MergeChangesAsync(
 
                     if db_object is None:
                         # We don't add deleted element
-                        if not foreign_deleted:
-                            # Add new object
-                            db_object = model(**foreign_dict)
-                            DBSession.add(db_object)
+                        # if not foreign_deleted:
+                        # Add new object
+                        db_object = model(**foreign_dict)
+                        DBSession.add(db_object)
 
-                            action = 'added'
+                        action = 'added'
 
                     elif foreign_update > local_update:
                         # Delete client_id and object_id
