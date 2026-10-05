@@ -608,6 +608,7 @@ class Query(graphene.ObjectType):
 
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     tasks = graphene.List(Task)
+    is_complete_task = graphene.Field(graphene.Int, task_id=graphene.String(required=True))
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
 
@@ -1840,6 +1841,22 @@ class Query(graphene.ObjectType):
         tasks_dicts = TaskStatus.get_user_tasks(user.id, clear_out=True)
         tasks = [Task(**task_dict) for task_dict in tasks_dicts]
         return tasks
+
+    def resolve_is_complete_task(self, info, task_id):
+        request = info.context.request
+        client_id = info.context.client_id
+        if not client_id:
+            user_id = anonymous_userid(request)
+        else:
+            user_id = Client.get_user_by_client_id(client_id).id
+
+        task_objs = TaskStatus.get_user_tasks(user_id, task_id=task_id)
+        result = (
+            task_objs[0].progress == 100 and
+            task_objs[0].current_stage == task_objs[0].total_stages
+            if len(task_objs) == 1 else -1
+        )
+        return result
 
     def resolve_permission_lists(self, info, proxy, debug_flag=True):
 
@@ -5502,6 +5519,7 @@ class ApplySync(graphene.Mutation):
 
     message = graphene.List(graphene.String)
     triumph = graphene.Boolean()
+    task_id = graphene.String()
 
     @staticmethod
     def mutate(root, info, **args):

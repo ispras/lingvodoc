@@ -641,7 +641,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         # ORM query JOINs against it to hydrate full Entity rows.
         # PublishingEntity stage below also JOINs against the same temp table.
         ent_ids_table = None
-        if le_ids:
+        if le_ids and field_ids:
             ent_ids_table = 'xal_ent_ids_' + uuid.uuid4().hex
             le_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in le_ids)
             field_values = ', '.join(f"({c}::bigint, {o}::bigint)" for c, o in field_ids)
@@ -695,7 +695,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
         # Pull only the link_'d LE IDs we don't yet have (small set):
         if ent_ids and ent_ids_table is not None:
             linked_le_rows = DBSession.execute(text(f"""
-                select distinct * from lexicalentry le, {ent_ids_table} t
+                select distinct le.* from lexicalentry le, {ent_ids_table} t
                  where le.client_id = t.link_client_id
                    and le.object_id = t.link_object_id
             """)).fetchall()
@@ -706,7 +706,7 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
                 if (linked_pers_id := (LLE.parent_client_id, LLE.parent_object_id)) != tuple(perspective_id):
                     pers_ids.add(linked_pers_id)
                 else:
-                    print(">>> !!! Linked lex is in current perspective")
+                    print("!!! >>> Linked lex is in current perspective")
 
         # --- Stage 9: PublishingEntity (1:1 by id with Entity) ---
         # Raw SELECT joined against the entity-ids temp table — RowProxy
@@ -1145,7 +1145,7 @@ def MergeChanges(
     MergeChangesAsync.delay(perspective_id, **async_func_args, **args)
     # We return success result, but async
     # function may end not successfully
-    return {'triumph': True, 'message': ""}
+    return {'triumph': True, 'message': "", 'task_id': task_status.id}
 
 
 @celery.task
