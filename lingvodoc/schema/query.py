@@ -5517,7 +5517,7 @@ class ApplySync(graphene.Mutation):
         action = graphene.String()
         debug_flag = graphene.Boolean()
 
-    message = graphene.List(graphene.String)
+    message = graphene.String()
     triumph = graphene.Boolean()
     task_id = graphene.String()
 
