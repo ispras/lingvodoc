@@ -1851,11 +1851,11 @@ class Query(graphene.ObjectType):
             user_id = Client.get_user_by_client_id(client_id).id
 
         task_objs = TaskStatus.get_user_tasks(user_id, task_id=task_id)
-        result = (
-            task_objs[0].progress == 100 and
-            task_objs[0].current_stage == task_objs[0].total_stages
-            if len(task_objs) == 1 else -1
-        )
+        result = int(
+            (task_objs[0].progress == 100 and
+             task_objs[0].current_stage == task_objs[0].total_stages)
+            or task_objs[0].progress == -1
+            if len(task_objs) == 1 else -1)
         return result
 
     def resolve_permission_lists(self, info, proxy, debug_flag=True):

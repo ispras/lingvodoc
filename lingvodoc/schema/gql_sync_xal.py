@@ -703,10 +703,8 @@ def _walk_perspective_bulk(perspective_id, sync_point, action, local_result,
 
             # Found out if linked lexical entry is in another perspective
             for LLE in linked_le_rows:
-                if (linked_pers_id := (LLE.parent_client_id, LLE.parent_object_id)) != tuple(perspective_id):
+                if (linked_pers_id := (LLE.parent_client_id, LLE.parent_object_id)) != (pcid, poid):
                     pers_ids.add(linked_pers_id)
-                else:
-                    print("!!! >>> Linked lex is in current perspective")
 
         # --- Stage 9: PublishingEntity (1:1 by id with Entity) ---
         # Raw SELECT joined against the entity-ids temp table — RowProxy
@@ -1118,7 +1116,8 @@ def MergeChanges(
     if not CheckPermissions(info, perspective_id, action):
         return {
             'triumph': False,
-            'message': "You have no permissions to do sync"
+            'message': "You have no permissions to do sync",
+            'task_id': None
         }
 
     client_id = info.context.client_id
