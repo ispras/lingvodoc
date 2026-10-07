@@ -1120,6 +1120,8 @@ def MergeChanges(
             'task_id': None
         }
 
+    log.warning(f"\n!!! >>> Merging perspective: '{perspective_name}' | {perspective_id=}...")
+
     client_id = info.context.client_id
     user_id = dbClient.get_user_by_client_id(client_id).id
     task_status = TaskStatus(
@@ -1245,9 +1247,17 @@ def MergeChangesAsync(
                 DBSession.flush()
                 transaction.commit()
 
-        except (UniqueViolation, IntegrityError, ResourceClosedError):
-            DBSession.rollback()
-            transaction.abort()
+        except (IntegrityError, UniqueViolation, ResourceClosedError) as e:
+            # This case maybe due to race condition, so we skip it
+            if isinstance(e.orig, UniqueViolation):
+                DBSession.rollback()
+                transaction.abort()
+                log.debug(str(e))
+            else:
+                if debug_flag:
+                    pass
+                    #A()
+                raise
 
         except Exception as e:
             if debug_flag:
