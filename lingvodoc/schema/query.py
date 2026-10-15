@@ -754,6 +754,8 @@ class Query(graphene.ObjectType):
 
     is_paired = graphene.Boolean()
 
+    is_proxy = graphene.Boolean()
+
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
         client_id = info.context.client_id
@@ -5507,6 +5509,12 @@ class Query(graphene.ObjectType):
         paired = strtobool(settings['proxy'].get('paired', 'no'))
 
         return bool(paired)
+
+    def resolve_is_proxy(self, info):
+        settings = info.context.request.registry.settings
+        proxy = strtobool(settings['proxy'].get('proxy', 'false'))
+
+        return bool(proxy)
 
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
