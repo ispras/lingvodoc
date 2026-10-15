@@ -393,6 +393,7 @@ from operator import attrgetter
 from lingvodoc.scripts.list_cognates import entities_getter
 from lingvodoc.utils.proxy import ProxyPass
 from lingvodoc.views.v2.user_and_login import subdict
+from distutils.util import strtobool
 
 from pdb import set_trace as A
 
@@ -608,6 +609,7 @@ class Query(graphene.ObjectType):
 
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     tasks = graphene.List(Task)
+    is_complete_task = graphene.Field(graphene.Int, task_id=graphene.String(required=True))
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
 
@@ -749,6 +751,8 @@ class Query(graphene.ObjectType):
         graphene.Field(
             ObjectVal,
             category = graphene.Int(required = True)))
+
+    is_paired = graphene.Boolean()
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
@@ -1840,6 +1844,22 @@ class Query(graphene.ObjectType):
         tasks_dicts = TaskStatus.get_user_tasks(user.id, clear_out=True)
         tasks = [Task(**task_dict) for task_dict in tasks_dicts]
         return tasks
+
+    def resolve_is_complete_task(self, info, task_id):
+        request = info.context.request
+        client_id = info.context.client_id
+        if not client_id:
+            user_id = anonymous_userid(request)
+        else:
+            user_id = Client.get_user_by_client_id(client_id).id
+
+        task_objs = TaskStatus.get_user_tasks(user_id, task_id=task_id)
+        result = int(
+            (task_objs[0].progress == 100 and
+             task_objs[0].current_stage == task_objs[0].total_stages)
+            or task_objs[0].progress == -1
+            if len(task_objs) == 1 else -1)
+        return result
 
     def resolve_permission_lists(self, info, proxy, debug_flag=True):
 
@@ -5482,6 +5502,12 @@ class Query(graphene.ObjectType):
 
         return result
 
+    def resolve_is_paired(self, info):
+        settings = info.context.request.registry.settings
+        paired = strtobool(settings['proxy'].get('paired', 'no'))
+
+        return bool(paired)
+
 class PerspectivesAndFields(graphene.InputObjectType):
     perspective_id = LingvodocID()
     field_id = LingvodocID()
@@ -5500,8 +5526,9 @@ class ApplySync(graphene.Mutation):
         action = graphene.String()
         debug_flag = graphene.Boolean()
 
-    message = graphene.List(graphene.String)
+    message = graphene.String()
     triumph = graphene.Boolean()
+    task_id = graphene.String()
 
     @staticmethod
     def mutate(root, info, **args):

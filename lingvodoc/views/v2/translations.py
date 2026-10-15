@@ -31,7 +31,7 @@ from pyramid.view import view_config
 
 from sqlalchemy.exc import IntegrityError
 
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator#, add_user_to_group, check_client_id
 from lingvodoc.utils.creation import add_user_to_group, translationgist_contents, translationatom_contents
 from lingvodoc.utils.verification import check_client_id
@@ -271,16 +271,21 @@ def translation_service_search(request):
         return {'error': "invalid json"}
     searchstring = req['searchstring']
     try:
-        translationatom = DBSession.query(TranslationAtom)\
-            .join(TranslationGist).\
-            filter(TranslationAtom.content == searchstring,
-                   TranslationAtom.locale_id == 2,
-                   TranslationGist.type == 'Service')\
-            .one()
+        translationatom = (
+            DBSession
+                .query(TranslationAtom)
+                .join(TranslationGist)
+                .filter(
+                    TranslationAtom.content == searchstring,
+                    TranslationAtom.locale_id == 2,
+                    TranslationAtom.marked_for_deletion == False,
+                    TranslationGist.type == 'Service',
+                    TranslationGist.marked_for_deletion == False)
+                .one())
         response = translationgist_contents(translationatom.parent)
         request.response.status = HTTPOk.code
         return response
 
-    except NoResultFound:
+    except (NoResultFound, MultipleResultsFound):
         request.response.status = HTTPNotFound.code
-        return {'error': str("No result")}
+        return {'error': f"None or more than one '{searchstring}' english translation was found"}

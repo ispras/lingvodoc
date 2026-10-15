@@ -102,13 +102,15 @@ class TaskStatus():
             return TaskStatus(0, "Dummy task", "cache failure", 1)
 
     @classmethod
-    def get_user_tasks(cls, user_id, clear_out=False):
+    def get_user_tasks(cls, user_id, clear_out=False, task_id=None):
         task_list = []
         if CACHE:
             current_tasks = CACHE.get("current_tasks:" + str(user_id))
             current_tasks = dill.loads(current_tasks) if current_tasks else []
-            for task_id in current_tasks:
-                task = CACHE.get(task_id)
+            for task_key in current_tasks:
+                if task_id is not None and task_key != f'task:{task_id}':
+                    continue
+                task = CACHE.get(task_key)
                 if task:
                     task = dill.loads(task)
                     task_list.append(task)
