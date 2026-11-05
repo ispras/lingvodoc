@@ -1,0 +1,1203 @@
+ Language degree of endangerment (selection affects selected languages and dictionaries) : Լեզվի վերացման վտանգի աստիճան (ընտրությունն ազդում է ընտրված լեզուների և բառարանների վրա)
+ left : ձախ
+ right : աջ
+(for example, Eastern Mansi) as well as those that are in danger of extinction (that is, languages that have no more than 10 speakers over 60 years old left) : (օրինակ՝ արևելյան մանսի), ինչպես նաև վերացման վտանգի տակ գտնվողները (այսինքն՝ լեզուներ, որոնց կրողներից մնացել է ոչ ավելի քան 10 հոգի՝ 60 տարեկանից բարձր)
+.docx file does not have any tables : .docx ֆայլը չի պարունակում աղյուսակներ
+.docx file for convertion: : .docx ֆայլ փոխարկման համար՝
+.eaf file : .eaf ֆայլ
+.xlsx file : .xlsx ֆայլ
+300 text corpora : 300 տեքստային կորպուս
+A chance for many researchers to work simultaneously and independently : Բազմաթիվ հետազոտողների համար միաժամանակ և անկախ աշխատելու հնարավորություն
+A possibility to automatically check for errors in the processed data : Մշակված տվյալներում սխալների ավտոմատ ստուգման հնարավորություն
+a.* : a.*
+ablative : Abessive (բացակայության հոլով)
+About : Մասին
+About the organization : Կազմակերպության մասին
+absolutive : Absolutive (բացարձակ հոլով)
+Accept : Ընդունել
+Accept all selected : Ընդունել բոլոր ընտրվածները
+Accept Contributions : Ընդունել ներդրումները
+Accepted : Ընդունված է
+Accepted by : Ընդունված է՝
+accepted first : սկզբում ընդունվածը
+accepted last : վերջում ընդունվածը
+accusative : Accusative (ուղղական հոլով)
+Action : Գործողություն
+Actions : Գործողություններ
+Activate : Ակտիվացնել
+Activate / Deactivate : Ակտիվացնել / Ապաակտիվացնել
+Add : Ավելացնել
+Add all markers of the groups to which this marker belongs to the group : Ավելացնել խմբի այն խմբերի բոլոր նշիչները, որոնց պատկանում է այս նշիչը
+Add AND block : Ավելացնել AND բլոկ
+Add AND condition : Ավելացնել AND պայման
+Add connection : Ավելացնել կապ
+Add dictionaries of other language groups : Ավելացնել այլ լեզվախմբերի բառարաններ
+Add field : Ավելացնել դաշտ
+Add language : Ավելացնել լեզու
+Add lexical entry : Ավելացնել բառային միավոր
+Add link : Ավելացնել հղում
+Add marker to group : Ավելացնել նշիչ խմբին
+Add new column : Ավելացնել նոր սյունակ
+Add new field : Ավելացնել նոր դաշտ
+Add new translation gist : Ավելացնել թարգմանության նոր gist
+Add news : Ավելացնել նորություն
+Add one or more perspectives : Ավելացնել մեկ կամ ավելի perspective
+Add one or more translations : Ավելացնել մեկ կամ ավելի թարգմանություն
+Add OR block : Ավելացնել OR բլոկ
+Add OR condition : Ավելացնել OR պայման
+Add organization : Ավելացնել կազմակերպություն
+Add perspective : Ավելացնել perspective
+Add red star : Ավելացնել կարմիր աստղ
+Add roles : Ավելացնել դերեր
+Add to markup : Ավելացնել markup-ին
+Add to TOC : Ավելացնել պարունակությանը
+Add Translation : Ավելացնել թարգմանություն
+Add translation : Ավելացնել թարգմանություն
+Add variant : Ավելացնել տարբերակ
+Add words and transcriptions from paradigms to lexical entries : Ավելացնել բառեր և տրանսկրիպցիաներ պարադիգմաներից բառային միավորներին
+Add yellow star : Ավելացնել դեղին աստղ
+Added : Ավելացված է
+Added roles successfully : Դերերը հաջողությամբ ավելացվեցին
+Adding : Ավելացում
+Additional code : Լրացուցիչ կոդ
+additive : Additive (հավելյալ հոլով)
+adessiv : Adessive (մերձակա հոլով)
+adjective : Արժանվան
+Adjust perspectives set : Կարգավորել perspectives-ի հավաքածուն
+Administrate : Կառավարել
+Administrators : Ադմինիստրատորներ
+Adverb data : Ձևանիշի տվյալներ
+Adverb prefix filter : Ձևանիշի նախածանցի ֆիլտր
+Adverb specificity : Ձևանիշի սպեցիֆիկություն
+adverb(ial) : ձևանիշ(ային)
+Adverbs : Ձևանիշներ
+adverbs : ձևանիշներ
+affirmative : Հաստատական
+agent-like argument of canonical transitive verb : Կանոնիկ անցումային բայի գործակալ-նման արգումենտ
+alignment .docx : Հավասարեցման .docx
+All : Բոլորը
+All added : Բոլորը ավելացված են
+All characters : Բոլոր նիշերը
+All entries : Բոլոր գրառումները
+All removed : Բոլորը հեռացված են
+All replaced : Բոլորը փոխարինված են
+All tables : Բոլոր աղյուսակները
+All vowels : Բոլոր ձայնավորները
+allative : Allative (ուղղության հոլով)
+Allow sync : Թույլատրել համաժամեցումը
+Allow sync / Deny sync : Թույլատրել / Արգելել համաժամեցումը
+Amount of Lexical and Paradigmatic entries : Բառային և պարադիգմատիկ միավորների քանակ
+An option to create results of intellectual activity (RIAs) for the needs of writing reports and working with data : Ինտելեկտուալ գործունեության արդյունքների (ՌԻԱ) ստեղծման հնարավորություն հաշվետվությունների գրման և տվյալների հետ աշխատանքի համար
+an option to save the online map one has created as a link, and its automatic update when adding new materials to LingvoDoc : ստեղծված առցանց քարտեզը որպես հղում պահպանելու և LingvoDoc-ում նոր նյութեր ավելացնելիս դրա ավտոմատ թարմացման հնարավորություն
+Analysis library is absent, please contact system administrator : Վերլուծության գրադարանը բացակայում է, դիմեք համակարգի ադմինիստրատորին
+analysis of cognates, phonemes and allophones : հարազատ բառերի, ֆոնեմների և ալլոֆոնների վերլուծություն
+Analysis results : Վերլուծության արդյունքներ
+AND : AND
+and : և
+AND block : AND բլոկ
+Another suggestion was accepted, source perspective word and/or one of suggested cognate words or cognate groups have been connected : Այլ առաջարկություն ընդունվեց, սկզբնական perspective-ի բառը և/կամ առաջարկված հարազատ բառերից կամ խմբերից մեկը կապվեցին
+antipassive : Antipassive (հակադարձ ձև)
+Antonymous translation : Անтонիմային թարգմանություն
+Any three consecutive characters : Ցանկացած երեք հաջորդական նիշ
+Apply : Կիրառել
+Apply filter : Կիրառել ֆիլտրը
+Applying : Կիրառվում է
+Archive : Արխիվ
+Are you sure you want to delete dictionary : Վստա՞հ եք, որ ուզում եք ջնջել բառարանը
+Are you sure you want to delete file : Վստա՞հ եք, որ ուզում եք ջնջել ֆայլը
+Are you sure you want to delete perspective : Վստա՞հ եք, որ ուզում եք ջնջել perspective-ը
+Are you sure you want to delete this variant : Վստա՞հ եք, որ ուզում եք ջնջել այս տարբերակը
+Are you sure you want to move selected element : Վստա՞հ եք, որ ուզում եք տեղափոխել ընտրված տարրը
+Are you sure you want to remove selected element from markup : Վստա՞հ եք, որ ուզում եք հեռացնել ընտրված տարրը markup-ից
+Areas mode : Տարածքների ռեժիմ
+Armenian : Հայերեն
+article : Հոդված (կետ)
+Ask questions about the LingvoDoc program at : Հարցեր LingvoDoc ծրագրի մասին ուղղեք՝
+ASR service is unavailable : ASR ծառայությունը անհասանելի է
+assertive : Assertive (հաստատական)
+assumptive : Assumptive (ենթադրական)
+Attach : Կցել
+Attach new user : Կցել նոր օգտատեր
+Attached to another group : Կցված է այլ խմբի
+attributive : Attributive (վերաբերական)
+Audio : Աուդիո
+Audio recording is not supported in this browser : Աուդիո ձայնագրումը չի աջակցվում այս զննարկիչում
+Author : Հեղինակ
+Authors : Հեղինակներ
+automatic creation of dictionaries from text corpora : տեքստային կորպուսներից բառարանների ավտոմատ ստեղծում
+automatic segmentation of native speaker surveys, uploaded into the Telegram channel “LingvoDoc Support”, into separate words : “LingvoDoc Support” Telegram-ալիք բեռնված լեզվակիրների հարցումների առանձին բառերի ավտոմատ հատում
+auxiliary : Օժանդակ
+Available corpora : Հասանելի կորպուսներ
+Available dictionaries : Հասանելի բառարաններ
+Available parallel corpora : Հասանելի զուգահեռ կորպուսներ
+A≠a : A≠a
+Back : Հետ
+Base blob : Բազայի blob
+base sentence : Բազային նախադասություն
+Become a member : Դառնալ անդամ
+Become an administrator : Դառնալ ադմինիստրատոր
+Begin : Սկսել
+Beloborodov Ivan Borisovich : Բելոբորոդով Իվան Բորիսովիչ
+Belongs to a group : Պատկանում է խմբի
+benefactive : Benefactive (օգտակար հոլով)
+Bibliographic data of the source : Աղբյուրի մատենագիտական տվյալներ
+Bibliographic data of the translation : Թարգմանության մատենագիտական տվյալներ
+Bogomolov Igor Vladimirovich : Բոգոմոլով Իգոր Վլադիմիրովիչ
+Borisenko Oleg Dmitrievich : Բորիսենկո Օլեգ Դմիտրիևիչ
+Browse : Դիտել
+By Grants : Ըստ դրամաշնորհների
+By Languages : Ըստ լեզուների
+By Organizations : Ըստ կազմակերպությունների
+Calque : Քաղվածք
+Can approve lexical entries and publish : Կարող է հաստատել բառային միավորները և հրապարակել
+Can create dictionary roles and assign collaborators : Կարող է ստեղծել բառարանի դերեր և նշանակել համագործակիցներ
+Can create lexical entries : Կարող է ստեղծել բառային միավորներ
+Can create perspective roles and assign collaborators : Կարող է ստեղծել perspective-ի դերեր և նշանակել համագործակիցներ
+Can create perspectives : Կարող է ստեղծել perspectives
+Can deactivate lexical entries : Կարող է ապաակտիվացնել բառային միավորները
+Can delete dictionary : Կարող է ջնջել բառարանը
+Can delete lexical entries and entities : Կարող է ջնջել բառային միավորները և էությունները
+Can delete perspective : Կարող է ջնջել perspective-ը
+Can edit dictionary options : Կարող է խմբագրել բառարանի կարգավորումները
+Can edit dictionary status : Կարող է խմբագրել բառարանի կարգավիճակը
+Can edit perspective : Կարող է խմբագրել perspective-ը
+Can edit perspective status : Կարող է խմբագրել perspective-ի կարգավիճակը
+Can get dictionary role list : Կարող է ստանալ բառարանի դերերի ցանկը
+Can get perspective role list : Կարող է ստանալ perspective-ի դերերի ցանկը
+Can merge dictionaries and perspectives : Կարող է միավորել բառարաններ և perspectives
+Can resign users from dictionary editors : Կարող է հեռացնել օգտատերերին բառարանի խմբագիրներից
+Can resign users from perspective editors : Կարող է հեռացնել օգտատերերին perspective-ի խմբագիրներից
+Can view published lexical entries : Կարող է դիտել հրապարակված բառային միավորները
+Can view unpublished lexical entries : Կարող է դիտել չհրապարակված բառային միավորները
+Can't get data of the : Հնարավոր չէ ստանալ տվյալները՝
+Cancel : Չեղարկել
+Case : Հոլով
+Case-sensitive : Մեծատառի հաշվառմամբ
+causative : Causative (հրահրողական)
+changed at : Փոխվել է՝
+check .docx : Ստուգել .docx
+check .txt : Ստուգել .txt
+Check all : Նշել բոլորը
+Choose at least two parent corpora : Ընտրեք առնվազն երկու մայր կորպուս
+Choose at least two txt corpora or one json file : Ընտրեք առնվազն երկու txt կորպուս կամ մեկ json ֆայլ
+Choose groups for areas : Ընտրեք խմբեր տարածքների համար
+Choose markup tiers : Ընտրեք markup-ի մակարդակներ
+Choose parallel corpora : Ընտրեք զուգահեռ կորպուսներ
+Choose what : Ընտրեք ինչ
+classifier : Դասակարգիչ
+Clean any star : Մաքրել ցանկացած աստղ
+Clear : Մաքրել
+Clear all : Մաքրել բոլորը
+Clear completed : Մաքրել ավարտվածները
+Click here to download XLSX report : Սեղմեք այստեղ XLSX հաշվետվությունը ներբեռնելու համար
+Client type : Հաճախորդի տեսակ
+Close : Փակել
+Close input of language : Փակել լեզվի մուտքագրումը
+Cognate acoustic analysis : Հարազատ բառերի ակուստիկ վերլուծություն
+Cognate acoustic analysis is launched. Please check out tasks for details : Հարազատ բառերի ակուստիկ վերլուծությունը գործարկվել է: Մանրամասների համար տես առաջադրանքները
+Cognate analysis : Հարազատ բառերի վերլուծություն
+cognate groups : հարազատ բառերի խմբեր
+cognate groups were excluded from the analysis due to not having lexical entries in at least two selected dictionaries : հարազատ բառերի խմբերը բացառվեցին վերլուծությունից, քանի որ առնվազն երկու ընտրված բառարաններում չկան բառային միավորներ
+Cognate multi-language analysis : Հարազատ բառերի բազմալեզու վերլուծություն
+Cognate multi-language reconstruction : Հարազատ բառերի բազմալեզու վերակառուցում
+Cognate multi-language reconstruction requires dictionaries from at least 2 languages : Հարազատ բառերի բազմալեզու վերակառուցումը պահանջում է առնվազն 2 լեզվի բառարաններ
+Cognate multi-language suggestions : Հարազատ բառերի բազմալեզու առաջարկություններ
+Cognate multi-language suggestions (disabled, perspective is not published) : Հարազատ բառերի բազմալեզու առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+Cognate reconstruction : Հարազատ բառերի վերակառուցում
+Cognate suggestions : Հարազատ բառերի առաջարկություններ
+Cognate suggestions (disabled, perspective is not published) : Հարազատ բառերի առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+Cognate suggestions are available only for perspectives in the “Published” or “Limited access” state : Հարազատ բառերի առաջարկությունները հասանելի են միայն “Հրապարակված” կամ “Սահմանափակ հասանելիություն” կարգավիճակում գտնվող perspectives-ի համար
+Cognates summary : Հարազատ բառերի ամփոփում
+Columns Mapping : Սյունակների համադրում
+Combine with adjacent interval characters : Միավորել հարակից ինտերվալի նիշերի հետ
+comitative : Comitative (ուղեկցության հոլով)
+comparativ : Comparativ (համեմատական)
+Compare : Համեմատել
+Compare data loading error : Համեմատման տվյալների բեռնման սխալ
+Compensation : Փոխհատուցում
+Composite distance : Բարդ հեռավորություն
+Computation is going. Please see the sidebar with tasks : Հաշվարկը ընթացքի մեջ է: Տես առաջադրանքների կողային վահանակը
+Compute : Հաշվել
+Computing : Հաշվարկվում է
+computing modules of the system : Համակարգի հաշվողական մոդուլներ
+conditional : Conditional (պայմանական)
+confidence : Վստահություն
+Confirm Password : Հաստատեք գաղտնաբառը
+Confirmation : Հաստատում
+Connect : Կապել
+Connect all selected : Կապել բոլոր ընտրվածները
+Connected : Կապված
+connected : կապված
+Connecting : Կապում
+Connecting : Կապում
+connecting : կապում
+Contacts : Կոնտակտներ
+Contibutions : Ներդրումներ
+continius : Continuative (շարունակական)
+continuative : Continuative (շարունակական)
+Contributions : Ներդրումներ
+converb : Converb (դերբայական մասնակից)
+Conversion is in progress : Փոխարկումը ընթացքի մեջ է
+Convert : Փոխարկել
+Convert additional markup : Փոխարկել լրացուցիչ markup-ը
+Convert morphology concordance : Փոխարկել ձևաբանական համապատասխանությունը
+Convert to dictionary : Փոխարկել բառարանի
+Converted successfully : Հաջողությամբ փոխարկվեց
+Converting : Փոխարկվում է
+Convertion error : Փոխարկման սխալ
+Convertion failed : Փոխարկումը ձախողվեց
+Copy failed — please select and copy the text manually : Պատճենումը ձախողվեց — ընտրեք և պատճենեք տեքստը ձեռքով
+Copy transcription : Պատճենել տրանսկրիպցիան
+Core : Միջուկ
+Corpora : Կորպուսներ
+Corpora created : Կորպուսները ստեղծված են
+Corpus names and metadata : Կորպուսի անուններ և մետատվյալներ
+Corpus search : Կորպուսի որոնում
+Could not get user information : Հնարավոր չեղավ ստանալ օգտատիրոջ տեղեկատվությունը
+Could not reach the ASR service : Հնարավոր չեղավ հասնել ASR ծառայությանը
+Could not reach the TTS service : Հնարավոր չեղավ հասնել TTS ծառայությանը
+Could not sign out : Հնարավոր չեղավ դուրս գալ
+Create : Ստեղծել
+Create a new field : Ստեղծել նոր դաշտ
+Create a new perspective : Ստեղծել նոր perspective
+Create corpus : Ստեղծել կորպուս
+Create dictionary : Ստեղծել բառարան
+Create field : Ստեղծել դաշտ
+Create language : Ստեղծել լեզու
+Create markup : Ստեղծել markup
+Create new : Ստեղծել նորը
+Create new perspective : Ստեղծել նոր perspective
+Create one or more perspectives : Ստեղծել մեկ կամ ավելի perspectives
+Create organization : Ստեղծել կազմակերպություն
+Create perspective : Ստեղծել perspective
+Create valency data : Ստեղծել կապակցության տվյալներ
+Created : Ստեղծված է
+Created at : Ստեղծվել է՝
+Created by : Ստեղծող՝
+Created valency data : Ստեղծված կապակցության տվյալներ
+creating any columns; adding any text, audio files, marking spectrograms using the Praat phonetic software; creating etymological connections between words from different dictionaries : ցանկացած սյունակների ստեղծում; ցանկացած տեքստի, աուդիո ֆայլերի ավելացում, սպեկտրոգրամների նշում Praat ծրագրի միջոցով; տարբեր բառարանների բառերի միջև էտիմոլոգիական կապերի ստեղծում
+creating search queries of any type of complexity and plotting them on the map : ցանկացած բարդության որոնման հարցումների ստեղծում և դրանց քարտեզի վրա տեղադրում
+Creating valency data : Կապակցության տվյալների ստեղծում
+Critically endangered : Կրիտիկական վտանգված
+cuncative : Cuncative (հապաղողական)
+Dashboard : Վահանակ
+data processing and analysis software: phonetic analysis; search for etymologies; analysis of cognates in dialects and several languages; acoustic analysis of cognates; measuring phonological statistical distance; phonemic analysis; reconstruction of cognates in dialects and several languages : տվյալների մշակման և վերլուծության ծրագրային ապահովում՝ հնչեթական վերլուծություն; էտիմոլոգիաների որոնում; բարբառների և մի քանի լեզուների հարազատ բառերի վերլուծություն; հարազատ բառերի ակուստիկ վերլուծություն; ֆոնոլոգիական վիճակագրական հեռավորության չափում; ֆոնեմային վերլուծություն; բարբառների և մի քանի լեզուների հարազատ բառերի վերակառուցում
+data processing with existing parsers (for the Erzya, Moksha, Udmurt, Komi, Kazakh, Tatar languages) or creating new parsers quickly and integrating them into LingvoDoc : տվյալների մշակում առկա վերլուծիչներով (էրզյա, մոկշա, ուդմուրտ, կոմի, ղազախ, թաթար լեզուների համար) կամ նոր վերլուծիչների արագ ստեղծում և LingvoDoc-ում ինտեգրում
+Data source : Տվյալների աղբյուր
+Date : Ամսաթիվ
+Date removed from publication : Հրապարակումից հեռացման ամսաթիվ
+dative : Dative (տրամադրական հոլով)
+Deactivate : Ապաակտիվացնել
+Debug flag : Debug դրոշակ
+declarative : Declarative (հայտարարական)
+definite : Definite (որոշյալ)
+Definitely endangered : Որոշակի վտանգված
+Delete : Ջնջել
+Delete groups : Ջնջել խմբերը
+Delete image file : Ջնջել պատկերի ֆայլը
+Delete markup : Ջնջել markup-ը
+Delete markup file : Ջնջել markup-ի ֆայլը
+Delete markup group : Ջնջել markup-ի խումբը
+Delete markup(s) : Ջնջել markup(-ներ)ը
+Delete markup(s) with related groups : Ջնջել markup(-ներ)ը կապված խմբերի հետ
+Delete organization : Ջնջել կազմակերպությունը
+Delete parser results : Ջնջել վերլուծիչի արդյունքները
+Delete selected markups and related groups? Are you sure : Ջնջե՞լ ընտրված markups-ները և կապված խմբերը: Վստա՞հ եք
+Delete sound file : Ջնջել ձայնային ֆայլը
+Deleting : Ջնջվում է
+deliberativ : Deliberativ (կանխամտածված)
+demonstrative : Demonstrative (ցուցական)
+Deny sync : Արգելել համաժամեցումը
+Descriptive translation : Նկարագրական թարգմանություն
+Designed for compiling, analyzing and storing dictionaries, corpora and concordances of various languages and dialects : Նախատեսված է տարբեր լեզուների և բարբառների բառարանների, կորպուսների և համապատասխանությունների կազմման, վերլուծության և պահպանման համար
+Desktop : Desktop
+desktop : desktop
+Detach the user : Անջատել օգտատիրոջը
+determiner : Determiner (որոշիչ)
+development of the architecture and core of the system : Համակարգի ճարտարապետության և միջուկի մշակում
+development of the system core : Համակարգի միջուկի մշակում
+Dialeqt : Dialeqt
+Dialeqt file : Dialeqt ֆայլ
+Dictionaries : Բառարաններ
+dictionaries : բառարաններ
+Dictionaries created out of grant : Դրամաշնորհից դուրս ստեղծված բառարաններ
+Dictionary : Բառարան
+dictionary : բառարան
+Dictionary created : Բառարանը ստեղծված է
+Dictionary data loading error : Բառարանի տվյալների բեռնման սխալ
+Dictionary data loading error, please contact administrators : Բառարանի տվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+Dictionary info loading error : Բառարանի տեղեկատվության բեռնման սխալ
+Dictionary info loading error, please contact adiministrators : Բառարանի տեղեկատվության բեռնման սխալ, դիմեք ադմինիստրատորներին
+Dictionary names : Բառարանի անուններ
+Dictionary names and metadata : Բառարանի անուններ և մետատվյալներ
+Disable all markers of the groups this marker belongs to : Անջատել այն խմբերի բոլոր նշիչները, որոնց պատկանում է այս նշիչը
+Disable marker : Անջատել նշիչը
+Disambiguated tokens : Միիմաստեցված թոքեններ
+Disambiguation : Միիմաստեցում
+Disambiguation statistics (not restricted by time interval, may take quite a lot of time to compute) : Միիմաստեցման վիճակագրություն (չի սահմանափակվում ժամանակային ինտերվալով, հաշվարկը կարող է զգալի ժամանակ պահանջել)
+Disconnect : Անջատել
+Disconnected : Անջատված
+Display mode : Ցուցադրման ռեժիմ
+Distance map : Հեռավորության քարտեզ
+distributive : Distributive (բաշխական)
+Doesn't have etymology : Չունի էտիմոլոգիա
+Download FLAC : Ներբեռնել FLAC
+Drop Here : Տեղադրեք այստեղ
+dual : Dual (երկակի թիվ)
+Duration : Տևողություն
+durative : Durative (տևական)
+Dybo Anna Vladimirovna : Դիբո Աննա Վլադիմիրովնա
+Edit : Խմբագրել
+Edit interface translations : Խմբագրել ինտերֆեյսի թարգմանությունները
+Edit of the dialects classification : Բարբառների դասակարգման խմբագրում
+Edit profile : Խմբագրել պրոֆիլը
+Edit translations : Խմբագրել թարգմանությունները
+editor-in-chief of the website : Կայքի գլխավոր խմբագիր
+elatv : Elative (ելակային հոլով)
+Elecard-Med LLC : Elecard-Med ՍՊԸ
+Email : Էլ. փոստ
+Email is required : Էլ. փոստը պարտադիր է
+Empty : Դատարկ
+Empty search query and no language/metadata conditions : Դատարկ որոնման հարցում և լեզվի/մետատվյալների պայմաններ չկան
+Empty substrings are not allowed : Դատարկ ենթատողերը չեն թույլատրվում
+End : Ավարտ
+Enter Armenian text to synthesize : Մուտքագրեք հայերեն տեքստ՝ սինթեզի համար
+Entities : Էություններ
+entity : էություն
+Entity matching algorithm : Էությունների համադրման ալգորիթմ
+Entity matching threshold : Էությունների համադրման շեմ
+Entity status : Էության կարգավիճակ
+Entity type : Էության տեսակ
+ergative : Ergative (երգատիվ)
+errors : սխալներ
+essiv : Essive (եսիվ)
+Etymological distance tree : Էտիմոլոգիական հեռավորության ծառ
+Excel file : Excel ֆայլ
+Exclude adoptions : Բացառել փոխառությունները
+exclusive : Exclusive (բացառող)
+Execute : Կատարել
+Expedition : Արշավախումբ
+Export phonology data to a CSV file : Արտահանել հնչույթաբանական տվյալները CSV ֆայլ
+Export to XLSX : Արտահանել XLSX
+Extinct : Անհետացած
+extinct languages : անհետացած լեզուներ
+Failed search query : Ձախողված որոնման հարցում
+Failed to add : Հնարավոր չեղավ ավելացնել
+Failed to ban user : Հնարավոր չեղավ արգելափակել օգտատիրոջը
+Failed to compute cognate analysis : Հնարավոր չեղավ հաշվել հարազատ բառերի վերլուծությունը
+Failed to compute cognate analysis! Analysis library or server connection error : Հնարավոր չեղավ հաշվել հարազատ բառերի վերլուծությունը։ Վերլուծության գրադարանի կամ սերվերի կապի սխալ
+Failed to compute cognate analysis! Server connection error : Հնարավոր չեղավ հաշվել հարազատ բառերի վերլուծությունը։ Սերվերի կապի սխալ
+Failed to compute phonemic analysis : Հնարավոր չեղավ հաշվել ֆոնեմային վերլուծությունը
+Failed to compute valency verb cases analysis : Հնարավոր չեղավ հաշվել կապակցության բայական հոլովների վերլուծությունը
+Failed to connect selected lexical entries, please contact developers : Հնարավոր չեղավ կապել ընտրված բառային միավորները, դիմեք մշակողներին
+Failed to delete organization : Հնարավոր չեղավ ջնջել կազմակերպությունը
+Failed to get search link, please contact administrators : Հնարավոր չեղավ ստանալ որոնման հղումը, դիմեք ադմինիստրատորներին
+Failed to launch cognate acoustic analysis : Հնարավոր չեղավ գործարկել հարազատ բառերի ակուստիկ վերլուծությունը
+Failed to launch neuro cognate analysis : Հնարավոր չեղավ գործարկել նեյրո հարազատ բառերի վերլուծությունը
+Failed to launch phonological statistical distance computation : Հնարավոր չեղավ գործարկել հնչույթաբանական վիճակագրական հեռավորության հաշվարկը
+Failed to launch phonology compilation : Հնարավոր չեղավ գործարկել հնչույթաբանության կազմումը
+Failed to launch saving dictionary task : Հնարավոր չեղավ գործարկել բառարանի պահպանման առաջադրանքը
+Failed to launch sound and markup compilation : Հնարավոր չեղավ գործարկել ձայնի և markup-ի կազմումը
+Failed to launch valency data compilation : Հնարավոր չեղավ գործարկել կապակցության տվյալների կազմումը
+Failed to merge selected lexical entries, please contact developers : Հնարավոր չեղավ միավորել ընտրված բառային միավորները, դիմեք մշակողներին
+Failed to remove : Հնարավոր չեղավ հեռացնել
+Failed to start convertion to a new dictionary : Հնարավոր չեղավ սկսել փոխարկումը նոր բառարանի
+Failed to start dictionary update : Հնարավոր չեղավ սկսել բառարանի թարմացումը
+Failure : Ձախողում
+Fast Track formant extraction : Fast Track ֆորմանտների արդյունահանում
+Favorite corpora : Նախընտրած կորպուսներ
+Favorite dictionaries : Նախընտրած բառարաններ
+feminine : Իգական
+Field : Դաշտ
+Field data loading error : Դաշտի տվյալների բեռնման սխալ
+Field selection : Դաշտի ընտրություն
+Field Type : Դաշտի տեսակ
+Fields : Դաշտեր
+File selection : Ֆայլի ընտրություն
+Files : Ֆայլեր
+Fill metadata information : Լրացրեք մետատվյալների տեղեկատվությունը
+Filter : Ֆիլտր
+Filtered adverbs : Զտված ձևանիշներ
+Filtered verbs : Զտված բայեր
+Finish : Ավարտել
+first person : Առաջին դեմք
+Focus : Ֆոկուս
+Follow : Հետևել
+Follow the link to learn more about using these options : Հետևեք հղմանը՝ այս տարբերակների օգտագործման մասին ավելին իմանալու համար
+for commercial purposes, you must sign an agreement with ISP RAS : կոմերցիոն նպատակների համար անհրաժեշտ է պայմանագիր կնքել ISP RAS-ի հետ
+For grantees and commercial use : Դրամաշնորհառուների և կոմերցիոն օգտագործման համար
+For the time being Distance Map functionality is available only for the administrator : Ներկայումս Հեռավորության քարտեզի ֆունկցիոնալությունը հասանելի է միայն ադմինիստրատորին
+Formant chart threshold : Ֆորմանտային գրաֆիկի շեմ
+Formatted transcription : Ձևաչափված տրանսկրիպցիա
+Found : Գտնված է
+From : Սկսած
+from TOC : պարունակությունից
+From : Սկսած
+frontend : frontend
+Full name : Ամբողջական անուն
+Full string : Ամբողջական տող
+future : Ապագա
+General error, please contact administrators : Ընդհանուր սխալ, դիմեք ադմինիստրատորներին
+genitive : Genitive (սեռական հոլով)
+Genre : Ժանր
+Genus : Ցեղ
+Get cognates summary : Ստանալ հարազատ բառերի ամփոփում
+Get composite distance between languages : Ստանալ լեզուների միջև բարդ հեռավորություն
+Get link to search results : Ստանալ որոնման արդյունքների հղումը
+Getting link to search results : Որոնման արդյունքների հղման ստացում
+Glottochronology : Գլոտոքրոնոլոգիա
+Glottochronology (Swadesh-Starostin) : Գլոտոքրոնոլոգիա (Swadesh-Starostin)
+Glottochronology (Swadesh-Starostin) multi-language : Գլոտոքրոնոլոգիա (Swadesh-Starostin) բազմալեզու
+Glottochronology multi-language : Գլոտոքրոնոլոգիա բազմալեզու
+Go : Գնալ
+Go to page : Գնալ էջին
+Grammar : Քերականություն
+Grant : Դրամաշնորհ
+Grant Issuer : Դրամաշնորհ տրամադրող
+Grant Number : Դրամաշնորհի համար
+Grant URL : Դրամաշնորհի URL
+Grants : Դրամաշնորհներ
+Grants and organizations : Դրամաշնորհներ և կազմակերպություններ
+GraphQL error: Request already exists : GraphQL սխալ՝ հարցումն արդեն գոյություն ունի
+Group : Խումբ
+Group doesn't have any unmerged lexical entries left : Խմբում չմիավորված բառային միավորներ չեն մնացել
+Group phonology data by markup descriptions : Խմբավորել հնչույթաբանության տվյալները ըստ markup նկարագրությունների
+Grouping field : Խմբավորման դաշտ
+Grouping field selection : Խմբավորման դաշտի ընտրություն
+Grouping tag : Խմբավորման թեգ
+habitualis : Habitualis (սովորական)
+Has audio : Ունի աուդիո
+Has etymology : Ունի էտիմոլոգիա
+has linked field : ունի կապված դաշտ
+Help : Օգնություն
+here : այստեղ
+Hide dashes : Թաքցնել գծերը
+Hiding sentences : Նախադասությունների թաքցում
+Human settlement : Բնակավայր
+id : id
+If you receive a grant for the development of the platform or intend to use it : Եթե ստանում եք դրամաշնորհ հարթակի զարգացման համար կամ մտադիր եք այն օգտագործել
+Ignore adoptions : Անտեսել փոխառությունները
+Ignore diacritics : Անտեսել դիակրիտիկները
+Ignore etymology : Անտեսել էտիմոլոգիան
+illative : Illative (ներսային հոլով)
+Image : Պատկեր
+imperative : Imperative (պատվիրան)
+imperfective : Imperfective (անավարտ տեսակ)
+Import : Ներմուծում
+Import dialeqt : Ներմուծել dialeqt
+Import Dialeqt dictionary : Ներմուծել Dialeqt բառարան
+Import Excel and Starling dictionaries : Ներմուծել Excel և Starling բառարաններ
+Import parallel corpora : Ներմուծել զուգահեռ կորպուսներ
+Import Starling dictionaries : Ներմուծել Starling բառարաններ
+In field : Դաշտում
+In processing : Մշակման մեջ
+inclusive : Inclusive (ներառող)
+indefinite : Indefinite (անորոշ)
+indicative : Indicative (ցուցական)
+indirective : Indirective (անուղղակի)
+Individual work : Անհատական աշխատանք
+inessiv : Inessive (ներքին հոլով)
+infinitive : Infinitive (անորոշ բայ)
+Info : Տեղեկատվություն
+Informant : Տեղեկատու
+input file is not a .docx format file : Մուտքային ֆայլը .docx ձևաչափի չէ
+Instances : Դեպքեր
+Institute of Linguistics Russian Academy of Sciences : Ռուսաստանի գիտությունների ակադեմիայի Լեզվաբանության ինստիտուտ
+instrumental : Instrumental (գործիական հոլով)
+Intermediate data : Միջանկյալ տվյալներ
+Interrogator : Հարցիչ
+intersections : հատումներ
+intransitive : Intransitive (անանցում)
+Invalid email address : Սխալ էլ. փոստի հասցե
+Invalid regular expression : Սխալ կանոնավոր արտահայտություն
+Invalid search condition matching type, please contact administrators : Սխալ որոնման պայմանի համադրման տեսակ, դիմեք ադմինիստրատորներին
+Invalidated : Անվավեր
+invalidated : անվավեր
+Ipatov Stepan Anatolievich : Իպատով Ստեփան Անատոլիևիչ
+irrealis : Irrealis (ոչ իրական)
+Issuer URL : Տրամադրողի URL
+It currently contains : Այն ներկայումս պարունակում է
+It keeps records on some : Այն պահում է գրառումներ որոշ
+It stores : Այն պահում է
+Items per page : Տարրեր մեկ էջում
+iterative : Iterative (կրկնվող)
+Ivannikov Institute for System Programming of the Russian Academy of Sciences : Ռուսաստանի գիտությունների ակադեմիայի Վ.Պ. Իվաննիկովի անվան Համակարգային ծրագրավորման ինստիտուտ
+Join : Միանալ
+Join markups : Միավորել markups-ները
+Json : Json
+JSON-exported analysis results : JSON-արտահանված վերլուծության արդյունքներ
+Keep : Պահել
+Keep skipped vowel interval characters : Պահել բաց թողնված ձայնավորի ինտերվալի նիշերը
+Language : Լեզու
+language : լեզու
+Language corpora : Լեզվի կորպուսներ
+Language databases : Լեզվի տվյալների բազաներ
+Language degree of endangerment : Լեզվի վերացման վտանգի աստիճան
+Language edit : Լեզվի խմբագրում
+Language genetic proximity map : Լեզվի գենետիկ մոտության քարտեզ
+Language Selection : Լեզվի ընտրություն
+Language(s) closest parent group : Լեզվի(ների) ամենամոտ մայր խումբ
+Language(s) group or title : Լեզվի(ների) խումբ կամ անվանում
+Languages : Լեզուներ
+Languages databases : Լեզուների տվյալների բազաներ
+Last modified at : Վերջին փոփոխություն՝
+left : ձախ
+left for now : ձախ առայժմ
+Left text : Ձախ տեքստ
+Legend : Լեգենդ
+Levenshtein distance limit for entity content matching : Լևենշտեյնի հեռավորության սահման էությունների բովանդակության համադրման համար
+Lexical entries : Բառային միավորներ
+Lexical entries not found : Բառային միավորներ չեն գտնվել
+Lexico-grammatical replacement : Բառարանա-քերականական փոխարինում
+Library of linguistic maps : Լեզվաբանական քարտեզների գրադարան
+License : Լիցենզիա
+limitative : Limitative (սահմանող)
+Lingtrain aligner : Lingtrain հավասարեցնող
+Lingvodoc creators : Lingvodoc-ի ստեղծողներ
+Lingvodoc Github : Lingvodoc Github
+LingvoDoc is a linguistic platform : LingvoDoc-ը լեզվաբանական հարթակ է
+Link : Հղում
+Link columns from files with each other : Կապել ֆայլերի սյունակները միմյանց հետ
+Link data loading error, please contact administrators : Հղման տվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+Link requested : Հղումը հարցված է
+Link to search results : Որոնման արդյունքների հղում
+Linked organizations : Կապված կազմակերպություններ
+Linking : Կապում
+Literal translation : Բառացի թարգմանություն
+Loading : Բեռնվում է
+Loading additional filter data : Լրացուցիչ ֆիլտրի տվյալների բեռնում
+Loading adjacent character data : Հարակից նիշի տվյալների բեռնում
+Loading adverb data : Ձևանիշի տվյալների բեռնում
+Loading dictionary data : Բառարանի տվյալների բեռնում
+Loading field data : Դաշտի տվյալների բեռնում
+Loading field template : Դաշտի ձևանմուշի բեռնում
+Loading file data : Ֆայլի տվյալների բեռնում
+Loading language data : Լեզվի տվյալների բեռնում
+Loading linked perspective data : Կապված perspective-ի տվյալների բեռնում
+Loading locale data : Լոկալի տվյալների բեռնում
+Loading markup data : Markup-ի տվյալների բեռնում
+Loading markups and groups data : Markups-ների և խմբերի տվյալների բեռնում
+Loading metadata : Մետատվյալների բեռնում
+Loading perspective data : Perspective-ի տվյալների բեռնում
+Loading perspective selection : Perspective-ի ընտրության բեռնում
+Loading role data : Դերի տվյալների բեռնում
+Loading sign-in data : Մուտքի տվյալների բեռնում
+Loading skipped character data : Բաց թողնված նիշի տվյալների բեռնում
+Loading suggestions : Առաջարկությունների բեռնում
+Loading tag data : Թեգի տվյալների բեռնում
+Loading tier data : Մակարդակի տվյալների բեռնում
+Loading user data : Օգտատիրոջ տվյալների բեռնում
+Loading valency data : Կապակցության տվյալների բեռնում
+Loading valency verb cases data : Կապակցության բայական հոլովների տվյալների բեռնում
+Local : Տեղական
+Local Update : Տեղական թարմացում
+Locale data loading error : Լոկալի տվյալների բեռնման սխալ
+Location : Տեղադրություն
+locative : Locative (տեղական հոլով)
+Login : Մուտք
+Login is required : Մուտքը պարտադիր է
+Make sure the model archive is deployed (e.g. to ~/asr-hy-cpu) and gunicorn is running, then reload this dialog : Համոզվեք, որ մոդելի արխիվը տեղակայված է (օր. ~/asr-hy-cpu) և gunicorn-ը աշխատում է, ապա վերաբեռնեք այս երկխոսությունը
+Make sure the tts-hy container is running and its healthcheck reports ready, then reload this dialog : Համոզվեք, որ tts-hy կոնտեյները աշխատում է և դրա healthcheck-ը հայտնում է պատրաստի մասին, ապա վերաբեռնեք այս երկխոսությունը
+Many dialects have already disappeared, and the LingvoDoc platform holds data from archives, which are presently stacked and inaccessible : Բազմաթիվ բարբառներ արդեն անհետացել են, և LingvoDoc հարթակը պարունակում է տվյալներ արխիվներից, որոնք ներկայումս դեպոզիտացված են և անհասանելի
+Map : Քարտեզ
+map : քարտեզ
+Map columns to LingvoDoc types : Համադրել սյունակները LingvoDoc-ի տեսակների հետ
+Map dictionaries to LingvoDoc languages : Համադրել բառարանները LingvoDoc-ի լեզուների հետ
+Map dictionary to LingvoDoc language : Համադրել բառարանը LingvoDoc-ի լեզվի հետ
+Map linked columns to LingvoDoc types : Համադրել կապված սյունակները LingvoDoc-ի տեսակների հետ
+Map of the languages and dialects : Լեզուների և բարբառների քարտեզ
+mapping geographic areas : Աշխարհագրական տարածքների քարտեզագրում
+Maps : Քարտեզներ
+Markup data loading error : Markup-ի տվյալների բեռնման սխալ
+Markup groups were saved into xlsx file : Markup-ի խմբերը պահպանվել են xlsx ֆայլում
+Markup was created : Markup-ը ստեղծվել է
+Markup was deleted : Markup-ը ջնջվել է
+Markup was edited or moved : Markup-ը խմբագրվել կամ տեղափոխվել է
+Markup(s) with related groups were removed : Markup(-ներ)ը կապված խմբերի հետ հեռացվել են
+masculine : Արական
+Match : Համադրում
+Match translations : Համադրել թարգմանությունները
+Members : Անդամներ
+Merge all : Միավորել բոլորը
+Merge error : Միավորման սխալ
+Merge group : Միավորել խումբը
+Merge lexical entries : Միավորել բառային միավորները
+Merge lexical entries by meaning : Միավորել բառային միավորները ըստ իմաստի
+Merge selected on current page : Միավորել ընտրվածները ընթացիկ էջում
+Merge suggestions : Առաջարկությունների միավորում
+Merge task created successfully : Միավորման առաջադրանքը հաջողությամբ ստեղծվել է
+Merged successfully : Հաջողությամբ միավորվել է
+Merges are disabled due to an error, please contact developers : Միավորումները անջատված են սխալի պատճառով, դիմեք մշակողներին
+Merging selected on current page : Ընթացիկ էջում ընտրվածների միավորում
+Merging : Միավորում
+Message : Հաղորդագրություն
+Metadata : Մետատվյալներ
+Metadata loading error, please contact adiministrators : Մետատվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+Microphone access denied or unavailable : Խոսափողի հասանելիությունը մերժված է կամ անհասանելի
+Mikhail Oslon : Միխայիլ Օսլոն
+Minimum spanning tree (2d relative distance embedding) : Նվազագույն տարածքի ծառ (2d հարաբերական հեռավորության տեղադրում)
+Minimum spanning tree (3d relative distance embedding) : Նվազագույն տարածքի ծառ (3d հարաբերական հեռավորության տեղադրում)
+Mood / Form : Տրամադրություն / Ձև
+More than : Ավելի քան
+more than 1000 audio dictionaries : ավելի քան 1000 աուդիո բառարան
+Morphology distance : Ձևաբանական հեռավորություն
+Morphology distance multi-language : Ձևաբանական հեռավորություն բազմալեզու
+Move copied markup element : Տեղափոխել պատճենված markup-ի տարրը
+Move marker to group : Տեղափոխել նշիչը խմբին
+Move markup element : Տեղափոխել markup-ի տարրը
+moved on : տեղափոխվել է
+Multiple languages required : Պահանջվում են մի քանի լեզուներ
+My corpora : Իմ կորպուսները
+My dictionaries : Իմ բառարանները
+My files : Իմ ֆայլերը
+My parallel corpora : Իմ զուգահեռ կորպուսները
+Name : Անուն
+Name is required : Անունը պարտադիր է
+Naumova Alexandra Vladimirovna : Նաումովա Ալեքսանդրա Վլադիմիրովնա
+negation, negative : ժխտում, ժխտական
+Neologism : Նորակերծում
+Neuro borrowing computation : Նեյրո փոխառության հաշվարկ
+Neuro borrowing multi-language suggestions : Նեյրո փոխառության բազմալեզու առաջարկություններ
+Neuro borrowing multi-language suggestions (disabled, perspective is not published) : Նեյրո փոխառության բազմալեզու առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+Neuro cognate analysis is launched. Please check out tasks for details : Նեյրո հարազատ բառերի վերլուծությունը գործարկվել է: Մանրամասների համար տես առաջադրանքները
+Neuro cognate multi-language suggestions : Նեյրո հարազատ բառերի բազմալեզու առաջարկություններ
+Neuro cognate multi-language suggestions (disabled, perspective is not published) : Նեյրո հարազատ բառերի բազմալեզու առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+Neuro cognate suggestions : Նեյրո հարազատ բառերի առաջարկություններ
+Neuro cognate suggestions (disabled, perspective is not published) : Նեյրո հարազատ բառերի առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+Neuro cognates computation : Նեյրո հարազատ բառերի հաշվարկ
+neuter : Միջին
+never : երբեք
+New organization : Նոր կազմակերպություն
+New password : Նոր գաղտնաբառ
+News editor : Նորությունների խմբագիր
+Next : Հաջորդ
+Next Step : Հաջորդ քայլ
+No : Ոչ
+no : ոչ
+No adverbs : Ձևանիշներ չկան
+No assigned users : Նշանակված օգտատերեր չկան
+No audio : Աուդիո չկա
+No authors found : Հեղինակներ չեն գտնվել
+No authors found : Հեղինակներ չեն գտնվել
+No background tasks : Ֆոնային առաջադրանքներ չկան
+No coordinate data : Կոորդինատների տվյալներ չկան
+No data for cognate analysis : Հարազատ բառերի վերլուծության համար տվյալներ չկան
+No data found for analysis, please select another dictionary : Վերլուծության համար տվյալներ չեն գտնվել, ընտրեք այլ բառարան
+No data : Տվյալներ չկան
+No entries : Գրառումներ չկան
+No fields, click button below to add a new one : Դաշտեր չկան, սեղմեք ստորևի կոճակը՝ նորը ավելացնելու համար
+No file selected : Ֆայլ չի ընտրվել
+No filtered adverbs : Զտված ձևանիշներ չկան
+No filtered verbs : Զտված բայեր չկան
+No groups to select : Ընտրելի խմբեր չկան
+No header : Վերնագիր չկա
+No input words or words to compare is received : Մուտքային բառեր կամ համեմատելու բառեր չեն ստացվել
+No instances : Դեպքեր չկան
+No language degree of endangerment found : Լեզվի վերացման վտանգի աստիճան չի գտնվել
+No language degree of endangerment found : Լեզվի վերացման վտանգի աստիճան չի գտնվել
+No languages found : Լեզուներ չեն գտնվել
+No more locales : Ավելի շատ լոկալներ չկան
+No parsing : Վերլուծություն չկա
+no prefix : առանց նախածանցի
+No results found : Արդյունքներ չեն գտնվել
+No settlement found : Բնակավայր չի գտնվել
+No settlement found : Բնակավայր չի գտնվել
+No source perspective and/or perspective(s) for comparing is selected : Սկզբնական perspective և/կամ համեմատելու perspective(ներ) չեն ընտրվել
+No statistics for the selected period : Ընտրված ժամանակահատվածի համար վիճակագրություն չկա
+No suggestions : Առաջարկություններ չկան
+No translations : Թարգմանություններ չկան
+No verbs : Բայեր չկան
+No years found : Տարիներ չեն գտնվել
+No years found : Տարիներ չեն գտնվել
+nominative : Nominative (անունական հոլով)
+None : Ոչ մեկը
+Normanskaya Julia Viktorovna : Նորմանսկայա Յուլիա Վիկտորովնա
+Not accepted : Չի ընդունվել
+not changed : չի փոխվել
+Not chosen : Չի ընտրվել
+Not enough permissions to download or update perspective : Բավարար թույլտվություններ չկան perspective-ը ներբեռնելու կամ թարմացնելու համար
+Not supported : Չի աջակցվում
+Nothing here, sorry : Այստեղ ոչինչ չկա, ներողություն
+Nothing to : Ոչինչ չկա
+Number : Թիվ
+Number of native speakers : Լեզվակիրների քանակ
+object : օբյեկտ
+of : -ի
+of markup records : markup-ի գրառումների
+off : անջատված
+Off-grant projects : Դրամաշնորհից դուրս նախագծեր
+Old password : Հին գաղտնաբառ
+on : միացված
+on the endangered languages of Russia : Ռուսաստանի վտանգված լեզուների մասին
+Only authorized users can create new cognate connections based on cognate suggestions : Միայն լիազորված օգտատերերը կարող են ստեղծել նոր հարազատ կապեր հարազատ բառերի առաջարկությունների հիման վրա
+Only entries of paradigmatic annotated forms : Միայն պարադիգմատիկ նշված ձևերի գրառումներ
+Only for orphans (words not included in existing etymology groups) : Միայն որբերի համար (գոյություն ունեցող էտիմոլոգիայի խմբերում չներառված բառեր)
+Only high-order languages : Միայն բարձրակարգ լեզուներ
+Only longest vowels and vowels with highest intensity : Միայն ամենաերկար ձայնավորները և ամենաբարձր ինտենսիվությամբ ձայնավորները
+Only registered users can convert .docx to .eaf : Միայն գրանցված օգտատերերը կարող են փոխարկել .docx-ը .eaf-ի
+Only registered users can convert .docx to .xlsx : Միայն գրանցված օգտատերերը կարող են փոխարկել .docx-ը .xlsx-ի
+Only registered users can create new search links : Միայն գրանցված օգտատերերը կարող են ստեղծել նոր որոնման հղումներ
+Only registered users can work with adverb data : Միայն գրանցված օգտատերերը կարող են աշխատել ձևանիշի տվյալների հետ
+Only registered users can work with distance map : Միայն գրանցված օգտատերերը կարող են աշխատել հեռավորության քարտեզի հետ
+Only registered users can work with files : Միայն գրանցված օգտատերերը կարող են աշխատել ֆայլերի հետ
+Only registered users can work with valency data : Միայն գրանցված օգտատերերը կարող են աշխատել կապակցության տվյալների հետ
+Only to entries lacking words and transcriptions : Միայն բառեր և տրանսկրիպցիաներ չունեցող գրառումներին
+Open map : Բացել քարտեզը
+Opportunities : Հնարավորություններ
+optative : Optative (ցանկական)
+OR : OR
+or : կամ
+or at : կամ ժամը՝
+OR block : OR բլոկ
+Or, if you would like to search just for dictionaries and perspective based on metadata, delete all search conditions : Կամ, եթե ցանկանում եք որոնել միայն բառարաններ և perspective-ներ մետատվյալների հիման վրա, ջնջեք բոլոր որոնման պայմանները
+Or, if you would like to search just for dictionaries and perspective based on metadata, use OR mode and delete all search conditions : Կամ, եթե ցանկանում եք որոնել միայն բառարաններ և perspective-ներ մետատվյալների հիման վրա, օգտագործեք OR ռեժիմը և ջնջեք բոլոր որոնման պայմանները
+OR/AND mode : OR/AND ռեժիմ
+Organization : Կազմակերպություն
+Organization admins : Կազմակերպության ադմինիստրատորներ
+Organization name : Կազմակերպության անուն
+Organization users : Կազմակերպության օգտատերեր
+Organizations : Կազմակերպություններ
+Organizations available to link to : Կապելու համար հասանելի կազմակերպություններ
+Own and inherited users : Սեփական և ժառանգված օգտատերեր
+Owners : Սեփականատերեր
+Page : Էջ
+Paradigm sentence column source tiers : Պարադիգմայի նախադասության սյունակի աղբյուրի մակարդակներ
+Paradigmatic forms and contexts : Պարադիգմատիկ ձևեր և համատեքստեր
+Parallel corpora : Զուգահեռ կորպուսներ
+Parent Corpora : Մայր կորպուսներ
+Parent language : Մայր լեզու
+Parse element : Վերլուծել տարրը
+Parser execution : Վերլուծիչի կատարում
+Parser task has been started : Վերլուծիչի առաջադրանքը սկսվել է
+participle : Participle (մասնակից)
+particle : Particle (մասնիկ)
+passive : Passive (պասիվ)
+Password : Գաղտնաբառ
+Passwords do not match : Գաղտնաբառերը չեն համընկնում
+past : Անցյալ
+past recent : Վերջերս անցյալ
+patient-like argument of canonical transitive verb : Կանոնիկ անցումային բայի պացիենս-նման արգումենտ
+Pavel Grashchenkov : Պավել Գրաշչենկով
+PDF : PDF
+perfect : Perfect (կատարյալ)
+perfective : Perfective (կատարյալ տեսակ)
+Person : Անձ
+Perspective : Perspective
+perspective : perspective
+Perspective does not have any grouping fields, cognate analysis is impossible : Perspective-ը չունի խմբավորման դաշտեր, հարազատ բառերի վերլուծությունը անհնար է
+Perspective does not have any text fields, phonemic analysis is impossible : Perspective-ը չունի տեքստային դաշտեր, ֆոնեմային վերլուծությունը անհնար է
+Perspective fields : Perspective-ի դաշտեր
+Perspective info loading error : Perspective-ի տեղեկատվության բեռնման սխալ
+Perspective is hidden and you don't have permissions to access it : Perspective-ը թաքնված է, և դուք չունեք դրան հասանելիության թույլտվություն
+Perspective is not published : Perspective-ը չի հրապարակված
+Perspective names : Perspective-ի անուններ
+Perspective state : Perspective-ի վիճակ
+Perspectives : Perspectives
+Perspectives limit : Perspectives-ի սահման
+Perspectives offset : Perspectives-ի օֆսետ
+Perspectives selected for comparison : Համեմատության համար ընտրված perspectives
+Phonemic analysis : Ֆոնեմային վերլուծություն
+Phonological statistical distance : Հնչույթաբանական վիճակագրական հեռավորություն
+Phonological statistical distance comparison is being computed. Please check out tasks for details : Հնչույթաբանական վիճակագրական հեռավորության համեմատությունը հաշվարկվում է: Մանրամասների համար տես առաջադրանքները
+Phonology : Հնչույթաբանություն
+Phonology is being compiled. Please check out tasks for details : Հնչույթաբանությունը կազմվում է: Մանրամասների համար տես առաջադրանքները
+Please add either search conditions or language/metadata conditions : Ավելացրեք որոնման պայմաններ կամ լեզվի/մետատվյալների պայմաններ
+Please contact administrators : Դիմեք ադմինիստրատորներին
+Please contact developers at : Դիմեք մշակողներին՝
+Please either narrow down search conditions or add grammatical signs conditions : Կա՛մ նեղացրեք որոնման պայմանները, կա՛մ ավելացրեք քերականական նշանների պայմաններ
+Please map all Starling columns to Lingvodoc types : Համադրեք բոլոր Starling սյունակները Lingvodoc-ի տեսակների հետ
+Please map all the columns to different Lingvodoc types. Meet the previous terms : Համադրեք բոլոր սյունակները տարբեր Lingvodoc տեսակների հետ: Բավարարեք նախորդ պայմանները
+Please select .docx file for convertion : Ընտրեք .docx ֆայլ փոխարկման համար
+Please select a user : Ընտրեք օգտատեր
+Please select an audio file in wav, mp3, ogg, flac or webm format : Ընտրեք աուդիո ֆայլ wav, mp3, ogg, flac կամ webm ձևաչափով
+Please select an element : Ընտրեք տարր
+Please select parent language and specify at least one translation for each Starling dictionary : Ընտրեք մայր լեզուն և նշեք առնվազն մեկ թարգմանություն յուրաքանչյուր Starling բառարանի համար
+Please select parent language and specify at least one translation to name the dictionary. Meet the previous terms : Ընտրեք մայր լեզուն և նշեք առնվազն մեկ թարգմանություն բառարանը անվանելու համար: Բավարարեք նախորդ պայմանները
+Please select parent language for each Starling dictionary : Ընտրեք մայր լեզուն յուրաքանչյուր Starling բառարանի համար
+Please select perspective : Ընտրեք perspective
+Please select type : Ընտրեք տեսակը
+Please set markups in both fields of the table : Նշեք markups-ները աղյուսակի երկու դաշտերում
+Please sign in : Մուտք գործեք
+Please use at least one Starling column : Օգտագործեք առնվազն մեկ Starling սյունակ
+Please, select the parent language : Խնդրում ենք ընտրել մայր լեզուն
+plural : Հոգնակի
+Possesiv : Possesiv (ունելի հոլով)
+posssesiv : Possesiv (ունելի հոլով)
+Pre-marked corpora : Նախապես նշված կորպուսներ
+precative : Precative (խնդրական)
+predicative : Predicative (կանխատեսական)
+prefix : Նախածանց
+present : Ներկա
+present at : ներկա է՝
+presenting results as online fragments of audio dictionaries and corpora which can be further edited or in the Excel file format : Արդյունքների ներկայացում որպես աուդիո բառարանների և կորպուսների առցանց հատվածներ, որոնք կարող են հետագայում խմբագրվել, կամ Excel ֆայլի ձևաչափով
+Preview : Նախադիտում
+Processing : Մշակվում է
+Profile has been updated : Պրոֆիլը թարմացվել է
+progressive : Progressive (ընթացական)
+prohibitive : Prohibitive (արգելողական)
+Project funded by grants : Դրամաշնորհներով ֆինանսավորվող նախագիծ
+prolative : Prolative (երկայնական)
+Properties : Հատկություններ
+Properties : Հատկություններ
+Proposed variants : Առաջարկված տարբերակներ
+Proprietary : Սեփականատիրական
+Proprietary license : Սեփականատիրական լիցենզիա
+prospektiv : Prospektiv (հեռանկարային)
+proximal/proximate : Proximal/Proximate (մոտակա)
+Publication date : Հրապարակման ամսաթիվ
+Publish : Հրապարակել
+Publish Entities : Հրապարակել էությունները
+Publish result of entity merge if any merged entity is published : Հրապարակել էությունների միավորման արդյունքը, եթե միավորված որևէ էություն հրապարակված է
+Published : Հրապարակված
+published : հրապարակված
+Quantitative characteristic : Քանակական բնութագիր
+Query error : Հարցման սխալ
+question particle/marker : Հարցական մասնիկ/նշիչ
+reciproc : Reciproc (փոխադարձ)
+reciprocal : Reciprocal (փոխադարձ)
+Recognize : Ճանաչել
+Record audio : Ձայնագրել աուդիո
+Redo parser execution : Կրկնել վերլուծիչի կատարումը
+reflexive : Reflexive (հետադարձ)
+Refresh : Թարմացնել
+Regexp : Regexp
+register : գրանցվել
+Regular expression : Կանոնավոր արտահայտություն
+Reject : Մերժել
+Reject all selected : Մերժել բոլոր ընտրվածները
+Relation : Հարաբերություն
+relative : Relative (հարաբերական)
+Remote : Հեռակա
+Remote submit : Հեռակա ուղարկում
+Remote Update : Հեռակա թարմացում
+Removal date : Հեռացման ամսաթիվ
+Remove : Հեռացնել
+Remove dictionary : Հեռացնել բառարանը
+Remove failed : Հեռացումը ձախողվեց
+Remove from markup : Հեռացնել markup-ից
+Remove from TOC : Հեռացնել պարունակությունից
+Remove lexical entries : Հեռացնել բառային միավորները
+Remove perspective : Հեռացնել perspective-ը
+Remove successful : Հեռացումը հաջողվեց
+Remove user : Հեռացնել օգտատիրոջը
+Removed : Հեռացված է
+removed : հեռացված
+Removing : Հեռացվում է
+Replaced : Փոխարինված է
+representing the dialects of various world languages : Աշխարհի տարբեր լեզուների բարբառների ներկայացում
+Request error : Հարցման սխալ
+Request has been sent to the grant's owner : Հարցումը ուղարկվել է դրամաշնորհի սեփականատիրոջը
+Request has been sent to the organization's administrator : Հարցումը ուղարկվել է կազմակերպության ադմինիստրատորին
+Request link : Հարցման հղում
+Requests : Հարցումներ
+responsible editor of Altai dictionaries : Ալթայի բառարանների պատասխանատու խմբագիր
+responsible editor of Ural dictionaries : Ուրալի բառարանների պատասխանատու խմբագիր
+Result : Արդյունք
+result url : Արդյունքի URL
+resultative : Resultative (արդյունքական)
+results : արդյունքներ
+results on : Արդյունքներ՝
+Return to tree : Վերադառնալ ծառին
+RichText file : RichText ֆայլ
+right : աջ
+Right text : Աջ տեքստ
+Role : Դեր
+Role data loading error, please contact adiministrators : Դերի տվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+Role in the sentence : Դերը նախադասությունում
+Roles : Դերեր
+Rozhkov Artyom Vladimirovich : Ռոժկով Արտյոմ Վլադիմիրովիչ
+Safe : Ապահով
+Satellite : Արբանյակ
+Save : Պահպանել
+Save adverb data : Պահպանել ձևանիշի տվյալները
+Save all : Պահպանել բոլորը
+Save dictionary : Պահպանել բառարանը
+Save intermediate data : Պահպանել միջանկյալ տվյալները
+Save markup : Պահպանել markup-ը
+Save only published : Պահպանել միայն հրապարակվածը
+Save sound recordings : Պահպանել ձայնագրությունները
+Save to XLSX : Պահպանել XLSX-ում
+Save valency data : Պահպանել կապակցության տվյալները
+Saving adverb data : Ձևանիշի տվյալների պահպանում
+Saving dictionary task is launched. Please check out tasks for details : Բառարանի պահպանման առաջադրանքը գործարկվել է: Մանրամասների համար տես առաջադրանքները
+Saving valency data : Կապակցության տվյալների պահպանում
+Search : Որոնում
+search : որոնում
+Search and map’s creating : Որոնում և քարտեզի ստեղծում
+Search for adoptions : Որոնել փոխառությունները
+Search in : Որոնել՝
+Search in found : Որոնել գտնվածում
+Search options : Որոնման տարբերակներ
+Search string : Որոնման տող
+second person : Երկրորդ դեմք
+Select : Ընտրել
+Select a dictionary for analysis : Ընտրեք բառարան վերլուծության համար
+Select a license : Ընտրեք լիցենզիա
+Select a new position for a markup element : Ընտրեք նոր դիրք markup-ի տարրի համար
+Select all : Ընտրել բոլորը
+Select all on current page : Ընտրել բոլորը ընթացիկ էջում
+Select audio : Ընտրել աուդիո
+Select authors : Ընտրել հեղինակներին
+Select data source : Ընտրել տվյալների աղբյուրը
+Select Dialeqt file for import : Ընտրել Dialeqt ֆայլ ներմուծման համար
+Select dictionary : Ընտրել բառարանը
+Select dictionary to be updated : Ընտրել թարմացվելիք բառարանը
+Select language : Ընտրել լեզուն
+Select language degree of endangerment : Ընտրել լեզվի վերացման վտանգի աստիճանը
+Select Language for : Ընտրել լեզուն՝
+Select language for the new dictionary : Ընտրել լեզուն նոր բառարանի համար
+Select languages : Ընտրել լեզուները
+Select Parent Language : Ընտրել մայր լեզուն
+Select parser : Ընտրել վերլուծիչը
+Select settlement : Ընտրել բնակավայրը
+Select tags : Ընտրել թեգերը
+Select user : Ընտրել օգտատիրոջը
+Select years : Ընտրել տարիները
+Select/deselect all dictionaries : Ընտրել/չընտրել բոլոր բառարանները
+Select/deselect all language's dictionaries : Ընտրել/չընտրել լեզվի բոլոր բառարանները
+Select/deselect all markup : Ընտրել/չընտրել ամբողջ markup-ը
+selected : ընտրված
+Selected by default : Ընտրված է ըստ լռելյայնի
+selected by default : ընտրված է ըստ լռելյայնի
+Selected dictionary group doesn't have multiple dictionaries with selected cognate grouping field present, cognate analysis is impossible : Ընտրված բառարանների խումբը չունի մի քանի բառարան ընտրված հարազատ բառերի խմբավորման դաշտով, հարազատ բառերի վերլուծությունը անհնար է
+Semi-calque : Կիսաքաղվածք
+sentence : Նախադասություն
+Separate by alphabet : Բաժանել ըստ այբուբենի
+Separate by corpora : Բաժանել ըստ կորպուսների
+Separate by paragraphs : Բաժանել ըստ պարբերությունների
+Service : Ծառայություն
+Set adverb annotation : Նշել ձևանիշի անոտացիան
+Set corpus name, translations and metadata : Նշել կորպուսի անունը, թարգմանությունները և մետատվյալները
+Set dictionary name and translations : Նշել բառարանի անունը և թարգմանությունները
+Set dictionary name, translations and metadata : Նշել բառարանի անունը, թարգմանությունները և մետատվյալները
+Set group name or leave empty : Նշեք խմբի անունը կամ թողեք դատարկ
+Set parent group as well : Նշել նաև մայր խումբը
+Set title or leave empty : Նշեք վերնագիրը կամ թողեք դատարկ
+Set valency annotation : Նշել կապակցության անոտացիան
+Settlement : Բնակավայր
+Severely endangered : Ծանր վտանգված
+Show : Ցույց տալ
+Show All : Ցույց տալ բոլորը
+Show all translations of each word : Ցույց տալ յուրաքանչյուր բառի բոլոր թարգմանությունները
+Show only the first translation of each word : Ցույց տալ միայն յուրաքանչյուր բառի առաջին թարգմանությունը
+Show sentences : Ցույց տալ նախադասությունները
+Show statistics : Ցույց տալ վիճակագրությունը
+Show Unpublished Only : Ցույց տալ միայն չհրապարակվածը
+Showing sentences : Նախադասությունների ցուցադրում
+Sign In : Մուտք գործել
+Sign out : Դուրս գալ
+Sign Up : Գրանցվել
+Signed successfully : Հաջողությամբ մուտք գործեցիք
+Signin failure. Either no such login/password combination exists, or this user account has been deactivated : Մուտքի ձախողում: Նման մուտքանուն/գաղտնաբառ զույգ գոյություն չունի, կամ այս օգտատիրոջ հաշիվը ապաակտիվացվել է
+Signup approval pending : Գրանցման հաստատումը սպասման մեջ է
+Signup success : Գրանցումը հաջողվեց
+Similatory translation : Նմանության թարգմանություն
+Simple : Պարզ
+single argument of canonical intransitive verb : Կանոնիկ անանցում բայի միակ արգումենտ
+singular : Եզակի
+Skipping text output, too long : Տեքստի ելքը բաց է թողնված, չափազանց երկար է
+software for morphological analysis of glossed corpora, in particular, automatic identification of government models : Գլոսացված կորպուսների ձևաբանական վերլուծության ծրագրային ապահովում, մասնավորապես՝ կառավարման մոդելների ավտոմատ նույնականացում
+Some of the selected markups take part in bundles. Are you sure you want to delete the markups and related groups : Ընտրված markups-ների մի մասը մասնակցում է փաթեթներին: Վստա՞հ եք, որ ուզում եք ջնջել markups-ները և կապված խմբերը
+Something went wrong : Ինչ-որ բան սխալ գնաց
+Sort by acceptance : Տեսակավորել ըստ ընդունման
+Sort by adverbs : Տեսակավորել ըստ ձևանիշների
+Sort by cases : Տեսակավորել ըստ հոլովների
+Sort by marks : Տեսակավորել ըստ նշիչների
+Sort by specificity : Տեսակավորել ըստ սպեցիֆիկության
+Sort by verbs : Տեսակավորել ըստ բայերի
+Sound and markup : Ձայն և markup
+Sound and markup compilation is being created. Check out tasks for details : Ձայնի և markup-ի կազմումը ստեղծվում է: Մանրամասների համար տես առաջադրանքները
+Source lexeme field (optional) : Աղբյուրի լեքսեմայի դաշտ (ոչ պարտադիր)
+Source lexeme field selection : Աղբյուրի լեքսեմայի դաշտի ընտրություն
+Source perspective word : Սկզբնական perspective-ի բառ
+Source transcription field : Աղբյուրի տրանսկրիպցիայի դաշտ
+Source transcription field selection : Աղբյուրի տրանսկրիպցիայի դաշտի ընտրություն
+Source translation field : Աղբյուրի թարգմանության դաշտ
+Source translation field selection : Աղբյուրի թարգմանության դաշտի ընտրություն
+Speech genre : Խոսքի ժանր
+Speech recognition (Armenian) : Խոսքի ճանաչում (հայերեն)
+Speech synthesis (Armenian) : Խոսքի սինթեզ (հայերեն)
+Split contents of the field on punctuation before matching : Բաժանել դաշտի բովանդակությունը կետադրության վրա համադրումից առաջ
+Split contents of the field on whitespace before matching : Բաժանել դաշտի բովանդակությունը բացատների վրա համադրումից առաջ
+Spread : Տարածել
+Starling/CSV : Starling/CSV
+Start typing language name : Սկսեք մուտքագրել լեզվի անունը
+Started convertion to a new dictionary. Please check out tasks for details : Նոր բառարանի փոխարկումը սկսվել է: Մանրամասների համար տես առաջադրանքները
+Started dictionary update. Please check out tasks for details : Բառարանի թարմացումը սկսվել է: Մանրամասների համար տես առաջադրանքները
+Statistics : Վիճակագրություն
+Statistics error : Վիճակագրության սխալ
+Stop : Կանգնեցնել
+Stopped manually : Կանգնեցվել է ձեռքով
+Stopping : Կանգնեցվում է
+Storage : Պահոց
+Sub string : Ենթատող
+Subject : Թեմա
+subject : սուբյեկտ
+subjunctive : Subjunctive (ենթադրական)
+Submit : Ուղարկել
+Subscribe all the existing dictionaries and corpora related to this language and its sublanguages : Բաժանորդագրվել այս լեզվի և նրա ենթալեզուների բոլոր առկա բառարաններին և կորպուսներին
+Success : Հաջողություն
+Successfully added : Հաջողությամբ ավելացվել է
+Successfully created perspective : Perspective-ը հաջողությամբ ստեղծվել է
+Successfully deleted organization : Կազմակերպությունը հաջողությամբ ջնջվել է
+Successfully removed : Հաջողությամբ հեռացվել է
+Such group already exists : Նման խումբ արդեն գոյություն ունի
+Suggested cognate groups : Առաջարկված հարազատ բառերի խմբեր
+Suggested cognates : Առաջարկված հարազատ բառեր
+suggestions : առաջարկություններ
+Support : Աջակցություն
+Support@Telegram : Աջակցություն@Telegram
+Sync : Համաժամեցում
+Synced : Համաժամեցված
+Synchronize : Համաժամեցնել
+Synchronize data loading error : Համաժամեցման տվյալների բեռնման սխալ
+Synthesis failed : Սինթեզը ձախողվեց
+Synthesize : Սինթեզել
+Table of contents : Պարունակություն
+Tag data loading error : Թեգի տվյալների բեռնման սխալ
+Tapekhin Andrey Nikolaevich : Տապեխին Անդրեյ Նիկոլաևիչ
+Tasks : Առաջադրանքներ
+Tense-Aspect : Ժամանակ-Տեսակ
+text entities analysed : Վերլուծված տեքստային էություններ
+Text markup : Տեքստի markup
+Text only : Միայն տեքստ
+The Armenian speech recognition service is not responding at : Հայերեն խոսքի ճանաչման ծառայությունը չի պատասխանում՝
+The Armenian speech synthesis service is not responding at : Հայերեն խոսքի սինթեզի ծառայությունը չի պատասխանում՝
+The entity is currently published. Click to unpublish : Էությունը ներկայումս հրապարակված է: Սեղմեք՝ հրապարակումը չեղարկելու համար
+The entity is NOT currently published. Click to publish : Էությունը ներկայումս ՉԻ հրապարակված: Սեղմեք՝ հրապարակելու համար
+The group was successfully added : Խումբը հաջողությամբ ավելացվել է
+The group was successfully deleted : Խումբը հաջողությամբ ջնջվել է
+The pros of the LingvoDoc platform : LingvoDoc հարթակի առավելությունները
+The theme of the text : Տեքստի թեման
+The work is supported by the following grants : Աշխատանքը աջակցվում է հետևյալ դրամաշնորհներով
+There are not enough perspectives with expected grouping field : Բավարար քանակությամբ perspectives սպասվող խմբավորման դաշտով չկան
+There are unsaved changes present. Are you sure you want to discard it : Կան չպահպանված փոփոխություններ: Վստա՞հ եք, որ ուզում եք դրանք անտեսել
+There is no any perspective with expected grouping field : Սպասվող խմբավորման դաշտով ոչ մի perspective չկա
+There is no languages and dictionaries with chosen language degree of endangerment. The search will be performed with all languages and dictionaries : Ընտրված վերացման վտանգի աստիճանով լեզուներ և բառարաններ չկան: Որոնումը կկատարվի բոլոր լեզուներով և բառարաններով
+third person : Երրորդ դեմք
+This entity was deleted : Այս էությունը ջնջվել է
+This page is available for administrator only : Այս էջը հասանելի է միայն ադմինիստրատորի համար
+This page is available for registered users only : Այս էջը հասանելի է միայն գրանցված օգտատերերի համար
+Tier : Մակարդակ
+Time of writing : Գրառման ժամանակ
+Title of the work : Աշխատանքի վերնագիր
+To : Մինչև
+To all entries : Բոլոր գրառումներին
+To get an agreement, you need to : Պայմանագիր ստանալու համար անհրաժեշտ է
+to TOC : պարունակությանը
+to view : դիտելու
+To : Մինչև
+Tomsk State University : Տոմսկի պետական համալսարան
+Too broad regular expressions are not allowed : Չափազանց լայն կանոնավոր արտահայտությունները չեն թույլատրվում
+Too large dictionaries to compare : Չափազանց մեծ բառարաններ համեմատության համար
+Tools : Գործիքներ
+total : Ընդամենը
+Total items : Ընդամենը տարրեր
+Total tokens : Ընդամենը թոքեններ
+Transcription : Տրանսկրիպցիա
+Transcription copied to clipboard : Տրանսկրիպցիան պատճենվել է clipboard
+Transcription failed : Տրանսկրիպցիան ձախողվեց
+Transcription of paradigmatic forms : Պարադիգմատիկ ձևերի տրանսկրիպցիա
+Transcription rules : Տրանսկրիպցիայի կանոններ
+transcriptions analysed : Վերլուծված տրանսկրիպցիաներ
+transitive : Transitive (անցումային)
+Translation field : Թարգմանության դաշտ
+Translation for : Թարգմանություն՝
+Translation loading error : Թարգմանության բեռնման սխալ
+Translations : Թարգմանություններ
+Translator : Թարգմանիչ
+Translit : Տրանսլիտ
+Transliteration : Տրանսլիտերացիա
+transpnition marker : Տրանսպոզիցիայի նշիչ
+Transposition : Տրանսպոզիցիա
+Truth threshold : Ճշմարտության շեմ
+Truth threshold must be between 0,7 and 0,999 : Ճշմարտության շեմը պետք է լինի 0,7-ից 0,999 միջակայքում
+Try closing the dialog and opening it again; if the error persists, please contact administrators : Փորձեք փակել երկխոսությունը և կրկին բացել; եթե սխալը պահպանվում է, դիմեք ադմինիստրատորներին
+Try reloading the page; if the error persists, please contact administrators : Փորձեք վերաբեռնել էջը; եթե սխալը պահպանվում է, դիմեք ադմինիստրատորներին
+TTS service is unavailable : TTS ծառայությունը անհասանելի է
+Txt : Txt
+Type : Տեսակ
+Type of discourse : Զրույցի տեսակ
+Type of speech : Խոսքի տեսակ
+Type to search : Մուտքագրեք՝ որոնելու համար
+unaccepted : չընդունված
+Unauthorized user : Չլիազորված օգտատեր
+Uncheck all : Չնշել բոլորը
+unique data : եզակի տվյալներ
+Unique software that reproduces the experimental-phonetic, etymological and morphological work of a researcher 100 times faster : Եզակի ծրագրային ապահովում, որը վերարտադրում է հետազոտողի փորձարարական-հնչեթական, էտիմոլոգիական և ձևաբանական աշխատանքը 100 անգամ ավելի արագ
+Unknown dictionary : Անհայտ բառարան
+Unknown grant : Անհայտ դրամաշնորհ
+Unknown request type : Անհայտ հարցման տեսակ
+Unknown type : Անհայտ տեսակ
+unpublished : չհրապարակված
+Unsigned successfully : Հաջողությամբ դուրս եկաք
+Up : Վերև
+Update : Թարմացնել
+Update dictionary : Թարմացնել բառարանը
+Update valency data : Թարմացնել կապակցության տվյալները
+Updated valency data : Թարմացված կապակցության տվյալներ
+Updating valency data : Կապակցության տվյալների թարմացում
+Upload : Բեռնել
+Upload failed : Բեռնումը ձախողվեց
+Upload successful : Բեռնումը հաջողվեց
+Uploaded at : Բեռնվել է՝
+Uploaded corpora : Բեռնված կորպուսներ
+Uploading : Բեռնվում է
+uploading audio files of any size, (audio)corpora in ELAN format, texts in Word .odt format : Ցանկացած չափի աուդիո ֆայլերի, ELAN ձևաչափի (աուդիո)կորպուսների, Word .odt ձևաչափի տեքստերի բեռնում
+URL with results of saving data should appear soon after clicking save button in the tasks : Տվյալների պահպանման արդյունքների URL-ը պետք է հայտնվի շուտով՝ առաջադրանքներում պահպանման կոճակ սեղմելուց հետո
+Use linked data : Օգտագործել կապված տվյալները
+User : Օգտատեր
+User account activation/deactivation : Օգտատիրոջ հաշվի ակտիվացում/ապաակտիվացում
+User data loading error : Օգտատիրոջ տվյալների բեռնման սխալ
+User defined variant : Օգտատիրոջ կողմից սահմանված տարբերակ
+User options for mapping linguistic features : Օգտատիրոջ տարբերակներ լեզվաբանական հատկանիշների համադրման համար
+User options for working with dictionaries : Օգտատիրոջ տարբերակներ բառարանների հետ աշխատանքի համար
+User options for working with text corpora : Օգտատիրոջ տարբերակներ տեքստային կորպուսների հետ աշխատանքի համար
+User sign-in error, please sign in; if not successful, please contact administrators : Օգտատիրոջ մուտքի սխալ, մուտք գործեք; եթե չի հաջողվում, դիմեք ադմինիստրատորներին
+user-friendly interface for online manual word sense disambiguation which may arise after the text has been processed by the parser : Օգտատեր-բարեկամ ինտերֆեյս առցանց ձեռքով բառային իմաստի միիմաստեցման համար, որը կարող է առաջանալ տեքստի վերլուծիչի կողմից մշակվելուց հետո
+valence analysis : Կապակցության վերլուծություն
+Valency : Կապակցություն
+Valency data : Կապակցության տվյալներ
+Valency data is being compiled. Check out tasks for details : Կապակցության տվյալները կազմվում են: Մանրամասների համար տես առաջադրանքները
+Valency verb cases : Կապակցության բայական հոլովներ
+Valency verb cases (extended) : Կապակցության բայական հոլովներ (ընդլայնված)
+Valency verb cases error : Կապակցության բայական հոլովների սխալ
+Verb lexeme/translation filter : Բայի լեքսեմայի/թարգմանության ֆիլտր
+Verb prefix filter : Բայի նախածանցի ֆիլտր
+Verb valency : Բայի կապակցություն
+Verbs : Բայեր
+verbs : բայեր
+Version : Տարբերակ
+View : Դիտել
+View contributions : Դիտել ներդրումները
+View published : Դիտել հրապարակվածը
+View suggestions : Դիտել առաջարկությունները
+vocative : Vocative (կոչական)
+Voice : Ձայն
+Vowel formant count threshold : Ձայնավորի ֆորմանտների քանակի շեմ
+Vulnerable : Խոցելի
+Warning : Նախազգուշացում
+wav, mp3, ogg, flac or webm : wav, mp3, ogg, flac կամ webm
+web : web
+will be downloaded from another server : կներբեռնվի այլ սերվերից
+will be downloaded from the central server : կներբեռնվի կենտրոնական սերվերից
+will be renewed : կթարմացվի
+With field selection : Դաշտի ընտրությամբ
+with own dictionaries and perspectives : Սեփական բառարաններով և perspectives-ով
+with own perspectives : Սեփական perspectives-ով
+Word file : Word ֆայլ
+XLSX-exported analysis results : XLSX-արտահանված վերլուծության արդյունքներ
+XLSX-exported data : XLSX-արտահանված տվյալներ
+Years : Տարիներ
+Yes : Այո
+yes : այո
+You are a member : Դուք անդամ եք
+You are an administrator : Դուք ադմինիստրատոր եք
+You are going to delete a markup and related groups? Are you sure : Դուք պատրաստվում եք ջնջել markup և կապված խմբեր: Վստա՞հ եք
+You have selected : Դուք ընտրել եք
+Your corpora is created, click : Ձեր կորպուսը ստեղծվել է, սեղմեք
+Your dictionaries are scheduled for conversion. Please, check tasks tab for conversion status : Ձեր բառարանները պլանավորվել են փոխարկման համար: Ստուգեք առաջադրանքների ներդիրը փոխարկման կարգավիճակի համար
+Your dictionary is created, click : Ձեր բառարանը ստեղծվել է, սեղմեք
+Your dictionary is created, clickRequests : Ձեր բառարանը ստեղծվել է, սեղմեք Հարցումներ
+Your dictionary is scheduled for conversion. Please, check tasks tab for conversion status : Ձեր բառարանը պլանավորվել է փոխարկման համար: Ստուգեք առաջադրանքների ներդիրը փոխարկման կարգավիճակի համար
+Zharov Andrey Anatolievich : Ժարով Անդրեյ Անատոլիևիչ
