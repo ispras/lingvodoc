@@ -1,7 +1,7 @@
 """
 Import Armenian translations into translationatom table.
 
-Reads ../lingvodoc-react/src/api/i18n_hy.txt, where each line has the form:
+Reads ./i18n_hy.txt, where each line has the form:
     <english phrase> : <armenian phrase>
 
 For each line the script looks up a TranslationAtom row with locale_id == 2
@@ -11,9 +11,9 @@ create_gists_with_atoms, attached to the same translation gist
 (parent_client_id / parent_object_id) with gist_type == 'Service'.
 
 Usage:
-    python -m lingvodoc.scripts.import_hy_translations <config_uri>
+    python import_hy_translations.py <config_uri> [i18n_hy.txt path] [client_id] [target_locale_id]
     e.g.:
-    python -m lingvodoc.scripts.import_hy_translations development.ini
+    python import_hy_translations.py ../development.ini ./i18n_hy.txt
 """
 
 import os
@@ -24,14 +24,15 @@ from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 
-from ..models import DBSession, TranslationAtom, TranslationGist, Client
-from ..utils.creation import create_gists_with_atoms
+from lingvodoc.models import DBSession, TranslationAtom, TranslationGist, Client
+from lingvodoc.utils.creation import create_gists_with_atoms
 
 
 SOURCE_LOCALE_ID = 2   # English
 TARGET_LOCALE_ID = 6   # Armenian
 GIST_TYPE = 'Service'
 DEFAULT_CLIENT_ID = 1  # admin / server client used for service gists
+DEFAULT_I18N_PATH = os.path.join(os.path.dirname(__file__), 'i18n_hy.txt')
 
 
 def parse_i18n_file(path):
@@ -52,13 +53,13 @@ def parse_i18n_file(path):
 
 
 def main(argv=sys.argv):
-    if len(argv) < 3:
-        print('usage: %s <config_uri> <i18n_hy.txt path> [client_id] [target_locale_id]'
+    if len(argv) < 2:
+        print('usage: %s <config_uri> [i18n_hy.txt path] [client_id] [target_locale_id]'
               % os.path.basename(argv[0]))
         sys.exit(1)
 
     config_uri = argv[1]
-    i18n_path = argv[2]
+    i18n_path = argv[2] if len(argv) > 2 else DEFAULT_I18N_PATH
     client_id = int(argv[3]) if len(argv) > 3 else DEFAULT_CLIENT_ID
     target_locale_id = int(argv[4]) if len(argv) > 4 else TARGET_LOCALE_ID
 
