@@ -36,7 +36,7 @@ from pyramid.paster import bootstrap  # noqa: F401  (kept for parity with other 
 from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 
-from lingvodoc.models import DBSession, TranslationAtom, Locale
+from lingvodoc.models import DBSession, TranslationGist, TranslationAtom, Locale
 from lingvodoc.utils.creation import create_gists_with_atoms
 
 
@@ -122,8 +122,11 @@ def main(argv=sys.argv):
         atom = (
             DBSession.query(TranslationAtom)
             .filter(
-                TranslationAtom.locale_id == SOURCE_LOCALE_ID,
                 TranslationAtom.content == src,
+                TranslationAtom.locale_id == SOURCE_LOCALE_ID,
+                TranslationAtom.parent_client_id == TranslationGist.client_id,
+                TranslationAtom.parent_object_id == TranslationGist.object_id,
+                TranslationGist.type == gist_type
             )
             .first()
         )
@@ -156,6 +159,9 @@ def main(argv=sys.argv):
                 TranslationAtom.parent_client_id == atom.parent_client_id,
                 TranslationAtom.parent_object_id == atom.parent_object_id,
                 TranslationAtom.locale_id == target_locale_id,
+                TranslationAtom.parent_client_id == TranslationGist.client_id,
+                TranslationAtom.parent_object_id == TranslationGist.object_id,
+                TranslationGist.type == gist_type
             )
             .first()
         )
@@ -177,17 +183,17 @@ def main(argv=sys.argv):
 
     transaction.commit()
 
-    print(f'Created: {created}')
-    print(f'Created (forced, new gist): {created_forced}')
-    print(f'Skipped (no English match): {len(skipped_no_match)}')
-    for lineno, src in skipped_no_match:
-        print(f'  line {lineno}: {src!r}')
     print(f'Skipped (target already exists): {len(skipped_exists)}')
     for lineno, src in skipped_exists:
+        print(f'  line {lineno}: {src!r}')
+    print(f'Skipped (no English match): {len(skipped_no_match)}')
+    for lineno, src in skipped_no_match:
         print(f'  line {lineno}: {src!r}')
     print(f'Errors: {len(errors)}')
     for lineno, src, msg in errors:
         print(f'  line {lineno}: {src!r} -> {msg}')
+    print(f'Created: {created}')
+    print(f'Created (forced, new gist): {created_forced}')
 
 
 if __name__ == '__main__':
