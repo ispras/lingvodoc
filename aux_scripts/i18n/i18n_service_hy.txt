@@ -1,6 +1,7 @@
+ cognate groups : ստուգաբանական խմբերի
  Language degree of endangerment (selection affects selected languages and dictionaries) : Լեզվի վերացման վտանգի աստիճան (ընտրությունն ազդում է ընտրված լեզուների և բառարանների վրա)
- left : ձախ
- right : աջ
+ left : դեպի ձախ
+ right : դեպի աջ
 (for example, Eastern Mansi) as well as those that are in danger of extinction (that is, languages that have no more than 10 speakers over 60 years old left) : (օրինակ՝ արևելյան մանսի), ինչպես նաև վերացման վտանգի տակ գտնվողները (այսինքն՝ լեզուներ, որոնց կրողներից մնացել է ոչ ավելի քան 10 հոգի՝ 60 տարեկանից բարձր)
 .docx file does not have any tables : .docx ֆայլը չի պարունակում աղյուսակներ
 .docx file for convertion: : .docx ֆայլ փոխարկման համար՝
@@ -196,7 +197,6 @@ Close input of language : Փակել լեզվի մուտքագրումը
 Cognate acoustic analysis : Հարազատ բառերի ակուստիկ վերլուծություն
 Cognate acoustic analysis is launched. Please check out tasks for details : Հարազատ բառերի ակուստիկ վերլուծությունը գործարկվել է: Մանրամասների համար տես առաջադրանքները
 Cognate analysis : Հարազատ բառերի վերլուծություն
-cognate groups : հարազատ բառերի խմբեր
 cognate groups were excluded from the analysis due to not having lexical entries in at least two selected dictionaries : հարազատ բառերի խմբերը բացառվեցին վերլուծությունից, քանի որ առնվազն երկու ընտրված բառարաններում չկան բառային միավորներ
 Cognate multi-language analysis : Հարազատ բառերի բազմալեզու վերլուծություն
 Cognate multi-language reconstruction : Հարազատ բառերի բազմալեզու վերակառուցում
