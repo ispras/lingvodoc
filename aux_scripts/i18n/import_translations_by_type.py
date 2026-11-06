@@ -59,18 +59,23 @@ def parse_filename(path):
 
 
 def parse_i18n_file(path):
-    """Yield (lineno, source, target) tuples for each well-formed line."""
+    """Yield (lineno, source, target) tuples for each well-formed line.
+
+    A leading space on a line is significant: it is kept in the source
+    phrase and also prepended to the target phrase."""
     with open(path, encoding='utf-8') as f:
         for lineno, raw in enumerate(f, 1):
-            line = raw.rstrip('\n').strip()
+            raw = raw.rstrip('\n')
+            leading = raw[:len(raw) - len(raw.lstrip(' '))]
+            line = raw.strip()
             if not line:
                 continue
             if ':' not in line:
                 continue
             src, _, dst = line.partition(':')
-            src = src.strip()
-            dst = dst.strip()
-            if not src or not dst:
+            src = leading + src.strip()
+            dst = leading + dst.strip()
+            if not src.strip() or not dst.strip():
                 continue
             yield lineno, src, dst
 
