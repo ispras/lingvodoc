@@ -104,7 +104,7 @@ def main(argv=sys.argv):
             by_gist[(gist_cid, gist_oid)][loc_id].add(content)
 
     lines = set()
-    for gist_locales in by_gist.values():
+    for gist_id, gist_locales in by_gist.items():
         phrase_lists = []
         for loc_id in locale_ids:
             phrases = sorted(gist_locales.get(loc_id, ()))
@@ -113,8 +113,8 @@ def main(argv=sys.argv):
             phrase_lists.append(phrases)
         # cartesian product in case a gist has several atoms per locale
         for combo in _product(phrase_lists):
-            line = ' : '.join(combo).strip()
-            if line:
+            line = '%s : %s' % (gist_id, ' : '.join(combo))
+            if line.strip():
                 lines.add(line)
 
     with open(output_path, 'w', encoding='utf-8') as f:
