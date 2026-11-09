@@ -4,25 +4,22 @@ into a text file, sorted alphabetically.
 
 For every TranslationGist row with type == <gist_type> the script collects
 content of all non-deleted TranslationAtom rows belonging to that gist for
-each requested locale, and writes them, one per line, into a file named
-i18n_<gist_type_lower>_<shortcuts>.txt (or a given path).
+each requested locale, and writes them, one per line, into the given file.
 
 Usage:
-    python export_translations_by_type.py <config_uri> <gist_type> [output_path] [locale_shortcuts]
-    e.g.:
-    python export_translations_by_type.py ../development.ini Service
-    python export_translations_by_type.py ../development.ini Service ./service-en.txt
-    python export_translations_by_type.py ../development.ini Service ./service-en-ru.txt en:ru
-    python export_translations_by_type.py ../development.ini Service ./service-hy.txt hy
+    python export_translations_by_type.py <config_uri> <output_path>
 
-locale_shortcuts is a colon-separated list of Locale.shortcut values
-(e.g. "en:ru", "hy"). With one shortcut each line is just the phrase;
-with several, each line is "<phrase1> : <phrase2> : ..." — phrases
-are translation atoms of the same gist for the respective locales.
-The default output path includes the shortcuts joined with '-'.
+Output path must be named like:
+    i18n_<gist_type>_<locale_shortcut1>[_<locale_shortcut2>_...].txt
+
+gist_type and locale shortcuts are parsed from that filename. With one
+shortcut each line is just the phrase; with several, each line is
+"<phrase1> : <phrase2> : ..." — translation atoms of the same gist for
+the respective locales.
 """
 
 import os
+import re
 import sys
 from collections import defaultdict
 
@@ -33,30 +30,38 @@ from sqlalchemy import engine_from_config
 from lingvodoc.models import DBSession, Locale, TranslationAtom, TranslationGist
 
 
-DEFAULT_LOCALE_SHORTCUT = 'en'
+OUTPUT_NAME_RE = re.compile(r'^i18n_(?P<gist>.+)_(?P<locales>.+)\.txt$')
+
+
+def _parse_output_name(output_path):
+    name = os.path.basename(output_path)
+    match = OUTPUT_NAME_RE.match(name)
+    if not match:
+        return None, None
+    gist = match.group('gist').strip().capitalize()
+    locale_parts = [p.strip().lower()
+                    for p in match.group('locales').split('_')
+                    if p.strip()]
+    return gist or None, locale_parts or None
 
 
 def main(argv=sys.argv):
     if len(argv) < 3:
-        print('usage: %s <config_uri> <gist_type> [output_path] [locale_shortcuts]'
+        print('usage: %s <config_uri> <output_path>'
               % os.path.basename(argv[0]))
         sys.exit(1)
 
     config_uri = argv[1]
-    gist_type = argv[2]
-    shortcut_arg = argv[4] if len(argv) > 4 else DEFAULT_LOCALE_SHORTCUT
-    shortcuts = [s.strip() for s in shortcut_arg.split(':') if s.strip()]
-    if not shortcuts:
-        print('error: empty locale shortcuts')
+    output_path = argv[2]
+
+    gist_type, shortcuts = _parse_output_name(output_path)
+    if not gist_type or not shortcuts:
+        print('error: output_path must be named '
+              'i18n_<gist_type>_<locale1>[_<locale2>...].txt')
         sys.exit(1)
 
-    output_path = argv[3] if len(argv) > 3 else os.path.join(
-        os.path.dirname(__file__),
-        'i18n_%s_%s.txt' % (gist_type.lower().replace(' ', '_'),
-                            '-'.join(shortcuts)))
-
     setup_logging(config_uri)
-    settings = get_appsettings(config_uri, options=parse_vars(argv[5:]))
+    settings = get_appsettings(config_uri, options=parse_vars(argv[3:]))
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
 
