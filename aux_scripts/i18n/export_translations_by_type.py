@@ -30,7 +30,7 @@ from sqlalchemy import engine_from_config
 from lingvodoc.models import DBSession, Locale, TranslationAtom, TranslationGist
 
 
-OUTPUT_NAME_RE = re.compile(r'^i18n_(?P<gist>.+)_(?P<locales>.+)\.txt$')
+OUTPUT_NAME_RE = re.compile(r'^i18n_(?P<gist>[A-Za-z]+)_(?P<locales>[A-Za-z_]+)\.txt$')
 
 
 def _parse_output_name(output_path):
