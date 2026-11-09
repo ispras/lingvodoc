@@ -7,7 +7,7 @@ content of all non-deleted TranslationAtom rows belonging to that gist for
 each requested locale, and writes them, one per line, into the given file.
 
 Usage:
-    python export_translations_by_type.py <config_uri> <output_path>
+    python export_translations_by_type.py <config_uri> <output_path> [xlsx]
 
 Output path must be named like:
     i18n_<gist_type>_<locale_shortcut1>[_<locale_shortcut2>_...].txt
@@ -16,6 +16,11 @@ gist_type and locale shortcuts are parsed from that filename. With one
 shortcut each line is just the phrase; with several, each line is
 "<phrase1> : <phrase2> : ..." — translation atoms of the same gist for
 the respective locales.
+
+If the optional third argument is 'xlsx', results are written as an .xlsx
+workbook instead of plain text. The sheet is named after gist_type and has
+columns: gist_id, one column per locale shortcut, and a boolean column
+'Подтверждено' initialized to FALSE.
 """
 
 import os
@@ -60,8 +65,14 @@ def main(argv=sys.argv):
               'i18n_<gist_type>_<locale1>[_<locale2>...].txt')
         sys.exit(1)
 
+    use_xlsx = len(argv) > 3 and argv[3].lower() == 'xlsx'
+    if use_xlsx:
+        root, ext = os.path.splitext(output_path)
+        if ext.lower() == '.txt':
+            output_path = root + '.xlsx'
+
     setup_logging(config_uri)
-    settings = get_appsettings(config_uri, options=parse_vars(argv[3:]))
+    settings = get_appsettings(config_uri, options=parse_vars(argv[4:]))
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
 
@@ -104,6 +115,7 @@ def main(argv=sys.argv):
             by_gist[(gist_cid, gist_oid)][loc_id].add(content)
 
     lines = set()
+    rows_out = []
     for gist_id, gist_locales in by_gist.items():
         phrase_lists = []
         for loc_id in locale_ids:
@@ -113,19 +125,38 @@ def main(argv=sys.argv):
             phrase_lists.append(phrases)
         # cartesian product in case a gist has several atoms per locale
         for combo in _product(phrase_lists):
+            rows_out.append((gist_id, list(combo)))
+
+    if use_xlsx:
+        try:
+            from openpyxl import Workbook
+        except ImportError:
+            print('error: openpyxl is required for xlsx output')
+            sys.exit(1)
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = gist_type
+        headers = ['gist_id'] + shortcuts + ['Подтверждено']
+        ws.append(headers)
+        for gist_id, combo in rows_out:
+            ws.append(['%s,%s' % gist_id] + combo + [False])
+        wb.save(output_path)
+    else:
+        lines = set()
+        for gist_id, combo in rows_out:
             line = '%s : %s' % (gist_id, ' : '.join(combo))
             if line.strip():
                 lines.add(line)
-
-    with open(output_path, 'w', encoding='utf-8') as f:
-        for line in sorted(lines):
-            f.write(line + '\n')
+        with open(output_path, 'w', encoding='utf-8') as f:
+            for line in sorted(lines):
+                f.write(line + '\n')
 
     print('Gist type: %r, locales: %s'
           % (gist_type,
              ', '.join('%s(id=%d)' % (s, shortcut_to_locale_id[s])
                        for s in shortcuts)))
-    print('Wrote %d lines to %s' % (len(lines), output_path))
+    print('Wrote %d rows to %s' % (len(rows_out), output_path))
 
 
 def _product(lists):
