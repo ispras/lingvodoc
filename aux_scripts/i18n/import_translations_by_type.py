@@ -1,23 +1,29 @@
 """
 Import translations into translationatom table.
 
-Reads a txt file named i18n_<gist_type>_<locale_shortcut>.txt where each
+Reads a txt file named i18n_<gist_type>_<locale_shortcut>.txt or
+i18n_<gist_type>_<source_locale>_<target_locale>.txt where each
 line has the form:
-    <english phrase> : <target phrase>
+    <source phrase> : <target phrase>
 
-gist_type and locale_shortcut are parsed from the input file name:
-gist_type is capitalized (e.g. 'service' -> 'Service'),
-locale_shortcut is lowercased (e.g. 'HY' -> 'hy').
+gist_type and locale_shortcut(s) are parsed from the input file name:
+gist_type is capitalized (e.g. 'service' -> 'Service') and must be one word,
+locale shortcuts are lowercased (e.g. 'HY' -> 'hy').
 
-For each line the script looks up a TranslationAtom row with locale_id == 2
-and content == <english phrase>. If found, a new TranslationAtom with
+When two locale shortcuts are provided (separated by _), the first is used
+as SOURCE_LOCALE and the second as TARGET_LOCALE. When one is provided,
+SOURCE_LOCALE defaults to English (locale_id == 2) and the provided shortcut
+is TARGET_LOCALE.
+
+For each line the script looks up a TranslationAtom row with the source locale
+and content == <source phrase>. If found, a new TranslationAtom with
 the target locale and content == <target phrase> is created via
 create_gists_with_atoms, attached to the same translation gist
 (parent_client_id / parent_object_id) with the given gist_type.
 
 With the optional 'force' argument:
-- when no English atom matching the source phrase exists, a new TranslationGist
-  is created together with both the English atom and the target-locale atom;
+- when no source atom matching the source phrase exists, a new TranslationGist
+  is created together with both the source and target-locale atoms;
 - when a target-locale translation already exists, it is updated with the new
   content instead of being skipped.
 
@@ -25,6 +31,7 @@ Usage:
     python import_translations_by_type.py <config_uri> <i18n_txt_path> [force]
     e.g.:
     python import_translations_by_type.py ../development.ini ./i18n_service_hy.txt
+    python import_translations_by_type.py ../development.ini ./i18n_service_en_hy.txt
     python import_translations_by_type.py ../development.ini ./i18n_service_hy.txt force
 """
 
@@ -45,19 +52,30 @@ from lingvodoc.utils.creation import create_gists_with_atoms
 SOURCE_LOCALE_ID = 2   # English
 CLIENT_ID = 1
 
-FILENAME_RE = re.compile(r'^i18n_(?P<gist_type>[A-Za-z_]+)_(?P<shortcut>[A-Za-z]{2,3})\.txt$')
+FILENAME_RE = re.compile(r'^i18n_(?P<gist_type>[A-Za-z]+)_(?P<locales>[A-Za-z]{2,3}(?:_[A-Za-z]{2,3})?)\.txt$')
 
 
 def parse_filename(path):
-    """Extract (gist_type, locale_shortcut) from a file name like
-    i18n_service_hy.txt -> ('Service', 'hy')."""
+    """Extract (gist_type, source_locale, target_locale) from a file name.
+
+    i18n_service_hy.txt -> ('Service', 'en', 'hy')
+    i18n_service_en_hy.txt -> ('Service', 'en', 'hy')
+    """
     name = os.path.basename(path)
     m = FILENAME_RE.match(name)
     if m is None:
         return None
-    gist_type = m.group('gist_type').replace('_', ' ').capitalize()
-    shortcut = m.group('shortcut').lower()
-    return gist_type, shortcut
+    gist_type = m.group('gist_type').capitalize()
+    locales = m.group('locales').split('_')
+
+    if len(locales) == 1:
+        source_locale = 'en'
+        target_locale = locales[0].lower()
+    else:
+        source_locale = locales[0].lower()
+        target_locale = locales[1].lower()
+
+    return gist_type, source_locale, target_locale
 
 
 def parse_i18n_file(path):
@@ -96,23 +114,30 @@ def main(argv=sys.argv):
 
     parsed = parse_filename(i18n_path)
     if parsed is None:
-        print(f'Cannot parse gist_type and locale_shortcut from {i18n_path!r}; '
-              'expected i18n_<gist_type>_<locale_shortcut>.txt')
+        print(f'Cannot parse gist_type and locales from {i18n_path!r}; '
+              'expected i18n_<gist_type>_<locale>.txt or i18n_<gist_type>_<source_locale>_<target_locale>.txt')
         sys.exit(1)
-    gist_type, shortcut = parsed
-    print(f'Parsed from filename: gist_type={gist_type!r} locale_shortcut={shortcut!r} force={force}')
+    gist_type, source_locale, target_locale = parsed
+    print(f'Parsed from filename: gist_type={gist_type!r} source_locale={source_locale!r} target_locale={target_locale!r} force={force}')
 
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, options=parse_vars(positional[2:]))
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
 
-    locale = DBSession.query(Locale).filter(Locale.shortcut == shortcut).first()
-    if locale is None:
-        print(f'No locale found with shortcut {shortcut!r}')
+    source_loc = DBSession.query(Locale).filter(Locale.shortcut == source_locale).first()
+    if source_loc is None:
+        print(f'No locale found with shortcut {source_locale!r}')
         sys.exit(1)
-    target_locale_id = locale.id
-    print(f'Target locale: shortcut={shortcut!r} id={target_locale_id}')
+    source_locale_id = source_loc.id
+    print(f'Source locale: shortcut={source_locale!r} id={source_locale_id}')
+
+    target_loc = DBSession.query(Locale).filter(Locale.shortcut == target_locale).first()
+    if target_loc is None:
+        print(f'No locale found with shortcut {target_locale!r}')
+        sys.exit(1)
+    target_locale_id = target_loc.id
+    print(f'Target locale: shortcut={target_locale!r} id={target_locale_id}')
 
     created = 0
     created_forced = 0
@@ -126,7 +151,7 @@ def main(argv=sys.argv):
             DBSession.query(TranslationAtom)
             .filter(
                 TranslationAtom.content == src,
-                TranslationAtom.locale_id == SOURCE_LOCALE_ID,
+                TranslationAtom.locale_id == source_locale_id,
                 TranslationAtom.parent_client_id == TranslationGist.client_id,
                 TranslationAtom.parent_object_id == TranslationGist.object_id,
                 TranslationGist.type == gist_type
@@ -141,7 +166,7 @@ def main(argv=sys.argv):
             try:
                 create_gists_with_atoms(
                     [
-                        {'locale_id': SOURCE_LOCALE_ID, 'content': src},
+                        {'locale_id': source_locale_id, 'content': src},
                         {'locale_id': target_locale_id, 'content': dst},
                     ],
                     None,
