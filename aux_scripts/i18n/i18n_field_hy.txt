@@ -1,0 +1,484 @@
+(Literary) Word : (Գրական) Բառ
+<h1>d{{3*3}} : <h1>d{{3*3}}
+AKO SL : AKO SL
+AKONUM SL : AKONUM SL
+ALFUNC SL : ALFUNC SL
+ALU SL : ALU SL
+Accent : Շեշտ
+Accentuation : Շեշտադրում
+Accordance in N. Tereshchenko's "Nenets-Russian Dictionary" : Համապատասխանություն Ն. Տերեշչենկոյի «Նենեց-ռուսերեն բառարանում»
+Accordance in N. Tereshchenko's "Nenets-Russian Dictionary" [Tereshchenko 1965] : Համապատասխանություն Ն. Տերեշչենկոյի «Նենեց-ռուսերեն բառարանում» [Տերեշչենկո 1965]
+Accordance in T. Salminen's " A Morphological Dictionary of Tundra Nenets" [Salminen 1998] : Համապատասխանություն Տ. Սալմինենի «Տունդրայի նենեցների ձևաբանական բառարանում» [Սալմինեն 1998]
+Accordance in T. Salminen's "Morphological Dictionary of Tundra Nenets" [Salminen 1998] : Համապատասխանություն Տ. Սալմինենի «Տունդրայի նենեցների ձևաբանական բառարանում» [Սալմինեն 1998]
+Add file : Ավելացնել ֆայլ
+Additional info : Լրացուցիչ տեղեկություն
+Affix : Աֆիքս
+Ainu : Այնու
+All-Perm (star) : Ընդհանուր պերմական (աստղանիշ)
+Allomorph : Ալլոմորֆ
+Altaic : Ալթայական
+Alutor : Ալյուտորյան
+Amur Nivkh : Ամուրի նիվխական
+Anomalies : Անոմալիաներ
+Arab graphic : Արաբական գրաֆիկա
+Audio : Աուդիո
+Author : Հեղինակ
+Author's notes : Հեղինակի նշումներ
+Author/Creator : Հեղինակ/Ստեղծող
+Azerbaijani : Ադրբեջաներեն
+BIL SL : BIL SL
+BILN SL : BILN SL
+BOG SL : BOG SL
+Balkar : Բալկարերեն
+Base : Հիմք
+Bashkir : Բաշկիրերեն
+Berezov 18th c. : Բերյոզով XVIII դ.
+Berezov 19th c. : Բերյոզով XIX դ.
+Besermyan : Բեսերմյաներեն
+Birsk : Բիրսկ
+Bodaninsky Dictionary (Tauride province), 1873 : Բոդանինսկու բառարան (Տավրիդայի նահանգ), 1873
+Borrowing : Փոխառություն
+Broad transcription : Լայն տառադարձություն
+CADLNUM SL : CADLNUM SL
+CHFUNK SL : CHFUNK SL
+CHN SL : CHN SL
+CHNNUM SL : CHNNUM SL
+CHU SL : CHU SL
+CHUK Chukchee : CHUK Չուկչերեն
+CHUV SL : CHUV SL
+CHUVN  SL : CHUVN SL
+CJD SL : CJD SL
+CJDNUM SL : CJDNUM SL
+CTH : CTH
+Category : Կատեգորիա
+Chagatai : Չաղաթայերեն
+Cheboksar dialect : Չեբոքսարյան բարբառ
+Chukchi : Չուկչերեն
+Chulym : Չուլիմերեն
+Churaeva : Չուրաևա
+Chuvan Yukaghir : Չուվան յուկագիրերեն
+Chuvash : Չուվաշերեն
+Cognates : Հարազատ բառեր
+Color : Գույն
+Comment : Մեկնաբանություն
+Concept : Հասկացություն
+Context : Համատեքստ
+Coverage : Ծածկույթ
+DYB SL : DYB SL
+Decryption and Russian-English translation : Վերծանում և ռուս-անգլերեն թարգմանություն
+Dialect group : Բարբառային խումբ
+Dialectal phonology : Բարբառային հնչյունաբանություն
+Dictionary form : Բառարանային ձև
+Dictionary of Krym-Tatar language, 1902 : Ղրիմ-թաթարերենի բառարան, 1902
+Dictionary orthography : Բառարանային ուղղագրություն
+Digor : Դիգորերեն
+Directed Link : Ուղղված հղում
+Dolgan : Դոլգաներեն
+Dunin-Gorkavich early 20th c. : Դունին-Գորկավիչ XX դ. սկիզբ
+ESK : ESK
+EXT SL : EXT SL
+East : Արևելք
+East Bashkir : Արևելյան բաշկիրերեն
+East Sahalin Nivkh : Արևելյան սախալինյան նիվխերեն
+Editorial remarks : Խմբագրական դիտողություններ
+Emotional domain : Հուզական ոլորտ
+Emyng Yastopsa early 20th c. : Էմինգ Յաստոպսա XX դ. սկիզբ
+Enents bai : Էնեց բայ
+Enets (star) : Էնեցերեն (աստղանիշ)
+Enets Somatu : Էնեց Սոմատու
+English translation : Անգլերեն թարգմանություն
+Erzya : Էրզյաներեն
+Estonian (star) : Էստոներեն (աստղանիշ)
+Etymology : Ստուգաբանություն
+Even : Էվեներեն
+Evenki : Էվենկերեն
+Expected phonematic shell : Սպասվող հնչյունային թաղանթ
+FY Dictionary : FY բառարան
+FY Dictionaty by Shalugin-Nikolaeva : FY բառարան Շալուգին-Նիկոլաևայի
+Family grouping tag : Ընտանեկան խմբավորման պիտակ
+Family tag : Ընտանեկան պիտակ
+Finance : Ֆինանսներ
+Finish Year : Ավարտման տարեթիվ
+Finnish (star) : Ֆիններեն (աստղանիշ)
+Forest Nenets : Անտառային նենեցերեն
+Forest Yukaghir : Անտառային յուկագիրերեն
+Forest Yukaghir (Johelson 1900) : Անտառային յուկագիրերեն (Յոհելսոն 1900)
+Forest Yukaghir (Shalugin, Nikolaeva) : Անտառային յուկագիրերեն (Շալուգին, Նիկոլաևա)
+French translation : Ֆրանսերեն թարգմանություն
+Gagauz : Գագաուզերեն
+Genre : Ժանր
+German translation : Գերմաներեն թարգմանություն
+Glazov : Գլազով
+Glossing : Փառաբանական նշագրման
+Grammar features : Քերականական հատկանիշներ
+Grammar glosses : Քերականական փաղաղակներ
+Group : Խումբ
+HMG SL : HMG SL
+HMGNUM SL : HMGNUM SL
+Hanyue translation : Հանյուե թարգմանություն
+Hungarian (star) : Հունգարերեն (աստղանիշ)
+ICOST SL : ICOST SL
+ILCNUM SL : ILCNUM SL
+IM SL : IM SL
+IRSLOV SL : IRSLOV SL
+ITE SL : ITE SL
+ITEMEA SL : ITEMEA SL
+ITRUSL SL : ITRUSL SL
+Idiolectal phonology : Անհատական բարբառի հնչյունաբանություն
+Idiom's name : Արտահայտության անվանում
+Illustrative sentences : Օրինակ նախադասություններ
+Image : Պատկեր
+Inari Sami : Ինարի սաամերեն
+Izhma : Իժմա
+Izhorian : Իժորերեն
+Japanese translation : Ճապոներեն թարգմանություն
+Jaransk : Յարանսկ
+Jelabuga : Ելաբուգա
+Jurchen : Չժուրչեներեն
+KER SL : KER SL
+KJN SL : KJN SL
+KJNNUM SL : KJNNUM SL
+KNW SL : KNW SL
+KNWNUM SL : KNWNUM SL
+KOE SL : KOE SL
+KOFUNC SL : KOFUNC SL
+KOL SL : KOL SL
+KOR SL : KOR SL
+KREJN SL : KREJN SL
+KRNMAT SL : KRNMAT SL
+KRYY SL : KRYY SL
+Kamassian (star) : Կամասիներեն (աստղանիշ)
+Karagas : Կարագասերեն
+Karahanid : Քարախանիդերեն
+Karaim : Կարaimերեն
+Karakalpak : Ղարաքալպաքերեն
+Karelian : Կարելերեն
+Kazakh : Ղազախերեն
+Kazan : Ղազան
+Kazym 21st c. : Քազիմ XXI դ.
+Khakass : Խակասերեն
+Khalaj : Խալաջերեն
+Khanty (star) : Խանտիերեն (աստղանիշ)
+Kildin Sami : Կիլդին սաամերեն
+Kirghiz : Ղրղզերեն
+Koibal (Castren) : Կոյբալերեն (Կաստրեն)
+Koibal (Radlov) : Կոյբալերեն (Ռադլով)
+Koibal (Spassky) : Կոյբալերեն (Սպասսկի)
+Kokshai : Կոկշայ
+Komi (star) : Կոմիերեն (աստղանիշ)
+Komi Zyryan dialect : Կոմի-զիրյանական բարբառ
+Komi-Yaz'va : Կոմի-յազվիներեն
+Komi-Zyryan lit : Կոմի-զիրյանական գրական
+Komi-permian : Կոմի-պերմյակերեն
+Korean : Կորեերեն
+Koryak : Կորյակերեն
+Kozmodemyan : Կոզմոդեմյանսկ
+Krejnovich 1982 : Կրեյնովիչ 1982
+Kumyk : Կումիկերեն
+LES SL : LES SL
+LMEAN SL : LMEAN SL
+Language competence : Լեզվական կարողություն
+Latin Name : Լատիներեն անվանում
+Latin Transliteration : Լատինական տառադարձություն
+Latin transliteration : Լատինական տառադարձություն
+Lemma : Լեմմա
+Letka : Լետկա
+Lexem_San-chuan : Lexem_San-chuan
+Lexical Entries : Բառային գրառումներ
+Lexical meaning : Բառային նշանակություն
+Lines : Տողեր
+Link : Հղում
+Link (Link) : Հղում (Link)
+Link from Starling : Հղում Starling-ից
+Literal translation : Բառացի թարգմանություն
+Literary correlate in standard phonological transcription : Գրական համապատասխան ստանդարտ հնչյունաբանական տառադարձությամբ
+Literary norm : Գրական նորմ
+Livonian : Լիվերեն
+Local litter : Տեղական խումբ
+Low Vychegda : Ստորին Վիչեգդա
+Ludic : Լյուդիերեն
+Lule Sami : Լուլե սաամերեն
+Lumpokolie 18th c. : Լումպոկոլիե XVIII դ.
+Luza : Լուզա
+Luzlet : Luzlet
+MLU SL : MLU SL
+MLUN SL : MLUN SL
+MOR SL : MOR SL
+Main grammatical forms : Հիմնական քերականական ձևեր
+Malmyzh : Մալմիժ
+Malmyzh-urzhum : Մալմիժ-ուրժում
+Manchu : Մանջուրերեն
+Mansi (star) : Մանսիերեն (աստղանիշ)
+Mari (star) : Մարիերեն (աստղանիշ)
+Markup : Նշագրման
+Mator (star) : Մատորերեն (աստղանիշ)
+Meadow Mari : Մարգագետնային մարիերեն
+Meaning : Նշանակություն
+Meaning in Yakut : Նշանակություն յակուտերենում
+Meaning of affix : Աֆիքսի նշանակություն
+Meaning's change : Նշանակության փոփոխություն
+Middle : Միջին
+Middle Sysola : Միջին Սիսոլա
+Moksha : Մոկշայերեն
+Mordwinische (star) : Մորդվիներեն (աստղանիշ)
+Morphophonemic transcription : Մորֆոֆոնեմական տառադարձություն
+Mountain : Լեռնային
+NDISS SL : NDISS SL
+NIKSH SL : NIKSH SL
+NIOD SL : NIOD SL
+NIODNUM SL : NIODNUM SL
+NIVG SL : NIVG SL
+NRS SL : NRS SL
+Name of the practice : Փորձի անվանում
+Nanai : Նանայերեն
+Narrow phonetic transcription : Նեղ հնչյունական տառադարձություն
+Narrow transliteration : Նեղ տառադարձություն
+Negidal : Նեգիդալերեն
+Nenets (star) : Նենեցերեն (աստղանիշ)
+Nganasan (star) : Նգանասաներեն (աստղանիշ)
+Nizyam 21st c. : Նիզյամ XXI դ.
+Nogai : Նոգայերեն
+North : Հյուսիս
+North Sami : Հյուսիսային սաամերեն
+Number : Թիվ
+Number of the languages : Լեզուների թիվ
+OEIT SL : OEIT SL
+OIT SL : OIT SL
+OMEAN SL : OMEAN SL
+OMOK SL : OMOK SL
+OMOKN SL : OMOKN SL
+OSIT SL : OSIT SL
+OTAINA SL : OTAINA SL
+Obdorsk 19th c. : Օբդորսկ XIX դ.
+Obdorsk 21st c. : Օբդորսկ XXI դ.
+Oirat : Օյրաթերեն
+Old Chinese : Հին չինարեն
+Old Komi Permian : Հին կոմի-պերմյակերեն
+Old Turkic : Հին թյուրքերեն
+Olet : Օլետ
+Olet XVIII cent : Օլետ XVIII դ.
+Omok Yukaghir : Օմոկ յուկագիրերեն
+Order : Կարգ
+Ordos : Օրդոս
+Oroch : Օրոչերեն
+Orok : Օրոկերեն
+Orthoepic phonology of the closest standard : Ամենամոտ գրական լեզվի orthoepic հնչյունաբանություն
+Orthography : Ուղղագրություն
+Other Fennic languages : Այլ ֆեննիական լեզուներ
+PAK SL : PAK SL
+PAL SL : PAL SL
+PAM SL : PAM SL
+PHM SL : PHM SL
+PHN SL : PHN SL
+PHNNUM SL : PHNNUM SL
+PMEAN SL : PMEAN SL
+POS : POS
+PRNUM SL : PRNUM SL
+PRO SL : PRO SL
+PROM SL : PROM SL
+PUKHTA SL : PUKHTA SL
+Page number (star) : Էջի համար (աստղանիշ)
+Palana Alutor : Պալանա ալյուտորերեն
+Pallas (1787–1789) : Պալլաս (1787–1789)
+Paradigm : Պարադիգմ
+Paradigm Markup : Պարադիգմի նշագրման
+Paradigm and contexts  : Պարադիգմ և համատեքստեր
+Paradigmatic forms and contexts : Պարադիգմային ձևեր և համատեքստեր
+Paragraph : Պարբերություն
+Pechora : Պեչորա
+Permian : Պերմական
+Phonemic  transcription : Հնչյունաբանական տառադարձություն
+Phonetic structure : Հնչյունական կառուցվածք
+Phonetic transcription : Հնչյունական տառադարձություն
+Phrase : Արտահայտություն
+Picture : Նկար
+Pitch : Ձայնի բարձրություն
+Pitch's change : Ձայնի բարձրության փոփոխություն
+Pite Sami : Պիտե սաամերեն
+Place of habitat : Բնակության վայր
+Plant name : Բույսի անվանում
+Polish translation : Լեհերեն թարգմանություն
+Praat Markup : Praat նշագրման
+Praat Textgrid : Praat Textgrid
+Practice description : Փորձի նկարագրություն
+Practice goal : Փորձի նպատակ
+Proto Mari according G. Bereczki : Պրոտո-մարիերեն ըստ Գ. Բերեցկիի
+Proto-Finno-Ugric (star) : Պրոտո-ֆիննո-ուագրական (աստղանիշ)
+Proto-Finno-Volga (star) : Պրոտո-ֆիննո-վոլգական (աստղանիշ)
+Proto-Japanese : Պրոտո-ճապոներեն
+Proto-Khanty : Պրոտո-խանտիերեն
+Proto-Khanty (star) : Պրոտո-խանտիերեն (աստղանիշ)
+Proto-Komi : Պրոտո-կոմիերեն
+Proto-Korean : Պրոտո-կորեերեն
+Proto-Mansi (star) : Պրոտո-մանսիերեն (աստղանիշ)
+Proto-Mari : Պրոտո-մարիերեն
+Proto-Mongolian : Պրոտո-մոնղոլերեն
+Proto-Mordwin : Պրոտո-մորդվիներեն
+Proto-Perm (star) : Պրոտո-պերմական (աստղանիշ)
+Proto-Samoyed : Պրոտո-սամոյեդերեն
+Proto-Samoyed (star) : Պրոտո-սամոյեդերեն (աստղանիշ)
+Proto-Tunguska : Պրոտո-տունգուսերեն
+Proto-Turkic : Պրոտո-թյուրքերեն
+Proto-Udmurt : Պրոտո-ուդմուրթերեն
+Proto-Yukaghir : Պրոտո-յուկագիրերեն
+Proto-form : Պրոտո-ձև
+Proto-form meaning : Պրոտո-ձևի նշանակություն
+Protokomi ESK : Պրոտոկոմի ESK
+Protosaam : Պրոտոսաամ
+Publication : Հրատարակություն
+Quasi-phonology : Քվազի-հնչյունաբանություն
+RKS SL : RKS SL
+ROW SL : ROW SL
+Reaction : Ռեակցիա
+Reconstruction : Վերակառուցում
+Russian : Ռուսերեն
+Russian translation : Ռուսերեն թարգմանություն
+Russian-Tatar dictionary, 1906 : Ռուս-թաթարերեն բառարան, 1906
+SAXL SL : SAXL SL
+SDYB SL : SDYB SL
+SED SL : SED SL
+SEU SL : SEU SL
+SEUNUM SL : SEUNUM SL
+SHM SL : SHM SL
+SIT SL : SIT SL
+SITMEA SL : SITMEA SL
+SITMEP SL : SITMEP SL
+SKR SL : SKR SL
+SNPR SL : SNPR SL
+SNR SL : SNR SL
+SOP SL : SOP SL
+STBIT SL : STBIT SL
+STEB SL : STEB SL
+STPRO : STPRO
+STPRO Chukchee : STPRO Չուկչերեն
+STPRO SL : STPRO SL
+Saami (star) : Սաամերեն (աստղանիշ)
+Salar : Սալարերեն
+Sammallahti reconstruction : Սամմալլահտիի վերակառուցում
+Sarapul : Սարապուլ
+Second_oirat : Երկրորդ_ոյրաթ
+Selengin : Սելենգին
+Selkup (star) : Սելկուպերեն (աստղանիշ)
+Selkup [Bykonya 2005] : Սելկուպերեն [Բիկոնյա 2005]
+Semantics : Իմաստաբանություն
+Sentence : Նախադասություն
+Sentiment : Զգացմունք
+Shor : Շորերեն
+Shuryshkary 21st c. : Շուրիշկարի XXI դ.
+Skolt Sami  : Սկոլտ սաամերեն
+Solon : Սոլոներեն
+Soshmin : Սոշմին
+Sound : Հնչյուն
+Sound changes : Հնչյունային փոփոխություններ
+Sound in sentences : Հնչյուն նախադասություններում
+Sound of paradigmatic forms : Պարադիգմային ձևերի հնչյուն
+Source : Աղբյուր
+Source language : Աղբյուրի լեզու
+Sources : Աղբյուրներ
+South : Հարավ
+Sphere : Ոլորտ
+Starling ID : Starling ID
+Starling graphemes : Starling գրաֆեմներ
+Subcategory : Ենթակատեգորիա
+Subphonological notes : Ենթահնչյունաբանական նշումներ
+Swedish translation : Շվեդերեն թարգմանություն
+Swest : Swest
+Syktyvkar : Սիկտիվկար
+Syllabic paragraph : Վանկային պարբերություն
+Sysola : Սիսոլա
+TSLOV SL : TSLOV SL
+TUND SL : TUND SL
+TUNSL SL : TUNSL SL
+TY Dictionary : TY բառարան
+Tags : Պիտակներ
+Taigi : Տայգի
+Tatar : Թաթարերեն
+Taz Selkup : Տազ սելկուպերեն
+Ter Sami : Տեր սաամերեն
+Tereshkin (1981) : Տերեշկին (1981)
+The Saro-Yogurs in Machuaugtzŭ : Սարո-յոգուրները Մաչուաուգթզուն
+Theme : Թեմա
+Thesis Irina A. Nikolaeva : Թեզիս Իրինա Ա. Նիկոլաևա
+Third_oirat : Երրորդ_ոյրաթ
+Tibetan : Տիբետերեն
+Tobolsk 18th c. : Տոբոլսկ XVIII դ.
+Todo bichiq : Todo bichiq
+Tofalar : Տոֆալարերեն
+Transcription : Տառադարձություն
+Transcription (Julia Normanskaja) : Տառադարձություն (Յուլիա Նորմանսկայա)
+Transcription of paradigmatic forms : Պարադիգմային ձևերի տառադարձություն
+Translation 1 : Թարգմանություն 1
+Translation and grammar glosses : Թարգմանություն և քերականական փաղաղակներ
+Translation into Russian : Թարգմանություն ռուսերեն
+Translation of paradigmatic forms : Պարադիգմային ձևերի թարգմանություն
+Transliteration in Cyrillic : Տառադարձություն կիրիլիցայով
+Tundra Yukaghir : Տունդրայի յուկագիրերեն
+Tundra Yukaghir (Johelson 1900) : Տունդրայի յուկագիրերեն (Յոհելսոն 1900)
+Turkish : Թուրքերեն
+Turkmen : Թուրքմեներեն
+Tushal : Տուշալ
+Tuvan : Տուվայերեն
+Tylovaj : Տիլովայ
+Udege : Ուդեգեերեն
+Udmurt (star) : Ուդմուրթերեն (աստղանիշ)
+Udmurt dial. : Ուդմուրթական բարբառ
+Udora : Ուդորա
+Ufa : Ուֆա
+Uighur : Ույղուրերեն
+Ulch : Ուլչերեն
+Ume Sami : Ումե սաամերեն
+Upper Sysola : Վերին Սիսոլա
+Upper Vychegod : Վերին Վիչեգդա
+Ursygurt : Ուրսիգուրտ
+Urzhum : Ուրժում
+Uzbek : Ուզբեկերեն
+VOL SL : VOL SL
+VZHU SL : VZHU SL
+Vach : Վաչ
+Vakh (Tereshkin) : Վախ (Տերեշկին)
+Vakh 20th c. : Վախ XX դ.
+Vasjugan 18th c. : Վասյուգան XVIII դ.
+Vasyaugan (Tereshkin) : Վասյուգան (Տերեշկին)
+Vepsian : Վեպսերեն
+Vetluga : Վետլուգա
+VoQS notes : VoQS նշումներ
+Votic : Վոդերեն
+Vychegda : Վիչեգդա
+Vym : Վիմ
+WCFUNK SL : WCFUNK SL
+WCOST SL : WCOST SL
+WDYB SL : WDYB SL
+WIT SL : WIT SL
+WITMEA SL : WITMEA SL
+WITMEP SL : WITMEP SL
+WKD SL : WKD SL
+Western Yugur : Արևմտյան յուգուրերեն
+Word : Բառ
+Word in Arch. Veniamin's Grammar  : Բառ արքեպիսկոպոս Վենիամինի քերականությունում
+Word of the closest known idiom : Ամենամոտ հայտնի բարբառի բառ
+Word of the closest standard language : Ամենամոտ գրական լեզվի բառ
+Word with affix : Բառ աֆիքսով
+Wsch. Kor. : Wsch. Kor.
+XAIR SL : XAIR SL
+Xibe : Սիբոերեն
+Xorazm : Խորեզմ
+YFA SL : YFA SL
+Yakut : Յակուտերեն
+Year of beggining : Սկզբի տարեթիվ
+Yukaghir (Billings) : Յուկագիրերեն (Բիլլինգս)
+Yukaghir (Krejnovich 1900) : Յուկագիրերեն (Կրեյնովիչ 1900)
+Yukaghir (Krejnovich 1958) : Յուկագիրերեն (Կրեյնովիչ 1958)
+Yukaghir (Krejnovich 1982) : Յուկագիրերեն (Կրեյնովիչ 1982)
+Yukaghir (Miller-Lindenau) : Յուկագիրերեն (Միլլեր-Լինդենաու)
+Yukaghir (Nikolaeva 1988) : Յուկագիրերեն (Նիկոլաևա 1988)
+Yukaghir-Russian dictionary 2001 : Յուկագիր-ռուսերեն բառարան 2001
+Yukagir (star) : Յուկագիրերեն (աստղանիշ)
+Yurak : Յուրակ
+a. p. : a. p.
+dictionary form : բառարանային ձև
+transcript_int : transcript_int
+transcript_shor : transcript_shor
+Грамматическая информация : Քերականական տեղեկություն
+Дискурс : Զրույց
+Ошибки : Սխալներ
+№ of fairytales : Հեքիաթների №

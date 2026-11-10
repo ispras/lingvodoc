@@ -1,0 +1,1264 @@
+(1, 10) : Converting 80% : Преобразование 80% : 
+(1, 101) : Organizations : Организации : Կազմակերպություններ
+(1, 105) : Grouping Tag : Группировочный тег : 
+(1, 109) : Kildin dialect (village Voronino) Saami language : Кильдинский диалект (воронинский говор) саамского языка : 
+(1, 114) : WiP : В работе : 
+(1, 118) : Published dictionaries : Опубликованные словари : 
+(1, 1189) : Language degree of endangerment (selection affects selected languages and dictionaries) :  : Լեզվի վերացման վտանգի աստիճան (ընտրությունն ազդում է ընտրված լեզուների և բառարանների վրա)
+(1, 1192) : right :  : աջ
+(1, 1195) : .docx file for convertion : : .docx-файл для конвертации: : : .docx ֆայլ փոխարկման համար՝
+(1, 1198) : a.* :  : a.*
+(1, 1201) : ablative :  : Abessive (բացակայության հոլով)
+(1, 1204) : absolutive :  : Absolutive (բացարձակ հոլով)
+(1, 1207) : accusative :  : Accusative (ուղղական հոլով)
+(1, 1210) : Add dictionaries of other language groups :  : Ավելացնել այլ լեզվախմբերի բառարաններ
+(1, 1213) : Add news :  : Ավելացնել նորություն
+(1, 1216) : Add to markup :  : Ավելացնել markup-ին
+(1, 1219) : Add variant :  : Ավելացնել տարբերակ
+(1, 1222) : Add words and transcriptions from paradigms to lexical entries :  : Ավելացնել բառեր և տրանսկրիպցիաներ պարադիգմաներից բառային միավորներին
+(1, 1225) : additive :  : Additive (հավելյալ հոլով)
+(1, 1228) : adessiv :  : Adessive (մերձակա հոլով)
+(1, 123) : Published : Опубликованный : Հրապարակված
+(1, 1231) : adjective :  : Արժանվան
+(1, 1234) : adverb(ial) :  : ձևանիշ(ային)
+(1, 1237) : affirmative :  : Հաստատական
+(1, 1240) : agent-like argument of canonical transitive verb :  : Կանոնիկ անցումային բայի գործակալ-նման արգումենտ
+(1, 1243) : alignment .docx :  : Հավասարեցման .docx
+(1, 1246) : All entries :  : Բոլոր գրառումները
+(1, 1249) : allative :  : Allative (ուղղության հոլով)
+(1, 1252) : antipassive :  : Antipassive (հակադարձ ձև)
+(1, 1255) : Apply :  : Կիրառել
+(1, 1258) : Are you sure you want to delete file :  : Վստա՞հ եք, որ ուզում եք ջնջել ֆայլը
+(1, 1261) : Are you sure you want to remove selected element from markup :  : Վստա՞հ եք, որ ուզում եք հեռացնել ընտրված տարրը markup-ից
+(1, 1264) : article :  : Հոդված (կետ)
+(1, 1267) : ASR service is unavailable :  : ASR ծառայությունը անհասանելի է
+(1, 1270) : assertive :  : Assertive (հաստատական)
+(1, 1273) : assumptive :  : Assumptive (ենթադրական)
+(1, 1276) : Attach :  : Կցել
+(1, 1279) : attributive :  : Attributive (վերաբերական)
+(1, 128) : ELAN markup : ELAN разметка : 
+(1, 1282) : Audio recording is not supported in this browser :  : Աուդիո ձայնագրումը չի աջակցվում այս զննարկիչում
+(1, 1285) : auxiliary :  : Օժանդակ
+(1, 1288) : A≠a :  : A≠a
+(1, 1291) : benefactive :  : Benefactive (օգտակար հոլով)
+(1, 1294) : Case :  : Հոլով
+(1, 1297) : causative :  : Causative (հրահրողական)
+(1, 1300) : check .docx :  : Ստուգել .docx
+(1, 1303) : check .txt :  : Ստուգել .txt
+(1, 1306) : classifier :  : Դասակարգիչ
+(1, 1309) : cognate groups :  : հարազատ բառերի խմբեր
+(1, 1312) : comitative :  : Comitative (ուղեկցության հոլով)
+(1, 1315) : comparativ :  : Comparativ (համեմատական)
+(1, 1318) : conditional :  : Conditional (պայմանական)
+(1, 132) : Village Forest Tsibaevo : Деревня Лесное Цибаево : 
+(1, 1321) : Contibutions :  : Ներդրումներ
+(1, 1324) : continius :  : Continuative (շարունակական)
+(1, 1327) : continuative :  : Continuative (շարունակական)
+(1, 1330) : converb :  : Converb (դերբայական մասնակից)
+(1, 1333) : Convert additional markup :  : Փոխարկել լրացուցիչ markup-ը
+(1, 1336) : Convert morphology concordance :  : Փոխարկել ձևաբանական համապատասխանությունը
+(1, 1339) : Copy failed — please select and copy the text manually :  : Պատճենումը ձախողվեց — ընտրեք և պատճենեք տեքստը ձեռքով
+(1, 134) : RNF № 15-18-00044 "Information system for description of minority languages of the world. Development of descriptions for endangered Altaic and Uralic languages of Russia", 2015-2017 (head V. M. Alpatov) : РНФ № 15-18-00044 «Информационная система для описания малочисленных языков народов мира. Создание описаний алтайских и уральских языков России, находящихся на грани исчезновения», 2015-2017 (рук. В. М. Алпатов) : 
+(1, 1342) : Copy transcription :  : Պատճենել տրանսկրիպցիան
+(1, 1345) : Core :  : Միջուկ
+(1, 1348) : Corpora created :  : Կորպուսները ստեղծված են
+(1, 1351) : Corpus search :  : Կորպուսի որոնում
+(1, 1354) : Could not reach the ASR service :  : Հնարավոր չեղավ հասնել ASR ծառայությանը
+(1, 1357) : Could not reach the TTS service :  : Հնարավոր չեղավ հասնել TTS ծառայությանը
+(1, 1360) : cuncative :  : Cuncative (հապաղողական)
+(1, 1363) : data processing and analysis software : phonetic analysis; search for etymologies; analysis of cognates in dialects and several languages; acoustic analysis of cognates; measuring phonological statistical distance; phonemic analysis; reconstruction of cognates in dialects and several languages : ПО для обработки и анализа данных: фонетический анализ; поиск этимологий; анализ когнатов в диалектах и нескольких языках; акустический анализ когнатов; измерение фонологического статистического расстояния; фонематический анализ; реконструкция когнатов в диалектах и нескольких языках : phonetic analysis; search for etymologies; analysis of cognates in dialects and several languages; acoustic analysis of cognates; measuring phonological statistical distance; phonemic analysis; reconstruction of cognates in dialects and several languages : տվյալների մշակման և վերլուծության ծրագրային ապահովում՝ հնչեթական վերլուծություն; էտիմոլոգիաների որոնում; բարբառների և մի քանի լեզուների հարազատ բառերի վերլուծություն; հարազատ բառերի ակուստիկ վերլուծություն; ֆոնոլոգիական վիճակագրական հեռավորության չափում; ֆոնեմային վերլուծություն; բարբառների և մի քանի լեզուների հարազատ բառերի վերակառուցում
+(1, 1366) : Date removed from publication :  : Հրապարակումից հեռացման ամսաթիվ
+(1, 1369) : dative :  : Dative (տրամադրական հոլով)
+(1, 1372) : declarative :  : Declarative (հայտարարական)
+(1, 1375) : definite :  : Definite (որոշյալ)
+(1, 1378) : Delete image file :  : Ջնջել պատկերի ֆայլը
+(1, 1381) : Delete markup :  : Ջնջել markup-ը
+(1, 1384) : Delete markup file :  : Ջնջել markup-ի ֆայլը
+(1, 1387) : Delete markup group :  : Ջնջել markup-ի խումբը
+(1, 1390) : Delete sound file :  : Ջնջել ձայնային ֆայլը
+(1, 1393) : deliberativ :  : Deliberativ (կանխամտածված)
+(1, 1396) : demonstrative :  : Demonstrative (ցուցական)
+(1, 1399) : determiner :  : Determiner (որոշիչ)
+(1, 1402) : Dictionary data loading error :  : Բառարանի տվյալների բեռնման սխալ
+(1, 1405) : Dictionary info loading error :  : Բառարանի տեղեկատվության բեռնման սխալ
+(1, 1408) : Disambiguated tokens :  : Միիմաստեցված թոքեններ
+(1, 1411) : Disambiguation :  : Միիմաստեցում
+(1, 1414) : distributive :  : Distributive (բաշխական)
+(1, 1417) : Download FLAC :  : Ներբեռնել FLAC
+(1, 1420) : dual :  : Dual (երկակի թիվ)
+(1, 1423) : Duration :  : Տևողություն
+(1, 1426) : durative :  : Durative (տևական)
+(1, 1429) : Edit interface translations :  : Խմբագրել ինտերֆեյսի թարգմանությունները
+(1, 143) : Contacts : Контакты : Կոնտակտներ
+(1, 1432) : elatv :  : Elative (ելակային հոլով)
+(1, 1435) : Empty :  : Դատարկ
+(1, 1438) : Empty search query and no language/metadata conditions :  : Դատարկ որոնման հարցում և լեզվի/մետատվյալների պայմաններ չկան
+(1, 1441) : Empty substrings are not allowed :  : Դատարկ ենթատողերը չեն թույլատրվում
+(1, 1444) : Enter Armenian text to synthesize :  : Մուտքագրեք հայերեն տեքստ՝ սինթեզի համար
+(1, 1447) : entity :  : էություն
+(1, 1450) : ergative :  : Ergative (երգատիվ)
+(1, 1453) : essiv :  : Essive (եսիվ)
+(1, 1456) : exclusive :  : Exclusive (բացառող)
+(1, 1459) : Execute :  : Կատարել
+(1, 1462) : Failed search query :  : Ձախողված որոնման հարցում
+(1, 1465) : Failed to compute valency verb cases analysis :  : Հնարավոր չեղավ հաշվել կապակցության բայական հոլովների վերլուծությունը
+(1, 1468) : Failed to get search link, please contact administrators :  : Հնարավոր չեղավ ստանալ որոնման հղումը, դիմեք ադմինիստրատորներին
+(1, 147) : Language : Язык : Լեզու
+(1, 1471) : Failed to launch valency data compilation :  : Հնարավոր չեղավ գործարկել կապակցության տվյալների կազմումը
+(1, 1474) : Failed to start convertion to a new dictionary :  : Հնարավոր չեղավ սկսել փոխարկումը նոր բառարանի
+(1, 1477) : Failed to start dictionary update :  : Հնարավոր չեղավ սկսել բառարանի թարմացումը
+(1, 1480) : feminine :  : Իգական
+(1, 1483) : Field data loading error :  : Դաշտի տվյալների բեռնման սխալ
+(1, 1486) : Field selection :  : Դաշտի ընտրություն
+(1, 1489) : first person :  : Առաջին դեմք
+(1, 1492) : Focus :  : Ֆոկուս
+(1, 1495) : Formatted transcription :  : Ձևաչափված տրանսկրիպցիա
+(1, 1498) : future :  : Ապագա
+(1, 15) : Grant of President of Russia  MD -7005.2015.6 "Comparative historical dialect audioditionary of Uralic languages", 2015-2016 (head Ju. V. Normanskaja) : Президентами РФ МД -7005.2015.6 «Создание сравнительно-исторического диалектного аудиословаря уральских языков», 2015-2016 (рук. Ю. В. Норманская) : 
+(1, 1501) : genitive :  : Genitive (սեռական հոլով)
+(1, 1504) : Genus :  : Ցեղ
+(1, 1507) : Getting link to search results :  : Որոնման արդյունքների հղման ստացում
+(1, 151) : Participants of the project : Участники проекта : 
+(1, 1510) : Grants and organizations :  : Դրամաշնորհներ և կազմակերպություններ
+(1, 1513) : GraphQL error : Request already exists : Ошибка GraphQL: запрос уже существует : Request already exists : GraphQL սխալ՝ հարցումն արդեն գոյություն ունի
+(1, 1516) : habitualis :  : Habitualis (սովորական)
+(1, 1519) : here :  : այստեղ
+(1, 1522) : Hiding sentences :  : Նախադասությունների թաքցում
+(1, 1525) : id :  : id
+(1, 1528) : illative :  : Illative (ներսային հոլով)
+(1, 1531) : imperative :  : Imperative (պատվիրան)
+(1, 1534) : imperfective :  : Imperfective (անավարտ տեսակ)
+(1, 1537) : Import :  : Ներմուծում
+(1, 1540) : Import dialeqt :  : Ներմուծել dialeqt
+(1, 1543) : inclusive :  : Inclusive (ներառող)
+(1, 1546) : indefinite :  : Indefinite (անորոշ)
+(1, 1549) : indicative :  : Indicative (ցուցական)
+(1, 155) : The project was supported by : Проект выполняется при финансовой поддержке грантов: : 
+(1, 1552) : indirective :  : Indirective (անուղղակի)
+(1, 1555) : inessiv :  : Inessive (ներքին հոլով)
+(1, 1558) : infinitive :  : Infinitive (անորոշ բայ)
+(1, 1561) : instrumental :  : Instrumental (գործիական հոլով)
+(1, 1564) : intransitive :  : Intransitive (անանցում)
+(1, 1567) : Invalid regular expression :  : Սխալ կանոնավոր արտահայտություն
+(1, 1570) : Invalid search condition matching type, please contact administrators :  : Սխալ որոնման պայմանի համադրման տեսակ, դիմեք ադմինիստրատորներին
+(1, 1573) : irrealis :  : Irrealis (ոչ իրական)
+(1, 1576) : iterative :  : Iterative (կրկնվող)
+(1, 1579) : Json :  : Json
+(1, 1582) : language :  : լեզու
+(1, 1585) : left for now :  : ձախ առայժմ
+(1, 1588) : Left text :  : Ձախ տեքստ
+(1, 1591) : Lexical entries not found :  : Բառային միավորներ չեն գտնվել
+(1, 1594) : limitative :  : Limitative (սահմանող)
+(1, 1597) : Lingtrain aligner :  : Lingtrain հավասարեցնող
+(1, 1600) : Loading dictionary data :  : Բառարանի տվյալների բեռնում
+(1, 1603) : Loading field template :  : Դաշտի ձևանմուշի բեռնում
+(1, 1606) : Loading file data :  : Ֆայլի տվյալների բեռնում
+(1, 1609) : Loading locale data :  : Լոկալի տվյալների բեռնում
+(1, 1612) : Loading markup data :  : Markup-ի տվյալների բեռնում
+(1, 1615) : Loading markups and groups data :  : Markups-ների և խմբերի տվյալների բեռնում
+(1, 1618) : Loading tag data :  : Թեգի տվյալների բեռնում
+(1, 1621) : Loading valency data :  : Կապակցության տվյալների բեռնում
+(1, 1624) : Loading valency verb cases data :  : Կապակցության բայական հոլովների տվյալների բեռնում
+(1, 1627) : Local Update :  : Տեղական թարմացում
+(1, 1630) : Locale data loading error :  : Լոկալի տվյալների բեռնման սխալ
+(1, 1633) : locative :  : Locative (տեղական հոլով)
+(1, 1636) : Make sure the model archive is deployed (e.g. to ~/asr-hy-cpu) and gunicorn is running, then reload this dialog :  : Համոզվեք, որ մոդելի արխիվը տեղակայված է (օր. ~/asr-hy-cpu) և gunicorn-ը աշխատում է, ապա վերաբեռնեք այս երկխոսությունը
+(1, 1639) : Make sure the tts-hy container is running and its healthcheck reports ready, then reload this dialog :  : Համոզվեք, որ tts-hy կոնտեյները աշխատում է և դրա healthcheck-ը հայտնում է պատրաստի մասին, ապա վերաբեռնեք այս երկխոսությունը
+(1, 164) : Create dictionary : Создать словарь : Ստեղծել բառարան
+(1, 1642) : Markup data loading error :  : Markup-ի տվյալների բեռնման սխալ
+(1, 1645) : masculine :  : Արական
+(1, 1648) : Merge lexical entries by meaning :  : Միավորել բառային միավորները ըստ իմաստի
+(1, 1651) : Merges are disabled due to an error, please contact developers :  : Միավորումները անջատված են սխալի պատճառով, դիմեք մշակողներին
+(1, 1654) : Merging :  : Միավորում
+(1, 1657) : Metadata loading error, please contact adiministrators :  : Մետատվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+(1, 1660) : Microphone access denied or unavailable :  : Խոսափողի հասանելիությունը մերժված է կամ անհասանելի
+(1, 1663) : Mood / Form :  : Տրամադրություն / Ձև
+(1, 1666) : negation, negative :  : ժխտում, ժխտական
+(1, 1669) : Neuro borrowing computation :  : Նեյրո փոխառության հաշվարկ
+(1, 1672) : Neuro borrowing multi-language suggestions :  : Նեյրո փոխառության բազմալեզու առաջարկություններ
+(1, 1675) : Neuro borrowing multi-language suggestions (disabled, perspective is not published) :  : Նեյրո փոխառության բազմալեզու առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+(1, 1678) : Neuro cognate multi-language suggestions (disabled, perspective is not published) :  : Նեյրո հարազատ բառերի բազմալեզու առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+(1, 1681) : Neuro cognate suggestions :  : Նեյրո հարազատ բառերի առաջարկություններ
+(1, 1684) : Neuro cognate suggestions (disabled, perspective is not published) :  : Նեյրո հարազատ բառերի առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+(1, 1687) : Neuro cognates computation :  : Նեյրո հարազատ բառերի հաշվարկ
+(1, 1690) : neuter :  : Միջին
+(1, 1693) : News editor :  : Նորությունների խմբագիր
+(1, 1696) : no :  : ոչ
+(1, 1699) : No coordinate data :  : Կոորդինատների տվյալներ չկան
+(1, 1702) : No input words or words to compare is received :  : Մուտքային բառեր կամ համեմատելու բառեր չեն ստացվել
+(1, 1705) : No languages found :  : Լեզուներ չեն գտնվել
+(1, 1708) : No source perspective and/or perspective(s) for comparing is selected :  : Սկզբնական perspective և/կամ համեմատելու perspective(ներ) չեն ընտրվել
+(1, 171) : Create dictionary... : Создать словарь... : 
+(1, 1711) : nominative :  : Nominative (անունական հոլով)
+(1, 1714) : not changed :  : չի փոխվել
+(1, 1717) : object :  : օբյեկտ
+(1, 1720) : Only entries of paradigmatic annotated forms :  : Միայն պարադիգմատիկ նշված ձևերի գրառումներ
+(1, 1723) : Only registered users can create new search links :  : Միայն գրանցված օգտատերերը կարող են ստեղծել նոր որոնման հղումներ
+(1, 1726) : Only to entries lacking words and transcriptions :  : Միայն բառեր և տրանսկրիպցիաներ չունեցող գրառումներին
+(1, 1729) : optative :  : Optative (ցանկական)
+(1, 1732) : or :  : կամ
+(1, 1735) : Or, if you would like to search just for dictionaries and perspective based on metadata, delete all search conditions :  : Կամ, եթե ցանկանում եք որոնել միայն բառարաններ և perspective-ներ մետատվյալների հիման վրա, ջնջեք բոլոր որոնման պայմանները
+(1, 1738) : Parser execution :  : Վերլուծիչի կատարում
+(1, 1741) : Parser task has been started :  : Վերլուծիչի առաջադրանքը սկսվել է
+(1, 1744) : participle :  : Participle (մասնակից)
+(1, 1747) : particle :  : Particle (մասնիկ)
+(1, 1750) : passive :  : Passive (պասիվ)
+(1, 1753) : past :  : Անցյալ
+(1, 1756) : past recent :  : Վերջերս անցյալ
+(1, 1759) : patient-like argument of canonical transitive verb :  : Կանոնիկ անցումային բայի պացիենս-նման արգումենտ
+(1, 176) : Paradigm : Парадигма : Պարադիգմ
+(1, 1762) : perfect :  : Perfect (կատարյալ)
+(1, 1765) : perfective :  : Perfective (կատարյալ տեսակ)
+(1, 1768) : Person :  : Անձ
+(1, 177) : Converting : Преобразование : Փոխարկվում է
+(1, 1771) : Perspective info loading error :  : Perspective-ի տեղեկատվության բեռնման սխալ
+(1, 1774) : Perspective is hidden and you don't have permissions to access it :  : Perspective-ը թաքնված է, և դուք չունեք դրան հասանելիության թույլտվություն
+(1, 1777) : Please add either search conditions or language/metadata conditions :  : Ավելացրեք որոնման պայմաններ կամ լեզվի/մետատվյալների պայմաններ
+(1, 1780) : Please either narrow down search conditions or add grammatical signs conditions :  : Կա՛մ նեղացրեք որոնման պայմանները, կա՛մ ավելացրեք քերականական նշանների պայմաններ
+(1, 1783) : Please select an audio file in wav, mp3, ogg, flac or webm format :  : Ընտրեք աուդիո ֆայլ wav, mp3, ogg, flac կամ webm ձևաչափով
+(1, 1786) : Please select an element :  : Ընտրեք տարր
+(1, 1789) : Please select parent language and specify at least one translation for each Starling dictionary :  : Ընտրեք մայր լեզուն և նշեք առնվազն մեկ թարգմանություն յուրաքանչյուր Starling բառարանի համար
+(1, 1792) : plural :  : Հոգնակի
+(1, 1795) : Possesiv :  : Possesiv (ունելի հոլով)
+(1, 1798) : posssesiv :  : Possesiv (ունելի հոլով)
+(1, 1801) : precative :  : Precative (խնդրական)
+(1, 1804) : predicative :  : Predicative (կանխատեսական)
+(1, 1807) : present :  : Ներկա
+(1, 181) : Converting 15% : Преобразование 15% : 
+(1, 1810) : Preview :  : Նախադիտում
+(1, 1813) : progressive :  : Progressive (ընթացական)
+(1, 1816) : prohibitive :  : Prohibitive (արգելողական)
+(1, 1819) : prolative :  : Prolative (երկայնական)
+(1, 1822) : Proposed variants :  : Առաջարկված տարբերակներ
+(1, 1825) : Proprietary license :  : Սեփականատիրական լիցենզիա
+(1, 1828) : prospektiv :  : Prospektiv (հեռանկարային)
+(1, 1831) : proximal/proximate :  : Proximal/Proximate (մոտակա)
+(1, 1834) : Publication date :  : Հրապարակման ամսաթիվ
+(1, 1837) : question particle/marker :  : Հարցական մասնիկ/նշիչ
+(1, 1840) : reciproc :  : Reciproc (փոխադարձ)
+(1, 1843) : reciprocal :  : Reciprocal (փոխադարձ)
+(1, 1846) : Recognize :  : Ճանաչել
+(1, 1849) : Record audio :  : Ձայնագրել աուդիո
+(1, 185) : Languages : Языки : Լեզուներ
+(1, 1852) : reflexive :  : Reflexive (հետադարձ)
+(1, 1855) : relative :  : Relative (հարաբերական)
+(1, 1858) : Remote Update :  : Հեռակա թարմացում
+(1, 1861) : Removal date :  : Հեռացման ամսաթիվ
+(1, 1864) : Remove from markup :  : Հեռացնել markup-ից
+(1, 1867) : Removed :  : Հեռացված է
+(1, 1870) : resultative :  : Resultative (արդյունքական)
+(1, 1873) : Right text :  : Աջ տեքստ
+(1, 1876) : Role data loading error, please contact adiministrators :  : Դերի տվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+(1, 1879) : Role in the sentence :  : Դերը նախադասությունում
+(1, 1882) : Satellite :  : Արբանյակ
+(1, 1885) : Save valency data :  : Պահպանել կապակցության տվյալները
+(1, 1888) : Saving dictionary task is launched. Please check out tasks for details :  : Բառարանի պահպանման առաջադրանքը գործարկվել է: Մանրամասների համար տես առաջադրանքները
+(1, 1891) : Saving valency data :  : Կապակցության տվյալների պահպանում
+(1, 1894) : second person :  : Երկրորդ դեմք
+(1, 1897) : Select parser :  : Ընտրել վերլուծիչը
+(1, 1900) : Select/deselect all markup :  : Ընտրել/չընտրել ամբողջ markup-ը
+(1, 1903) : Separate by corpora :  : Բաժանել ըստ կորպուսների
+(1, 1906) : Showing sentences :  : Նախադասությունների ցուցադրում
+(1, 1909) : single argument of canonical intransitive verb :  : Կանոնիկ անանցում բայի միակ արգումենտ
+(1, 1912) : singular :  : Եզակի
+(1, 1915) : Some of the selected markups take part in bundles. Are you sure you want to delete the markups and related groups :  : Ընտրված markups-ների մի մասը մասնակցում է փաթեթներին: Վստա՞հ եք, որ ուզում եք ջնջել markups-ները և կապված խմբերը
+(1, 1918) : Starling/CSV :  : Starling/CSV
+(1, 192) : Limited access : Ограниченный доступ : 
+(1, 1921) : Started convertion to a new dictionary. Please check out tasks for details :  : Նոր բառարանի փոխարկումը սկսվել է: Մանրամասների համար տես առաջադրանքները
+(1, 1924) : Started dictionary update. Please check out tasks for details :  : Բառարանի թարմացումը սկսվել է: Մանրամասների համար տես առաջադրանքները
+(1, 1927) : Stop :  : Կանգնեցնել
+(1, 1930) : Stopped manually :  : Կանգնեցվել է ձեռքով
+(1, 1933) : Stopping :  : Կանգնեցվում է
+(1, 1936) : subject :  : սուբյեկտ
+(1, 1939) : subjunctive :  : Subjunctive (ենթադրական)
+(1, 1942) : Success :  : Հաջողություն
+(1, 1945) : Synced :  : Համաժամեցված
+(1, 1948) : Synchronize :  : Համաժամեցնել
+(1, 1951) : Synchronize data loading error :  : Համաժամեցման տվյալների բեռնման սխալ
+(1, 1954) : Synthesis failed :  : Սինթեզը ձախողվեց
+(1, 1957) : Synthesize :  : Սինթեզել
+(1, 196) : Dashboard : Панель управления : Վահանակ
+(1, 1960) : Tag data loading error :  : Թեգի տվյալների բեռնման սխալ
+(1, 1963) : Tense-Aspect :  : Ժամանակ-Տեսակ
+(1, 1966) : Text markup :  : Տեքստի markup
+(1, 1969) : Text only :  : Միայն տեքստ
+(1, 1972) : The Armenian speech recognition service is not responding at :  : Հայերեն խոսքի ճանաչման ծառայությունը չի պատասխանում՝
+(1, 1975) : There are not enough perspectives with expected grouping field :  : Բավարար քանակությամբ perspectives սպասվող խմբավորման դաշտով չկան
+(1, 1978) : There are unsaved changes present. Are you sure you want to discard it :  : Կան չպահպանված փոփոխություններ: Վստա՞հ եք, որ ուզում եք դրանք անտեսել
+(1, 1981) : There is no any perspective with expected grouping field :  : Սպասվող խմբավորման դաշտով ոչ մի perspective չկա
+(1, 1984) : third person :  : Երրորդ դեմք
+(1, 1987) : This entity was deleted :  : Այս էությունը ջնջվել է
+(1, 1990) : To all entries :  : Բոլոր գրառումներին
+(1, 1993) : to view :  : դիտելու
+(1, 1996) : Too broad regular expressions are not allowed :  : Չափազանց լայն կանոնավոր արտահայտությունները չեն թույլատրվում
+(1, 1999) : Too large dictionaries to compare :  : Չափազանց մեծ բառարաններ համեմատության համար
+(1, 2002) : Total tokens :  : Ընդամենը թոքեններ
+(1, 2005) : Transcription copied to clipboard :  : Տրանսկրիպցիան պատճենվել է clipboard
+(1, 2008) : Transcription failed :  : Տրանսկրիպցիան ձախողվեց
+(1, 2011) : transitive :  : Transitive (անցումային)
+(1, 2014) : Translation loading error :  : Թարգմանության բեռնման սխալ
+(1, 2017) : Translit :  : Տրանսլիտ
+(1, 2020) : transpnition marker :  : Տրանսպոզիցիայի նշիչ
+(1, 2023) : Truth threshold :  : Ճշմարտության շեմ
+(1, 2026) : Try closing the dialog and opening it again; if the error persists, please contact administrators :  : Փորձեք փակել երկխոսությունը և կրկին բացել; եթե սխալը պահպանվում է, դիմեք ադմինիստրատորներին
+(1, 2029) : TTS service is unavailable :  : TTS ծառայությունը անհասանելի է
+(1, 2032) : Txt :  : Txt
+(1, 2035) : Update valency data :  : Թարմացնել կապակցության տվյալները
+(1, 2038) : Updated valency data :  : Թարմացված կապակցության տվյալներ
+(1, 2041) : Updating valency data :  : Կապակցության տվյալների թարմացում
+(1, 2044) : Upload successful :  : Բեռնումը հաջողվեց
+(1, 2047) : Uploading :  : Բեռնվում է
+(1, 2050) : User defined variant :  : Օգտատիրոջ կողմից սահմանված տարբերակ
+(1, 2053) : Valency verb cases error :  : Կապակցության բայական հոլովների սխալ
+(1, 2056) : vocative :  : Vocative (կոչական)
+(1, 2059) : Voice :  : Ձայն
+(1, 2062) : Warning :  : Նախազգուշացում
+(1, 2065) : wav, mp3, ogg, flac or webm :  : wav, mp3, ogg, flac կամ webm
+(1, 2068) : will be downloaded from the central server :  : կներբեռնվի կենտրոնական սերվերից
+(1, 2071) : yes :  : այո
+(1, 2074) : Your corpora is created, click :  : Ձեր կորպուսը ստեղծվել է, սեղմեք
+(1, 2077) : Your dictionary is created, click :  : Ձեր բառարանը ստեղծվել է, սեղմեք
+(1, 208) : Can edit translationatom : Может изменять translationatom : 
+(1, 2080) : Your dictionary is created, clickRequests :  : Ձեր բառարանը ստեղծվել է, սեղմեք Հարցումներ
+(1, 21) : Link : Ссылка : Հղում
+(1, 210) : Can delete translationgist : Может удалять translationgist : 
+(1, 289) : Directed Link : Направленная ссылка : Ուղղված հղում
+(1, 30) : Hidden : Скрытый : 
+(1, 34) : RFH №14-04-12019 "Creating multimedia dictionaries Samoyed languages", 2014-2016 (head Ju. V. Normanskaja) : РГНФ № 14-04-12019 «Создание мультимедийных словарей самодийских языков», 2014-2016 (рук. Ю. В. Норманская) : 
+(1, 39) : Image : Изображение : Պատկեր
+(1, 43) : Available dictionaries : Доступные словари : Հասանելի բառարաններ
+(1, 47) : Text : Текст : 
+(1, 51) : Sound : Звук : 
+(1, 56) : Markup : Разметка : 
+(1, 60) : My files : Мои файлы : Իմ ֆայլերը
+(1, 64) : Attention! To access all capability of the system (including the creation and editing of dictionaries, their publication, binding metadata dictionaries, search based on geolocation, download dictionaries from the desktop version), you must register and log in. The registration / login there is in the upper right corner of the page. : Внимание! Для доступа ко всем возможностям системы (в том числе совместному созданию и редактированию словарей, их публикации, привязки метаданных к словарям, поиску с учетом геолокаций, загрузки словарей из настольной версии программы) необходимо зарегистрироваться и войти в систему. Кнопки регистрации/входа в систему находятся в правом верхнем углу страницы. : 
+(1, 69) : Merge master : Мастер слияния : 
+(1, 73) : The village Beloyarsk district Priuralsky YaNAO : Село Белоярск Приуральского района ЯНАО : 
+(1, 74) : Service : Сервис : Ծառայություն
+(1, 78) : Sign out : Выход : Դուրս գալ
+(1, 82) : RFH № 15-04-00361 "The first written texts on the Ural and Altai languages" (head Ju. V. Normanskaja). : РГНФ № 15-04-00361 "Первые памятники письменности на уральских и алтайских языках" (рук. Ю. В. Норманская). : 
+(1, 87) : My dictionaries : Мои словари : Իմ բառարանները
+(1, 92) : Map search : Поиск по картам : 
+(10972, 102) : Please select type : Выберите тип : Ընտրեք տեսակը
+(10972, 105) : Such group already exists : Такая группа уже существует : Նման խումբ արդեն գոյություն ունի
+(10972, 108) : Delete selected markups and related groups? Are you sure : Удалить выделенные метки и их группы? Вы уверены : Ջնջե՞լ ընտրված markups-ները և կապված խմբերը: Վստա՞հ եք
+(10972, 112) : Markup(s) with related groups were removed : Метка(ки) и её группы были удалены : Markup(-ներ)ը կապված խմբերի հետ հեռացվել են
+(10972, 117) : Markup was deleted : Метка удалена : Markup-ը ջնջվել է
+(10972, 121) : Markup was created : Создана метка : Markup-ը ստեղծվել է
+(10972, 124) : Please set markups in both fields of the table : Создайте метки в обоих столбцах таблицы : Նշեք markups-ները աղյուսակի երկու դաշտերում
+(10972, 138) : Author : Автор : 
+(10972, 154) : The group was successfully deleted : Группа успешно удалена : Խումբը հաջողությամբ ջնջվել է
+(10972, 157) : The group was successfully added : Группа успешно добавлена : Խումբը հաջողությամբ ավելացվել է
+(10972, 173) : Markup was edited or moved : Метка отредактирована или сдвинута : Markup-ը խմբագրվել կամ տեղափոխվել է
+(10972, 49) : Create markup : Создать метку : 
+(10972, 52) : Delete markup(s) : Удалить метку(ки) : 
+(10972, 55) : Delete groups : Удалить группы : 
+(10972, 58) : Join markups : Связать метки : 
+(10972, 61) : Delete markup(s) with related groups : Удалить метку(ки) и её группы : Ջնջել markup(-ներ)ը կապված խմբերի հետ
+(10972, 65) : Save to XLSX : Сохранить в файл Эксель : Պահպանել XLSX-ում
+(10972, 68) : Transliteration : Транслитерация : 
+(10972, 71) : Transcription : Транскрипция : 
+(10972, 74) : Calque : Калькирование : Քաղվածք
+(10972, 77) : Transposition : Транспозиция : Տրանսպոզիցիա
+(10972, 80) : Descriptive translation : Описательный перевод : Նկարագրական թարգմանություն
+(10972, 83) : Similatory translation : Уподобляющий перевод : Նմանության թարգմանություն
+(10972, 86) : Neologism : Неологизм : Նորակերծում
+(10972, 89) : Semi-calque : Полукалька : Կիսաքաղվածք
+(10972, 92) : Lexico-grammatical replacement : Лексико-грамматическая замена : Բառարանա-քերականական փոխարինում
+(10972, 95) : Antonymous translation : Антонимический перевод : Անтонիմային թարգմանություն
+(10972, 98) : Compensation : Компенсация : Փոխհատուցում
+(11197, 2) : Markup groups were saved into xlsx file : Группы меток были сохранены в файл Эксель : Markup-ի խմբերը պահպանվել են xlsx ֆայլում
+(11197, 32) : Show Unpublished Only : Показать только неопубликованные : Ցույց տալ միայն չհրապարակվածը
+(11197, 35) : Show All : Показать все : Ցույց տալ բոլորը
+(11197, 38) : Add red star : Дать высокий приоритет : Ավելացնել կարմիր աստղ
+(11197, 41) : Add yellow star : Дать средний приоритет : Ավելացնել դեղին աստղ
+(11197, 44) : Clean any star : Убрать приоритет : Մաքրել ցանկացած աստղ
+(11197, 5) : result url : ссылку на результат : Արդյունքի URL
+(11197, 8) : Follow : Щёлкните : Հետևել
+(11236, 2) : Favorite dictionaries : Избранные словари : Նախընտրած բառարաններ
+(11236, 5) : Favorite corpora : Избранные корпуса : Նախընտրած կորպուսներ
+(11828, 2) : Pre-marked corpora : Размеченные корпуса : Նախապես նշված կորպուսներ
+(12207, 11) : moved on : сдвинуто на : տեղափոխվել է
+(12207, 14) : changed at : изменено : Փոխվել է՝
+(12207, 17) :  right :  вправо :  աջ
+(12207, 2) : Compare : Сравнить : Համեմատել
+(12207, 20) :  left :  влево :  ձախ
+(12207, 23) : Compare data loading error : Ошибка загрузки данных для сравнения : Համեմատման տվյալների բեռնման սխալ
+(12207, 26) : Try reloading the page; if the error persists, please contact administrators : Попробуйте перезагрузить страницу. Если ошибка повторится, обратитесь к администраторам : Փորձեք վերաբեռնել էջը; եթե սխալը պահպանվում է, դիմեք ադմինիստրատորներին
+(12207, 29) : Click here to download XLSX report : Нажмите здесь, чтобы загрузить отчет XLSX. : Սեղմեք այստեղ XLSX հաշվետվությունը ներբեռնելու համար
+(12207, 32) : Something went wrong : Что-то пошло не так : Ինչ-որ բան սխալ գնաց
+(12207, 35) : Replaced : Заменено : Փոխարինված է
+(12207, 38) : Added : Добавлено : Ավելացված է
+(12207, 41) : All added : Все добавленные : Բոլորը ավելացված են
+(12207, 44) : All removed : Все удаленные : Բոլորը հեռացված են
+(12207, 47) : All replaced : Все замененные : Բոլորը փոխարինված են
+(12207, 5) : In field : В поле : Դաշտում
+(12207, 8) : removed : удалено : հեռացված
+(12824, 12) : of : из : -ի
+(12988, 11) : No filtered adverbs : Нет отфильтрованных наречий : Զտված ձևանիշներ չկան
+(12988, 17) : Cognates summary : Сводка когнатов : Հարազատ բառերի ամփոփում
+(12988, 2) : Speech recognition (Armenian) : Распознавание речи : Խոսքի ճանաչում (հայերեն)
+(12988, 5) : Speech synthesis (Armenian) : Синтез речи : Խոսքի սինթեզ (հայերեն)
+(12988, 8) : Adverb specificity : Сочетаемость наречий : Ձևանիշի սպեցիֆիկություն
+(12989, 10) : Adjust perspectives set : Настроить набор перспектив : Կարգավորել perspectives-ի հավաքածուն
+(12989, 103) : Get composite distance between languages : Получить составное расстояние между языками : 
+(12989, 107) : JSON-exported analysis results : Результаты анализа, экспортированные в JSON : JSON-արտահանված վերլուծության արդյունքներ
+(12989, 111) : Language(s) closest parent group : Ближайшая родительская группа языка(ов) : Լեզվի(ների) ամենամոտ մայր խումբ
+(12989, 115) : Language(s) group or title : Группа или название языка(ов) : Լեզվի(ների) խումբ կամ անվանում
+(12989, 119) : Loading adverb data : Загрузка данных наречия : Ձևանիշի տվյալների բեռնում
+(12989, 123) : Loading sign-in data : Загрузка данных для входа : Մուտքի տվյալների բեռնում
+(12989, 127) : Loading user data : Загрузка данных пользователя : Օգտատիրոջ տվյալների բեռնում
+(12989, 131) : Local : Локальный : Տեղական
+(12989, 135) : Move copied markup element : Переместить скопированный элемент разметки : Տեղափոխել պատճենված markup-ի տարրը
+(12989, 139) : Move markup element : Переместить элемент разметки : Տեղափոխել markup-ի տարրը
+(12989, 14) : Adverb data : Данные наречия : Ձևանիշի տվյալներ
+(12989, 143) : Neuro cognate analysis is launched. Please check out tasks for details : Нейросетевой анализ когнатов запущен. Подробности смотрите в задачах : Նեյրո հարազատ բառերի վերլուծությունը գործարկվել է: Մանրամասների համար տես առաջադրանքները
+(12989, 147) : No adverbs : Нет наречий : Ձևանիշներ չկան
+(12989, 151) : No authors found : Авторы не найдены : 
+(12989, 158) : No language degree of endangerment found : Степень угрозы исчезновения языка не найдена : 
+(12989, 162) : No settlement found : Населённый пункт не найден : 
+(12989, 166) : No years found : Годы не найдены : 
+(12989, 170) : Not accepted : Не принято : Չի ընդունվել
+(12989, 174) : Not enough permissions to download or update perspective : Недостаточно прав для загрузки или обновления перспективы : Բավարար թույլտվություններ չկան perspective-ը ներբեռնելու կամ թարմացնելու համար
+(12989, 178) : Close input of language : Закрыть ввод языка : Փակել լեզվի մուտքագրումը
+(12989, 18) : Adverb prefix filter : Фильтр префикса наречия : Ձևանիշի նախածանցի ֆիլտր
+(12989, 182) : Only high-order languages : Только языки высшего порядка : Միայն բարձրակարգ լեզուներ
+(12989, 186) : Only registered users can convert .docx to .xlsx : Только зарегистрированные пользователи могут конвертировать .docx в .xlsx : Միայն գրանցված օգտատերերը կարող են փոխարկել .docx-ը .xlsx-ի
+(12989, 190) : Only registered users can work with adverb data : Только зарегистрированные пользователи могут работать с данными наречий : Միայն գրանցված օգտատերերը կարող են աշխատել ձևանիշի տվյալների հետ
+(12989, 194) : Only registered users can work with distance map : Только зарегистрированные пользователи могут работать с картой расстояний : Միայն գրանցված օգտատերերը կարող են աշխատել հեռավորության քարտեզի հետ
+(12989, 198) : Only registered users can work with files : Только зарегистрированные пользователи могут работать с файлами : Միայն գրանցված օգտատերերը կարող են աշխատել ֆայլերի հետ
+(12989, 2) : .xlsx file : .xlsx файл : .xlsx ֆայլ
+(12989, 202) : Or, if you would like to search just for dictionaries and perspective based on metadata, use OR mode and delete all search conditions : Или, если вы хотите искать только словари и перспективы по метаданным, используйте режим ИЛИ и удалите все условия поиска : Կամ, եթե ցանկանում եք որոնել միայն բառարաններ և perspective-ներ մետատվյալների հիման վրա, օգտագործեք OR ռեժիմը և ջնջեք բոլոր որոնման պայմանները
+(12989, 206) : adverbs : наречия : ձևանիշներ
+(12989, 210) : never : никогда : երբեք
+(12989, 214) : search : поиск : որոնում
+(12989, 22) : Adverbs : Наречия : Ձևանիշներ
+(12989, 26) : Allow sync : Разрешить синхронизацию : Թույլատրել համաժամեցումը
+(12989, 30) : Allow sync / Deny sync : Разрешить синхронизацию / Запретить синхронизацию : Թույլատրել / Արգելել համաժամեցումը
+(12989, 34) : Applying : Применение : Կիրառվում է
+(12989, 38) : Are you sure you want to delete this variant : Вы уверены, что хотите удалить этот вариант : Վստա՞հ եք, որ ուզում եք ջնջել այս տարբերակը
+(12989, 42) : Are you sure you want to move selected element : Вы уверены, что хотите переместить выбранный элемент : Վստա՞հ եք, որ ուզում եք տեղափոխել ընտրված տարրը
+(12989, 46) : Can't get data of the : Не удалось получить данные : Հնարավոր չէ ստանալ տվյալները՝
+(12989, 50) : Choose at least two txt corpora or one json file : Выберите не менее двух txt корпусов или один json файл : Ընտրեք առնվազն երկու txt կորպուս կամ մեկ json ֆայլ
+(12989, 55) : Composite distance : Составное расстояние : Բարդ հեռավորություն
+(12989, 59) : Computation is going. Please see the sidebar with tasks : Вычисление выполняется. Посмотрите боковую панель с задачами : Հաշվարկը ընթացքի մեջ է: Տես առաջադրանքների կողային վահանակը
+(12989, 6) : Added roles successfully : Роли успешно добавлены : Դերերը հաջողությամբ ավելացվեցին
+(12989, 63) : Connecting : Подключение : 
+(12989, 67) : Could not sign out : Не удалось выйти из системы : Հնարավոր չեղավ դուրս գալ
+(12989, 71) : Delete parser results : Удалить результаты парсера : Ջնջել վերլուծիչի արդյունքները
+(12989, 75) : Deny sync : Запретить синхронизацию : Արգելել համաժամեցումը
+(12989, 79) : Dictionary data loading error, please contact administrators : Ошибка загрузки данных словаря, обратитесь к администраторам : Բառարանի տվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+(12989, 83) : Dictionary info loading error, please contact adiministrators : Ошибка загрузки информации о словаре, обратитесь к администраторам : Բառարանի տեղեկատվության բեռնման սխալ, դիմեք ադմինիստրատորներին
+(12989, 87) : Failed to launch neuro cognate analysis : Не удалось запустить нейросетевой анализ когнатов : Հնարավոր չեղավ գործարկել նեյրո հարազատ բառերի վերլուծությունը
+(12989, 91) : Failed to launch saving dictionary task : Не удалось запустить задачу сохранения словаря : Հնարավոր չեղավ գործարկել բառարանի պահպանման առաջադրանքը
+(12989, 95) : Filtered adverbs : Отфильтрованные наречия : Զտված ձևանիշներ
+(12989, 99) : Get cognates summary : Получить сводку когнатов : Ստանալ հարազատ բառերի ամփոփում
+(13024, 10) : Parse element : Разобрать элемент : Վերլուծել տարրը
+(13024, 102) : Statistics error : Ошибка статистики : Վիճակագրության սխալ
+(13024, 106) : The Armenian speech synthesis service is not responding at : Сервис синтеза армянской речи не отвечает по адресу : Հայերեն խոսքի սինթեզի ծառայությունը չի պատասխանում՝
+(13024, 110) : This page is available for registered users only : Эта страница доступна только зарегистрированным пользователям : Այս էջը հասանելի է միայն գրանցված օգտատերերի համար
+(13024, 114) : Transcription of paradigmatic forms : Транскрипция парадигматических форм : 
+(13024, 118) : Truth threshold must be between 0,7 and 0,999 : Порог достоверности должен быть между 0,7 и 0,999 : Ճշմարտության շեմը պետք է լինի 0,7-ից 0,999 միջակայքում
+(13024, 122) : Unsigned successfully : Выход выполнен успешно : Հաջողությամբ դուրս եկաք
+(13024, 126) : Upload failed : Выгрузка не удалась : Բեռնումը ձախողվեց
+(13024, 130) : Uploaded at : Выгружено в : Բեռնվել է՝
+(13024, 134) : Uploaded corpora : Выгруженные корпуса : Բեռնված կորպուսներ
+(13024, 138) : User data loading error : Ошибка загрузки данных пользователя : Օգտատիրոջ տվյալների բեռնման սխալ
+(13024, 14) : Perspectives limit : Лимит перспектив : Perspectives-ի սահման
+(13024, 142) : You are going to delete a markup and related groups? Are you sure : Вы собираетесь удалить разметку и связанные группы? Вы уверены : Դուք պատրաստվում եք ջնջել markup և կապված խմբեր: Վստա՞հ եք
+(13024, 146) : will be downloaded from another server : будет загружено с другого сервера : կներբեռնվի այլ սերվերից
+(13024, 150) : will be renewed : будет обновлено : կթարմացվի
+(13024, 154) : with own dictionaries and perspectives : с собственными словарями и перспективами : Սեփական բառարաններով և perspectives-ով
+(13024, 158) : with own perspectives : с собственными перспективами : Սեփական perspectives-ով
+(13024, 18) : Perspectives offset : Смещение перспектив : Perspectives-ի օֆսետ
+(13024, 2) : Paradigm sentence column source tiers : Исходные уровни столбца предложения парадигмы : Պարադիգմայի նախադասության սյունակի աղբյուրի մակարդակներ
+(13024, 22) : Please contact administrators : Обратитесь к администраторам : Դիմեք ադմինիստրատորներին
+(13024, 26) : Redo parser execution : Повторить выполнение парсера : Կրկնել վերլուծիչի կատարումը
+(13024, 30) : Remote : Удалённый : Հեռակա
+(13024, 34) : Remote submit : Удалённая отправка : Հեռակա ուղարկում
+(13024, 38) : Remove failed : Удаление не удалось : Հեռացումը ձախողվեց
+(13024, 42) : Remove successful : Удаление выполнено успешно : Հեռացումը հաջողվեց
+(13024, 46) : Request error : Ошибка запроса : Հարցման սխալ
+(13024, 50) : RichText file : Файл RichText : RichText ֆայլ
+(13024, 54) : Save adverb data : Сохранить данные наречия : Պահպանել ձևանիշի տվյալները
+(13024, 58) : Saving adverb data : Сохранение данных наречия : Ձևանիշի տվյալների պահպանում
+(13024, 6) : Paradigmatic forms and contexts : Парадигматические формы и контексты : 
+(13024, 62) : Select a new position for a markup element : Выберите новое положение для элемента разметки : Ընտրեք նոր դիրք markup-ի տարրի համար
+(13024, 66) : Separate by alphabet : Разделить по алфавиту : Բաժանել ըստ այբուբենի
+(13024, 70) : Set adverb annotation : Задать аннотацию наречия : Նշել ձևանիշի անոտացիան
+(13024, 74) : Set group name or leave empty : Укажите название группы или оставьте пустым : Նշեք խմբի անունը կամ թողեք դատարկ
+(13024, 78) : Set parent group as well : Также указать родительскую группу : Նշել նաև մայր խումբը
+(13024, 82) : Set title or leave empty : Укажите название или оставьте пустым : Նշեք վերնագիրը կամ թողեք դատարկ
+(13024, 86) : Signed successfully : Вход выполнен успешно : Հաջողությամբ մուտք գործեցիք
+(13024, 90) : Sort by adverbs : Сортировать по наречиям : Տեսակավորել ըստ ձևանիշների
+(13024, 94) : Sort by marks : Сортировать по меткам : Տեսակավորել ըստ նշիչների
+(13024, 98) : Sort by specificity : Сортировать по специфичности : Տեսակավորել ըստ սպեցիֆիկության
+(2115, 12) : Add translation : Добавить перевод : Ավելացնել թարգմանություն
+(2115, 13) : Save : Сохранить : Պահպանել
+(2115, 14) : Loading : Загрузка : Բեռնվում է
+(2115, 15) : This page is available for administrator only : Эта страница доступна только для администратора : Այս էջը հասանելի է միայն ադմինիստրատորի համար
+(2115, 2) : Perspective : Перспектива : Perspective
+(2115, 3) : Dictionary : Словарь : 
+(2115, 4) : Field : Поле : Դաշտ
+(2115, 5) : Grant : Грант : Դրամաշնորհ
+(2115, 6) : All : Все : Բոլորը
+(2170, 2) : Select languages : Выберите языки : Ընտրել լեզուները
+(2170, 3) : Grammar : Грамматика : Քերականություն
+(2170, 4) : Select tags : Выберите теги : Ընտրել թեգերը
+(2189, 2) : Select all : Выделить все : Ընտրել բոլորը
+(2189, 3) : Remove selection : Снять выделение : 
+(2245, 10) : Add field : Добавить поле : Ավելացնել դաշտ
+(2245, 100) : Lexical Entries : Лексические входы : 
+(2245, 101) : Link columns from files with each other : Связать столбцы из файлов друг с другом : Կապել ֆայլերի սյունակները միմյանց հետ
+(2245, 102) : Linking : Соединение : Կապում
+(2245, 103) : Loading suggestions : Загрузка предложений : Առաջարկությունների բեռնում
+(2245, 104) : Location : Местоположение : Տեղադրություն
+(2245, 105) : Login : Логин : Մուտք
+(2245, 106) : Login is required : Требуется логин : Մուտքը պարտադիր է
+(2245, 107) : Map : Карта : Քարտեզ
+(2245, 108) : Map dictionaries to LingvoDoc languages : Сопоставьте словари с языками LingvoDoc : Համադրել բառարանները LingvoDoc-ի լեզուների հետ
+(2245, 109) : Map linked columns to LingvoDoc types : Сопоставьте связанные столбцы с типами LingvoDoc : Համադրել կապված սյունակները LingvoDoc-ի տեսակների հետ
+(2245, 11) : Add lexical entry : Добавить лексический вход : Ավելացնել բառային միավոր
+(2245, 110) : Maps : Карта языков и диалектов : Քարտեզներ
+(2245, 111) : Merge group : Объединить группу : Միավորել խումբը
+(2245, 112) : Merge lexical entries : Объединить лексические входы : Միավորել բառային միավորները
+(2245, 113) : Merged successfully : Успешно объединены : Հաջողությամբ միավորվել է
+(2245, 114) : Merge suggestions : Объединить лексические входы : Առաջարկությունների միավորում
+(2245, 115) : Merge task created successfully : Задача объединения успешно создана : Միավորման առաջադրանքը հաջողությամբ ստեղծվել է
+(2245, 116) : Message : Сообщение : Հաղորդագրություն
+(2245, 117) : Metadata : Метаданные : Մետատվյալներ
+(2245, 118) : My corpora : Мои корпуса : Իմ կորպուսները
+(2245, 119) : Name : Имя : Անուն
+(2245, 12) : Add link : Добавить связь : Ավելացնել հղում
+(2245, 120) : Name is required : Имя обязательно : Անունը պարտադիր է
+(2245, 121) : New password : Новый пароль : Նոր գաղտնաբառ
+(2245, 122) : Next Step : Следующий шаг : Հաջորդ քայլ
+(2245, 123) : No background tasks : Нет фоновых задач : Ֆոնային առաջադրանքներ չկան
+(2245, 124) : No entries : Нет входов : Գրառումներ չկան
+(2245, 125) : No fields, click button below to add a new one : Нет полей, нажмите кнопку ниже, чтобы добавить новое : Դաշտեր չկան, սեղմեք ստորևի կոճակը՝ նորը ավելացնելու համար
+(2245, 126) : No more locales : Локалей больше нет : Ավելի շատ լոկալներ չկան
+(2245, 127) : No suggestions : Нет предложений : Առաջարկություններ չկան
+(2245, 128) : None : Никто : Ոչ մեկը
+(2245, 129) : Not supported : Не поддерживается : Չի աջակցվում
+(2245, 13) : Add new column : Добавить новый столбец : Ավելացնել նոր սյունակ
+(2245, 130) : Nothing here, sorry : Здесь ничего нет, извините : Այստեղ ոչինչ չկա, ներողություն
+(2245, 131) : Nothing to : Нечего : Ոչինչ չկա
+(2245, 132) : Number of native speakers : Количество носителей языка : Լեզվակիրների քանակ
+(2245, 133) : Old password : Старый пароль : Հին գաղտնաբառ
+(2245, 134) : Organization admins : Администраторы организации : Կազմակերպության ադմինիստրատորներ
+(2245, 135) : Organization users : Пользователи организации : Կազմակերպության օգտատերեր
+(2245, 136) : Owners : Владелец : Սեփականատերեր
+(2245, 137) : Page : Страница : Էջ
+(2245, 138) : Parent language : Родительский язык : Մայր լեզու
+(2245, 139) : Password : Пароль : Գաղտնաբառ
+(2245, 14) : Add one or more perspectives : Добавить одну или несколько перспектив : Ավելացնել մեկ կամ ավելի perspective
+(2245, 140) : PDF file : PDF файл : 
+(2245, 141) : Perspectives : Перспективы : Perspectives
+(2245, 142) : Perspective names : Названия перспектив : Perspective-ի անուններ
+(2245, 143) : Perspective state : Состояние перспективы : Perspective-ի վիճակ
+(2245, 144) : Phonemic analysis : Инвентарь фонем и аллофоны : Ֆոնեմային վերլուծություն
+(2245, 145) : Phonology : Результаты анализа спектрограмм : Հնչույթաբանություն
+(2245, 146) : Please select a user : Пожалуйста, выберите пользователя : Ընտրեք օգտատեր
+(2245, 147) : Please, select the parent language : Пожалуйста, выберите родительский язык : Խնդրում ենք ընտրել մայր լեզուն
+(2245, 148) : Please sign in : Пожалуйста, войдите в систему : Մուտք գործեք
+(2245, 149) : Properties : Свойства : Հատկություններ
+(2245, 15) : Add one or more translations : Добавить один или несколько переводов : Ավելացնել մեկ կամ ավելի թարգմանություն
+(2245, 150) : Publish : Опубликовать : Հրապարակել
+(2245, 151) : Publish Entities : Опубликовать объекты : Հրապարակել էությունները
+(2245, 152) : Publish result of entity merge if any merged entity is published : Опубликовать результат объединения объектов, если опубликован хотя бы один объединенный объект : Հրապարակել էությունների միավորման արդյունքը, եթե միավորված որևէ էություն հրապարակված է
+(2245, 153) : Refresh : Обновить : Թարմացնել
+(2245, 154) : Reject : Отклонить : Մերժել
+(2245, 155) : Relation : Связь : Հարաբերություն
+(2245, 156) : Remove : Удалить : Հեռացնել
+(2245, 157) : Remove dictionary : Удалить словарь : Հեռացնել բառարանը
+(2245, 158) : Remove lexical entries : Удалить лексические входы : Հեռացնել բառային միավորները
+(2245, 159) : Remove perspective : Удалить перспективу : Հեռացնել perspective-ը
+(2245, 16) : Add perspective : Добавить перспективу : Ավելացնել perspective
+(2245, 160) : Request has been sent to the grant's owner : Запрос был отправлен владельцу гранта : Հարցումը ուղարկվել է դրամաշնորհի սեփականատիրոջը
+(2245, 161) : Requests : Запросы : Հարցումներ
+(2245, 162) : Role : Роль : Դեր
+(2245, 163) : Roles... : Роли... : 
+(2245, 164) : Safe : Находится в безопасности : Ապահով
+(2245, 165) : Save all : Сохранить все : Պահպանել բոլորը
+(2245, 166) : Save dictionary : Сохранить словарь : Պահպանել բառարանը
+(2245, 167) : Save only published : Сохранить только опубликованные : Պահպանել միայն հրապարակվածը
+(2245, 168) : Search : Поиск : Որոնում
+(2245, 169) : Select : Выбрать : Ընտրել
+(2245, 17) : Archive : Архив : Արխիվ
+(2245, 170) : Select all on current page : Выбрать все на текущей странице : Ընտրել բոլորը ընթացիկ էջում
+(2245, 171) : Select dictionary : Выберите словарь : Ընտրել բառարանը
+(2245, 172) : Select language : Выберите язык : Ընտրել լեզուն
+(2245, 173) : Select Language for : Выберите язык для : Ընտրել լեզուն՝
+(2245, 174) : Select parent language : Выберите родительский язык : 
+(2245, 175) : Select user : Выберите пользователя : Ընտրել օգտատիրոջը
+(2245, 176) : Set corpora name, translations and metadata : Задайте название корпуса, переводы и метаданные : 
+(2245, 177) : Set dictionary name, translations and metadata : Задайте название словаря, переводы и метаданные : Նշել բառարանի անունը, թարգմանությունները և մետատվյալները
+(2245, 178) : Severely endangered : Находится в серьезной опасности : Ծանր վտանգված
+(2245, 179) : Show statistics : Показать статистику : Ցույց տալ վիճակագրությունը
+(2245, 18) : Authors : Авторы : Հեղինակներ
+(2245, 180) : Sign In : Вход : Մուտք գործել
+(2245, 181) : Sign Up : Регистрация : Գրանցվել
+(2245, 182) : Sound and markup : Скачать звук и размеченные спектрограммы : Ձայն և markup
+(2245, 183) : Sound and markup compilation is being created. Check out tasks for details : Компиляция звука и разметки создается. Проверьте задачи для просмотра деталей : Ձայնի և markup-ի կազմումը ստեղծվում է: Մանրամասների համար տես առաջադրանքները
+(2245, 184) : Split contents of the field on punctuation before matching : Разделите содержимое поля пунктуационными знаками  перед сопоставлением : Բաժանել դաշտի բովանդակությունը կետադրության վրա համադրումից առաջ
+(2245, 185) : Split contents of the field on whitespace before matching : Разделите содержимое поля пробелами перед сопоставлением : Բաժանել դաշտի բովանդակությունը բացատների վրա համադրումից առաջ
+(2245, 186) : Spread : Распространение : Տարածել
+(2245, 187) : Start typing language name : Начните вводить название языка : Սկսեք մուտքագրել լեզվի անունը
+(2245, 188) : Statistics... : Статистика... : 
+(2245, 189) : Subject : Тема : Թեմա
+(2245, 19) : Available corpora : Доступные корпуса : Հասանելի կորպուսներ
+(2245, 190) : Submit : Отправить : Ուղարկել
+(2245, 191) : Sync : Синхронизация : Համաժամեցում
+(2245, 192) : Tasks : Задачи : Առաջադրանքներ
+(2245, 193) : The entity is currently published. Click to unpublish : Объект в настоящее время опубликован. Нажмите, чтобы отменить публикацию : Էությունը ներկայումս հրապարակված է: Սեղմեք՝ հրապարակումը չեղարկելու համար
+(2245, 194) : The entity is NOT currently published. Click to publish : В настоящее время объект НЕ опубликован. Нажмите, чтобы опубликовать : Էությունը ներկայումս ՉԻ հրապարակված: Սեղմեք՝ հրապարակելու համար
+(2245, 195) : To : К : Մինչև
+(2245, 196) : Tools : Инструменты : Գործիքներ
+(2245, 197) : total : суммарно : Ընդամենը
+(2245, 198) : Translation for : Перевод для : Թարգմանություն՝
+(2245, 199) : Translations : Переводы : Թարգմանություններ
+(2245, 2) : Accept : Принять : Ընդունել
+(2245, 20) : Base blob : Базовый объект : Բազայի blob
+(2245, 200) : Type : Тип : Տեսակ
+(2245, 201) : Type to search : Введите для поиска : Մուտքագրեք՝ որոնելու համար
+(2245, 202) : Unknown request type : Неизвестный тип запроса : Անհայտ հարցման տեսակ
+(2245, 203) : Unknown type : Неизвестный тип : Անհայտ տեսակ
+(2245, 204) : Up : Вверх : Վերև
+(2245, 205) : Update : Обновить : Թարմացնել
+(2245, 206) : Update dictionary : Обновить словарь : Թարմացնել բառարանը
+(2245, 207) : Upload : Загрузить : Բեռնել
+(2245, 208) : URL with results of saving data should appear soon after clicking save button in the tasks : URL с результатами сохранения данных должен появиться в задачах вскоре после нажатия кнопки «Сохранить» : Տվյալների պահպանման արդյունքների URL-ը պետք է հայտնվի շուտով՝ առաջադրանքներում պահպանման կոճակ սեղմելուց հետո
+(2245, 209) : User : Пользователь : Օգտատեր
+(2245, 21) : Begin : Начать : Սկսել
+(2245, 210) : User account activation / deactivation : Активация / деактивация учетной записи пользователя : 
+(2245, 211) : View : Просмотр : Դիտել
+(2245, 212) : View contributions : Посмотреть этимологические предложения : Դիտել ներդրումները
+(2245, 213) : View published : Посмотреть опубликованные : Դիտել հրապարակվածը
+(2245, 214) : View suggestions : Посмотреть предложения : Դիտել առաջարկությունները
+(2245, 215) : Vulnerable : Положение вызывает опасение : Խոցելի
+(2245, 216) : web : сеть : web
+(2245, 217) : Years : Годы : Տարիներ
+(2245, 218) : You have selected : Вы выбрали : Դուք ընտրել եք
+(2245, 219) : Your corpora is created, click here to view : Ваш корпус создан, нажмите здесь для просмотра : 
+(2245, 22) : By Grants : По грантам : Ըստ դրամաշնորհների
+(2245, 220) : Your dictionaries are scheduled for conversion. Please, check tasks tab for conversion status : Ваши словари запланированы для конвертации. Пожалуйста, проверьте вкладку задач для просмотра статуса преобразования : Ձեր բառարանները պլանավորվել են փոխարկման համար: Ստուգեք առաջադրանքների ներդիրը փոխարկման կարգավիճակի համար
+(2245, 221) : Your dictionary is created, click here to view : Ваш словарь создан, нажмите здесь для просмотра : 
+(2245, 23) : By Languages : По языкам : Ըստ լեզուների
+(2245, 24) : Cancel : Отмена : Չեղարկել
+(2245, 25) : Client type : Тип клиента : Հաճախորդի տեսակ
+(2245, 26) : Close : Закрыть : Փակել
+(2245, 27) : Cognate analysis : Анализ когнатов в разных диалектах одного языка : Հարազատ բառերի վերլուծություն
+(2245, 28) : Columns Mapping : Сопоставление столбцов : Սյունակների համադրում
+(2245, 29) : confidence : степень уверенности : Վստահություն
+(2245, 3) : Accept contributions : Принять содействия : 
+(2245, 30) : Confirm Password : Подтвердить пароль : Հաստատեք գաղտնաբառը
+(2245, 31) : Connect : Связать : Կապել
+(2245, 32) : Connected : Связано : Կապված
+(2245, 34) : Conversion is in progress : Идет процесс конвертации : Փոխարկումը ընթացքի մեջ է
+(2245, 35) : Convert : Конвертировать : Փոխարկել
+(2245, 36) : Convert to dictionary : Преобразовать в словарь : Փոխարկել բառարանի
+(2245, 37) : Corpora : Корпуса : Կորպուսներ
+(2245, 38) : Corpus created : Корпус создан : 
+(2245, 39) : Corpora names and metadata : Названия корпусов и метаданные : 
+(2245, 4) : Action : Действие : Գործողություն
+(2245, 40) : Create : Создать : Ստեղծել
+(2245, 41) : Created : Создан : Ստեղծված է
+(2245, 42) : Create a new field : Создать новое поле : Ստեղծել նոր դաշտ
+(2245, 43) : Create a new perspective : Создать новую перспективу : Ստեղծել նոր perspective
+(2245, 44) : Create corpus : Создать корпус : Ստեղծել կորպուս
+(2245, 45) : Create field : Создать поле : Ստեղծել դաշտ
+(2245, 46) : Create language : Создать язык : Ստեղծել լեզու
+(2245, 47) : Create one or more perspectives : Создайте одну или несколько перспектив : Ստեղծել մեկ կամ ավելի perspectives
+(2245, 48) : Critically endangered : Находится в критическом состоянии : Կրիտիկական վտանգված
+(2245, 49) : Date : Дата : Ամսաթիվ
+(2245, 5) : Actions : Действия : Գործողություններ
+(2245, 50) : Deactivate : Дезактивировать : Ապաակտիվացնել
+(2245, 51) : Definitely endangered : Находится под угрозой исчезновения : Որոշակի վտանգված
+(2245, 52) : Delete : Удалить : Ջնջել
+(2245, 53) : desktop :  десктоп : desktop
+(2245, 54) : Desktop : Рабочий стол : Desktop
+(2245, 55) : Dialeqt file : Файл Dialeqt : Dialeqt ֆայլ
+(2245, 56) : Dictionaries : Словари : Բառարաններ
+(2245, 57) : Dictionary created : Словарь создан : Բառարանը ստեղծված է
+(2245, 58) : Dictionary names and metadata : Названия словарей и метаданные : Բառարանի անուններ և մետատվյալներ
+(2245, 59) : Disconnected : Разъединено : Անջատված
+(2245, 6) : Activate : Активировать : Ակտիվացնել
+(2245, 60) : Display mode : Режим отображения : Ցուցադրման ռեժիմ
+(2245, 61) : Edit : Редактировать : Խմբագրել
+(2245, 62) : Edit profile : Редактировать профиль : Խմբագրել պրոֆիլը
+(2245, 63) : Email : Электронная почта : Էլ. փոստ
+(2245, 64) : Email is required : Требуется электронная почта : Էլ. փոստը պարտադիր է
+(2245, 65) : End : Конец : Ավարտ
+(2245, 66) : Entities : Объекты : Էություններ
+(2245, 67) : Entity matching algorithm : Алгоритм сопоставления объектов : Էությունների համադրման ալգորիթմ
+(2245, 68) : Entity matching threshold : Порог сопоставления объекта : Էությունների համադրման շեմ
+(2245, 69) : Entity status : Статус объекта : Էության կարգավիճակ
+(2245, 7) : Activate / Deactivate : Активировать / Деактивировать : Ակտիվացնել / Ապաակտիվացնել
+(2245, 70) : Entity type : Тип объекта : Էության տեսակ
+(2245, 71) : Expedition : Экспедиция : Արշավախումբ
+(2245, 72) : Extinct : Вымерший : Անհետացած
+(2245, 73) : Failed to ban user : Не удалось заблокировать пользователя : Հնարավոր չեղավ արգելափակել օգտատիրոջը
+(2245, 74) : Failed to launch sound and markup compilation : Не удалось запустить компиляцию звука и разметки : Հնարավոր չեղավ գործարկել ձայնի և markup-ի կազմումը
+(2245, 75) : Field Type : Тип поля : Դաշտի տեսակ
+(2245, 76) : Fields : Поля : Դաշտեր
+(2245, 77) : Files : Файлы : Ֆայլեր
+(2245, 78) : Fill metadata information : Заполнить метаданные : Լրացրեք մետատվյալների տեղեկատվությունը
+(2245, 79) : Filter : Фильтр : Ֆիլտր
+(2245, 8) : Add : Добавить : Ավելացնել
+(2245, 80) : Finish : Завершение : Ավարտել
+(2245, 81) : From : Из : Սկսած
+(2245, 82) : Full name : Полное имя : Ամբողջական անուն
+(2245, 83) : Grant Issuer : Грантодатель : Դրամաշնորհ տրամադրող
+(2245, 84) : Grant Number : Номер гранта : Դրամաշնորհի համար
+(2245, 85) : Grant URL : URL гранта : Դրամաշնորհի URL
+(2245, 86) : Grants : Гранты : Դրամաշնորհներ
+(2245, 87) : Group : Группа : Խումբ
+(2245, 88) : Grouping tag : Тег группировки : Խմբավորման թեգ
+(2245, 89) : has linked field : имеет связанное поле : ունի կապված դաշտ
+(2245, 9) : Add connection : Добавить связь : Ավելացնել կապ
+(2245, 90) : Help : Помощь : Օգնություն
+(2245, 91) : Human settlement : Населенный пункт : Բնակավայր
+(2245, 92) : Import Starling dictionaries : Импортировать словари Starling : Ներմուծել Starling բառարաններ
+(2245, 93) : Info : Информация : Տեղեկատվություն
+(2245, 94) : Invalid email address : Неверный адрес электронной почты  : Սխալ էլ. փոստի հասցե
+(2245, 95) : Issuer URL : URL грантодателя : Տրամադրողի URL
+(2245, 96) : Join : Присоединиться : Միանալ
+(2245, 97) : Language edit : Редактирование языка : Լեզվի խմբագրում
+(2245, 98) : Language Selection : Выбор языка : Լեզվի ընտրություն
+(2245, 99) : Levenshtein distance limit for entity content matching : Предел расстояния Левенштейна для сопоставления содержимого объекта : Լևենշտեյնի հեռավորության սահման էությունների բովանդակության համադրման համար
+(2387, 10) : No audio : Нет аудио : Աուդիո չկա
+(2387, 11) : Select audio : Выбрать аудио : Ընտրել աուդիո
+(2387, 12) : Clear : Очистить : Մաքրել
+(2387, 13) : Data source : Источник данных : Տվյալների աղբյուր
+(2387, 14) : Select data source : Выбрать источник данных : Ընտրել տվյալների աղբյուրը
+(2387, 15) : Select years : Выбрать года : Ընտրել տարիները
+(2387, 16) : No years found : Года не найдены : Տարիներ չեն գտնվել
+(2387, 17) : Select settlement : Выбрать населенный пункт : Ընտրել բնակավայրը
+(2387, 18) : No settlement found : Населенный пункт не найден : Բնակավայր չի գտնվել
+(2387, 19) : Select authors : Выбрать авторов : Ընտրել հեղինակներին
+(2387, 2) : Select languages : Выбрать языки : 
+(2387, 20) : No authors found : Авторы не найдены : Հեղինակներ չեն գտնվել
+(2387, 21) : Select language degree of endangerment : Выбрать степень угрозы вымирания языка : Ընտրել լեզվի վերացման վտանգի աստիճանը
+(2387, 22) : No language degree of endangerment found : Степень угрозы вымирания языка не найдена : Լեզվի վերացման վտանգի աստիճան չի գտնվել
+(2387, 23) :  Language degree of endangerment (selection affects selected languages and dictionaries) : Степень угрозы вымирания языка (выбор повлияет на ранее выбранные языки и словари) :  Լեզվի վերացման վտանգի աստիճան (ընտրությունն ազդում է ընտրված լեզուների և բառարանների վրա)
+(2387, 24) : Language degree of endangerment : Степень угрозы вымирания языка : Լեզվի վերացման վտանգի աստիճան
+(2387, 25) : There is no languages and dictionaries with chosen language degree of endangerment. The search will be performed with all languages and dictionaries : Нет языков и словарей с выбранной степенью угрозы вымирания языка. Поиск будет производиться по всем языкам и словарям : Ընտրված վերացման վտանգի աստիճանով լեզուներ և բառարաններ չկան: Որոնումը կկատարվի բոլոր լեզուներով և բառարաններով
+(2387, 26) : selected : выбрано : ընտրված
+(2387, 27) : Not chosen : Не выбрано : Չի ընտրվել
+(2387, 28) : Select all : Выбрать все : 
+(2387, 29) : Choose groups for areas : Выбрать группы для ареалов : Ընտրեք խմբեր տարածքների համար
+(2387, 3) : Check all : Выделить все : Նշել բոլորը
+(2387, 30) : No groups to select : Нет групп для выбора : Ընտրելի խմբեր չկան
+(2387, 31) : Areas mode : Режим ареалов : Տարածքների ռեժիմ
+(2387, 32) : Disable marker : Отключить маркер : Անջատել նշիչը
+(2387, 33) : Disable all markers of the groups this marker belongs to : Отключить все маркеры групп, к которым относится данный маркер : Անջատել այն խմբերի բոլոր նշիչները, որոնց պատկանում է այս նշիչը
+(2387, 34) : Add marker to group : Добавить маркер в группу : Ավելացնել նշիչ խմբին
+(2387, 35) : Add all markers of the groups to which this marker belongs to the group : Добавить все маркеры групп, к которым относится данный маркер, в группу : Ավելացնել խմբի այն խմբերի բոլոր նշիչները, որոնց պատկանում է այս նշիչը
+(2387, 36) : Move marker to group : Перенести маркер в группу : Տեղափոխել նշիչը խմբին
+(2387, 37) : Search in found : Поиск в найденном : Որոնել գտնվածում
+(2387, 4) : Uncheck all : Снять выделение со всего : Չնշել բոլորը
+(2387, 5) : Select tags : Выбрать теги : 
+(2387, 6) : Grammar : Грамматика : 
+(2387, 7) : Show : Показать : Ցույց տալ
+(2387, 8) : Audio : Аудио : Աուդիո
+(2387, 9) : Has audio : Есть аудио : Ունի աուդիո
+(2430, 2) : OR/AND mode : ИЛИ / И режим : OR/AND ռեժիմ
+(4078, 16) : Distance map : Карта расстояний : Հեռավորության քարտեզ
+(4078, 19) : Library of linguistic maps : Библиотека лингвистических карт : Լեզվաբանական քարտեզների գրադարան
+(4078, 2) : Language databases : Языковые базы данных : Լեզվի տվյալների բազաներ
+(4078, 22) : Import Dialeqt dictionary : Импорт словарей Dialeqt : Ներմուծել Dialeqt բառարան
+(4078, 24) : Off-grant projects : Проекты вне грантов : Դրամաշնորհից դուրս նախագծեր
+(4078, 26) : Version : Версии : Տարբերակ
+(4078, 28) : Support@Telegram : Поддержка в Telegram : Աջակցություն@Telegram
+(4078, 34) : By Organizations : По организациям : Ըստ կազմակերպությունների
+(4078, 36) : Dictionaries created out of grant : Словари, созданные вне грантов : Դրամաշնորհից դուրս ստեղծված բառարաններ
+(4078, 38) : Create dictionary : Создать словарь : 
+(4078, 39) : Update dictionary : Обновить словарь : 
+(4078, 4) : Lingvodoc creators : Создатели Лингводока : Lingvodoc-ի ստեղծողներ
+(4078, 40) : File selection : Выбор файла : Ֆայլի ընտրություն
+(4078, 41) : Select Dialeqt file for import : Выберите файл из Dialeqt для импорта : Ընտրել Dialeqt ֆայլ ներմուծման համար
+(4078, 42) : Select language for the new dictionary : Выберите язык для нового словаря : Ընտրել լեզուն նոր բառարանի համար
+(4078, 43) : Dictionary names : Названия словаря : Բառարանի անուններ
+(4078, 44) : Set dictionary name and translations : Задайте словарю название и переводы названия : Նշել բառարանի անունը և թարգմանությունները
+(4078, 6) : Support : Поддержка : Աջակցություն
+(4078, 8) : Language corpora : Корпуса : Լեզվի կորպուսներ
+(4096, 11) : Cognate suggestions : Поиск когнатов в разных диалектах : Հարազատ բառերի առաջարկություններ
+(4096, 14) : Cognate reconstruction : Реконструкция праязыка нескольких диалектов : Հարազատ բառերի վերակառուցում
+(4096, 17) : Cognate multi-language suggestions : Поиск когнатов в разных языках : Հարազատ բառերի բազմալեզու առաջարկություններ
+(4096, 2) : Phonological statistical distance : Измерение степени сходства систем вокализма : Հնչույթաբանական վիճակագրական հեռավորություն
+(4096, 20) : Cognate multi-language reconstruction : Реконструкция праязыка нескольких языков : Հարազատ բառերի բազմալեզու վերակառուցում
+(4096, 5) : Valency : Автоматическое выявление валентностей глаголов : Կապակցություն
+(4096, 8) : Cognate acoustic analysis : Акустический анализ когнатов : Հարազատ բառերի ակուստիկ վերլուծություն
+(4112, 101) : an option to save the online map one has created as a link, and its automatic update when adding new materials to LingvoDoc : возможность сохранения построенной он-лайн карты в виде ссылки и ее автоматическое пополнение при добавлении новых материалов на ЛингвоДок : ստեղծված առցանց քարտեզը որպես հղում պահպանելու և LingvoDoc-ում նոր նյութեր ավելացնելիս դրա ավտոմատ թարմացման հնարավորություն
+(4112, 104) : Opportunities : Возможности : Հնարավորություններ
+(4112, 107) : Follow the link to learn more about using these options : Подробнее о применении этих опций : Հետևեք հղմանը՝ այս տարբերակների օգտագործման մասին ավելին իմանալու համար
+(4112, 11) : more than 1000 audio dictionaries : более 1000 аудиословарей : ավելի քան 1000 աուդիո բառարան
+(4112, 110) : Add new translation gist : Добавить переводную сущность : Ավելացնել թարգմանության նոր gist
+(4112, 113) : Add Translation : Добавить перевод : Ավելացնել թարգմանություն
+(4112, 116) : Save : Сохранить : 
+(4112, 14) : and : и : և
+(4112, 17) : 300 text corpora : 300 корпусов текстов : 300 տեքստային կորպուս
+(4112, 2) : LingvoDoc is a linguistic platform : Это ЛингвоДок. Лингвистическая платформа : LingvoDoc-ը լեզվաբանական հարթակ է
+(4112, 20) : representing the dialects of various world languages : по диалектам языков народов мира : Աշխարհի տարբեր լեզուների բարբառների ներկայացում
+(4112, 23) : It stores : Представлены : Այն պահում է
+(4112, 26) : unique data : уникальные данные : եզակի տվյալներ
+(4112, 29) : on the endangered languages of Russia : по исчезающим языкам России : Ռուսաստանի վտանգված լեզուների մասին
+(4112, 32) : Many dialects have already disappeared, and the LingvoDoc platform holds data from archives, which are presently stacked and inaccessible : Многие диалекты уже исчезли, и на ЛингвоДоке представлены архивные материалы, которые в настоящее время заштабелированы и недоступны : Բազմաթիվ բարբառներ արդեն անհետացել են, և LingvoDoc հարթակը պարունակում է տվյալներ արխիվներից, որոնք ներկայումս դեպոզիտացված են և անհասանելի
+(4112, 35) : It keeps records on some : Записаны : Այն պահում է գրառումներ որոշ
+(4112, 38) : extinct languages : исчезнувшие языки. : անհետացած լեզուներ
+(4112, 41) : (for example, Eastern Mansi) as well as those that are in danger of extinction (that is, languages that have no more than 10 speakers over 60 years old left) : Например, восточно-мансийский, и те, которые находятся под угрозой исчезновения (осталось не более 10 носителей старше 60 лет) : (օրինակ՝ արևելյան մանսի), ինչպես նաև վերացման վտանգի տակ գտնվողները (այսինքն՝ լեզուներ, որոնց կրողներից մնացել է ոչ ավելի քան 10 հոգի՝ 60 տարեկանից բարձր)
+(4112, 44) : The pros of the LingvoDoc platform : Преимущества платформы ЛингвоДок : LingvoDoc հարթակի առավելությունները
+(4112, 47) : An opportunity for many researchers to work simultaneously and independently : Одновременная и независимая работа многих исследователей : 
+(4112, 5) : Designed for compiling, analyzing and storing dictionaries, corpora and concordances of various languages and dialects : Предназначенная для составления, анализа и хранения словарей, корпусов и конкордансов различных языков и диалектов : Նախատեսված է տարբեր լեզուների և բարբառների բառարանների, կորպուսների և համապատասխանությունների կազմման, վերլուծության և պահպանման համար
+(4112, 50) : A possibility to automatically check for errors in the processed data : Возможность автоматической проверки ошибок в обработанных данных : Մշակված տվյալներում սխալների ավտոմատ ստուգման հնարավորություն
+(4112, 53) : Unique software that reproduces the experimental-phonetic, etymological and morphological work of a researcher 100 times faster : Уникальные программы, воспроизводящие экспериментально-фонетическую, этимологическую и морфологическую работу исследователя в 100 раз быстрее : Եզակի ծրագրային ապահովում, որը վերարտադրում է հետազոտողի փորձարարական-հնչեթական, էտիմոլոգիական և ձևաբանական աշխատանքը 100 անգամ ավելի արագ
+(4112, 56) : An option to create results of intellectual activity (RIAs) for the needs of writing reports and working with data : Возможность создания РИДов для отчетности и работы с материалом : Ինտելեկտուալ գործունեության արդյունքների (ՌԻԱ) ստեղծման հնարավորություն հաշվետվությունների գրման և տվյալների հետ աշխատանքի համար
+(4112, 59) : User options for working with dictionaries : Работа со словарями : Օգտատիրոջ տարբերակներ բառարանների հետ աշխատանքի համար
+(4112, 62) : creating any columns; adding any text, audio files, marking spectrograms using the Praat phonetic software; creating etymological connections between words from different dictionaries : создание любых столбцов; добавление любого текста, аудиофайлов, разметки спектрограмм в фонетической программе Праат; создание этимологических связей между словами в разных словарях : ցանկացած սյունակների ստեղծում; ցանկացած տեքստի, աուդիո ֆայլերի ավելացում, սպեկտրոգրամների նշում Praat ծրագրի միջոցով; տարբեր բառարանների բառերի միջև էտիմոլոգիական կապերի ստեղծում
+(4112, 65) : automatic segmentation of native speaker surveys, uploaded into the Telegram channel “LingvoDoc Support”, into separate words : возможность автоматической сегментации опроса носителей, подгруженного в Телеграмм-канал «Поддержка ЛингвоДок» на отдельные слова : “LingvoDoc Support” Telegram-ալիք բեռնված լեզվակիրների հարցումների առանձին բառերի ավտոմատ հատում
+(4112, 68) : data processing and analysis software: phonetic analysis; search for etymologies; analysis of cognates in dialects and several languages; acoustic analysis of cognates; measuring phonological statistical distance; phonemic analysis; reconstruction of cognates in dialects and several languages : программы обработки и анализа данных: фонетический анализ; поиск этимологий; анализ когнатов диалектов и нескольких языков; акустический анализ когнатов; фонологическое статистическое расстояние; фонематический анализ; реконструкция когнатов диалектов и нескольких языков : 
+(4112, 71) : User options for working with text corpora : Работа с корпусами текстов : Օգտատիրոջ տարբերակներ տեքստային կորպուսների հետ աշխատանքի համար
+(4112, 74) : uploading audio files of any size, (audio)corpora in ELAN format, texts in Word .odt format : загрузка аудиофайлов любого объема; (аудио) корпусов в формате Элан; текстов в формате Ворд .odt : Ցանկացած չափի աուդիո ֆայլերի, ELAN ձևաչափի (աուդիո)կորպուսների, Word .odt ձևաչափի տեքստերի բեռնում
+(4112, 77) : automatic creation of dictionaries from text corpora : автоматическое создание словарей из корпусов текстов : տեքստային կորպուսներից բառարանների ավտոմատ ստեղծում
+(4112, 8) : It currently contains : В настоящее время представлено : Այն ներկայումս պարունակում է
+(4112, 80) : data processing with existing parsers (for the Erzya, Moksha, Udmurt, Komi, Kazakh, Tatar languages) or creating new parsers quickly and integrating them into LingvoDoc : обработка с помощью парсеров: эрзянского, мокшанского, удмуртского, коми, казахского, татарского языков; возможность быстрого создания новых парсеров и их интеграции в ЛингвоДок : տվյալների մշակում առկա վերլուծիչներով (էրզյա, մոկշա, ուդմուրտ, կոմի, ղազախ, թաթար լեզուների համար) կամ նոր վերլուծիչների արագ ստեղծում և LingvoDoc-ում ինտեգրում
+(4112, 83) : user-friendly interface for online manual word sense disambiguation which may arise after the text has been processed by the parser : удобный интерфейс для он-лайн снятия вручную омонимии, возникшей после обработки текста парсером : Օգտատեր-բարեկամ ինտերֆեյս առցանց ձեռքով բառային իմաստի միիմաստեցման համար, որը կարող է առաջանալ տեքստի վերլուծիչի կողմից մշակվելուց հետո
+(4112, 86) : software for morphological analysis of glossed corpora, in particular, automatic identification of government models : программы морфологического анализа глоссированных корпусов, в частности, автоматическое выявление моделей управления : Գլոսացված կորպուսների ձևաբանական վերլուծության ծրագրային ապահովում, մասնավորապես՝ կառավարման մոդելների ավտոմատ նույնականացում
+(4112, 89) : User options for mapping linguistic features : Картографирование лингвистических особенностей : Օգտատիրոջ տարբերակներ լեզվաբանական հատկանիշների համադրման համար
+(4112, 92) : creating search queries of any type of complexity and plotting them on the map : поисковые запросы любого типа сложности и отражение их на карте : ցանկացած բարդության որոնման հարցումների ստեղծում և դրանց քարտեզի վրա տեղադրում
+(4112, 95) : mapping geographic areas : построение географических ареалов : Աշխարհագրական տարածքների քարտեզագրում
+(4112, 98) : presenting results as online fragments of audio dictionaries and corpora which can be further edited or in the Excel file format : вывод результатов в виде он-лайн фрагментов аудиословарей и корпусов с возможностью их редактирования и в формате файла Эксель : Արդյունքների ներկայացում որպես աուդիո բառարանների և կորպուսների առցանց հատվածներ, որոնք կարող են հետագայում խմբագրվել, կամ Excel ֆայլի ձևաչափով
+(4362, 43) : Cognate multi-language analysis : Анализ когнатов в нескольких языках : Հարազատ բառերի բազմալեզու վերլուծություն
+(4374, 2) : A chance for many researchers to work simultaneously and independently : Возможность для многих исследователей работать одновременно и независимо : Բազմաթիվ հետազոտողների համար միաժամանակ և անկախ աշխատելու հնարավորություն
+(4376, 2) : Project funded by grants : Работа поддержана грантами : Դրամաշնորհներով ֆինանսավորվող նախագիծ
+(4378, 101) : Contributions : Содействия : Ներդրումներ
+(4378, 105) : The work is supported by the following grants : Работа поддерживается следующими грантами : Աշխատանքը աջակցվում է հետևյալ դրամաշնորհներով
+(4378, 108) : Linked organizations : Связанные организации : Կապված կազմակերպություններ
+(4378, 11) : Edit of the dialects classification : Редактировать классификацию диалектов : Բարբառների դասակարգման խմբագրում
+(4378, 111) : Organizations available to link to : Организации, доступные для связи : Կապելու համար հասանելի կազմակերպություններ
+(4378, 114) : Request link : Запросить связь : Հարցման հղում
+(4378, 117) : Link requested : Связь запрошена : Հղումը հարցված է
+(4378, 120) : Request has been sent to the organization's administrator : Запрос был отправлен администратору организации : Հարցումը ուղարկվել է կազմակերպության ադմինիստրատորին
+(4378, 123) : GraphQL error: Request already exists : Ошибка GraphQL: Запрос уже существует : 
+(4378, 126) : Select a dictionary for analysis : Выберите словарь для анализа : Ընտրեք բառարան վերլուծության համար
+(4378, 129) : For the time being Distance Map functionality is available only for the administrator : В настоящее время функциональность Карты близости языков и диалектов доступна только администратору : Ներկայումս Հեռավորության քարտեզի ֆունկցիոնալությունը հասանելի է միայն ադմինիստրատորին
+(4378, 132) : Set corpus name, translations and metadata : Задайте название корпуса, переводы и метаданные : Նշել կորպուսի անունը, թարգմանությունները և մետատվյալները
+(4378, 136) : Corpus names and metadata : Названия корпусов и метаданные : Կորպուսի անուններ և մետատվյալներ
+(4378, 14) : Edit translations : Редактировать переводы : Խմբագրել թարգմանությունները
+(4378, 140) : Browse : Обзор : Դիտել
+(4378, 143) : No file selected : Файл не выбран : Ֆայլ չի ընտրվել
+(4378, 147) : OR : ИЛИ : OR
+(4378, 150) : AND : И : AND
+(4378, 153) : Export to XLSX : Экспорт в XLSX : Արտահանել XLSX
+(4378, 156) : Get link to search results : Получить ссылку на результаты поиска : Ստանալ որոնման արդյունքների հղումը
+(4378, 159) : Transcription rules : Правила транскрипции : Տրանսկրիպցիայի կանոններ
+(4378, 162) : Created at : Создано : Ստեղծվել է՝
+(4378, 165) : Created by : Создано : Ստեղծող՝
+(4378, 168) : Last modified at : Последнее изменение : Վերջին փոփոխություն՝
+(4378, 17) : Import Excel and Starling dictionaries : Импорт словарей Excel и Starling : Ներմուծել Excel և Starling բառարաններ
+(4378, 171) : Back : Назад : Հետ
+(4378, 174) : Next : Вперед : Հաջորդ
+(4378, 177) : Return to tree : Вернуться к дереву : Վերադառնալ ծառին
+(4378, 180) : No data found for analysis, please select another dictionary : Данные для анализа не найдены, пожалуйста, выберите другой словарь : Վերլուծության համար տվյալներ չեն գտնվել, ընտրեք այլ բառարան
+(4378, 183) : Clear all : Очистить все : Մաքրել բոլորը
+(4378, 186) : Settlement : Населенный пункт : Բնակավայր
+(4378, 189) : Loading additional filter data : Загрузка дополнительных данных фильтра : Լրացուցիչ ֆիլտրի տվյալների բեռնում
+(4378, 192) : Add AND block : Добавить И блок : Ավելացնել AND բլոկ
+(4378, 195) : Add OR block : Добавить ИЛИ блок : Ավելացնել OR բլոկ
+(4378, 198) : Add AND condition : Добавить И условие : Ավելացնել AND պայման
+(4378, 2) : Map of the languages and dialects : Карта языков и диалектов : Լեզուների և բարբառների քարտեզ
+(4378, 20) : Roles : Роли : Դերեր
+(4378, 201) : Add OR condition : Добавить ИЛИ условие : Ավելացնել OR պայման
+(4378, 204) : AND block : И блок : AND բլոկ
+(4378, 207) : OR block : ИЛИ блок : OR բլոկ
+(4378, 210) : Full string : Полная строка : Ամբողջական տող
+(4378, 213) : Sub string : Подстрока : Ենթատող
+(4378, 216) : Regexp : Регулярное выражение : Regexp
+(4378, 219) : Link to search results : Ссылка на результаты поиска : Որոնման արդյունքների հղում
+(4378, 222) : Found : Найдено : Գտնված է
+(4378, 225) : results on : результатов на : Արդյունքներ՝
+(4378, 228) : map : карте : քարտեզ
+(4378, 232) : Search string : Поисковая строка : Որոնման տող
+(4378, 235) : Cognate suggestions (disabled, perspective is not published) : Поиск когнатов в разных диалектах (отключено, нет прав) : Հարազատ բառերի առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+(4378, 238) : Cognate multi-language suggestions (disabled, perspective is not published) : Поиск когнатов в разных языках (отключено, нет прав) : Հարազատ բառերի բազմալեզու առաջարկություններ (անջատված է, perspective-ը չի հրապարակված)
+(4378, 24) : Properties : Свойства : 
+(4378, 241) : intersections : пересечений : հատումներ
+(4378, 244) : More than : Более : Ավելի քան
+(4378, 247) : Simple : Простой : Պարզ
+(4378, 250) : With field selection : С выбором поля : Դաշտի ընտրությամբ
+(4378, 253) : Merge all : Объединить все : Միավորել բոլորը
+(4378, 256) : Merge selected on current page : Объединить выбранное на текущей странице : Միավորել ընտրվածները ընթացիկ էջում
+(4378, 259) : Merging selected on current page : Объединение выбранного на текущей странице : Ընթացիկ էջում ընտրվածների միավորում
+(4378, 262) : License : Лицензия : Լիցենզիա
+(4378, 266) : Please select parent language for each Starling dictionary : Пожалуйста, выберите родительский язык для каждого словаря Starling : Ընտրեք մայր լեզուն յուրաքանչյուր Starling բառարանի համար
+(4378, 269) : Select Parent Language : Выберите родительский язык : Ընտրել մայր լեզուն
+(4378, 273) : Keep : Сохранить : Պահել
+(4378, 276) : Please use at least one Starling column : Пожалуйста, используйте хотя бы один Starling столбец : Օգտագործեք առնվազն մեկ Starling սյունակ
+(4378, 279) : Please map all Starling columns to Lingvodoc types : Пожалуйста, сопоставьте все столбцы Starling с типами Lingvodoc : Համադրեք բոլոր Starling սյունակները Lingvodoc-ի տեսակների հետ
+(4378, 28) : Statistics : Статистика : Վիճակագրություն
+(4378, 282) : Loading language data : Загрузка языковых данных : Լեզվի տվյալների բեռնում
+(4378, 285) : Genre : Жанр : 
+(4378, 288) : Open map : Открыть карту : Բացել քարտեզը
+(4378, 291) : Title of the work : Название работы : Աշխատանքի վերնագիր
+(4378, 294) : Time of writing : Время написания : Գրառման ժամանակ
+(4378, 297) : Quantitative characteristic : Количественная характеристика : Քանակական բնութագիր
+(4378, 300) : Bibliographic data of the source : Библиографические данные источника : Աղբյուրի մատենագիտական տվյալներ
+(4378, 303) : Translator : Переводчик : Թարգմանիչ
+(4378, 306) : Bibliographic data of the translation : Библиографические данные перевода : Թարգմանության մատենագիտական տվյալներ
+(4378, 309) : Select a license : Выберите лицензию : Ընտրեք լիցենզիա
+(4378, 312) : Select dictionary to be updated : Выберите словарь для обновления : Ընտրել թարմացվելիք բառարանը
+(4378, 315) : Organization name : Название организации : Կազմակերպության անուն
+(4378, 318) : About : Описание : Մասին
+(4378, 32) : Remove user : Удалить пользователя : Հեռացնել օգտատիրոջը
+(4378, 321) : Members : Участники : Անդամներ
+(4378, 324) : Administrators : Администраторы : Ադմինիստրատորներ
+(4378, 327) : Create organization : Добавить новую организацию : Ստեղծել կազմակերպություն
+(4378, 330) : Administrate : Администрировать : Կառավարել
+(4378, 333) : User account activation/deactivation : Активация/деактивация учетной записи пользователя : Օգտատիրոջ հաշվի ակտիվացում/ապաակտիվացում
+(4378, 336) : Normanskaya Julia Viktorovna : Норманская Юлия Викторовна : Նորմանսկայա Յուլիա Վիկտորովնա
+(4378, 339) : Dybo Anna Vladimirovna : Дыбо Анна Владимировна : Դիբո Աննա Վլադիմիրովնա
+(4378, 342) : Borisenko Oleg Dmitrievich : Борисенко Олег Дмитриевич : Բորիսենկո Օլեգ Դմիտրիևիչ
+(4378, 345) : Tapekhin Andrey Nikolaevich : Тапехин Андрей Николаевич : Տապեխին Անդրեյ Նիկոլաևիչ
+(4378, 348) : Bogomolov Igor Vladimirovich : Богомолов Игорь Владимирович : Բոգոմոլով Իգոր Վլադիմիրովիչ
+(4378, 35) : Save markup : Сохранить разметку : Պահպանել markup-ը
+(4378, 351) : Beloborodov Ivan Borisovich : Белобородов Иван Борисович : Բելոբորոդով Իվան Բորիսովիչ
+(4378, 354) : Ipatov Stepan Anatolievich : Ипатов Степан Анатольевич : Իպատով Ստեփան Անատոլիևիչ
+(4378, 357) : Zharov Andrey Anatolievich : Жаров Андрей Анатольевич : Ժարով Անդրեյ Անատոլիևիչ
+(4378, 360) : Rozhkov Artyom Vladimirovich : Рожков Артём Владимирович : Ռոժկով Արտյոմ Վլադիմիրովիչ
+(4378, 363) : Naumova Alexandra Vladimirovna : Наумова Александра Владимировна : Նաումովա Ալեքսանդրա Վլադիմիրովնա
+(4378, 366) : Mikhail Oslon : Михаил Ослон : Միխայիլ Օսլոն
+(4378, 369) : Pavel Grashchenkov : Павел Гращенков : Պավել Գրաշչենկով
+(4378, 372) : editor-in-chief of the website : главный редактор сайта : Կայքի գլխավոր խմբագիր
+(4378, 375) : responsible editor of Ural dictionaries : ответственный редактор Уральских словарей : Ուրալի բառարանների պատասխանատու խմբագիր
+(4378, 378) : responsible editor of Altai dictionaries : ответственный редактор Алтайских словарей : Ալթայի բառարանների պատասխանատու խմբագիր
+(4378, 38) : Save sound recordings : Сохранить звуковые записи : Պահպանել ձայնագրությունները
+(4378, 381) : development of the architecture and core of the system : разработка архитектуры и ядра системы : Համակարգի ճարտարապետության և միջուկի մշակում
+(4378, 384) : development of the system core : разработка ядра системы : Համակարգի միջուկի մշակում
+(4378, 387) : computing modules of the system : вычислительные модули системы : Համակարգի հաշվողական մոդուլներ
+(4378, 390) : frontend : фронтенд : frontend
+(4378, 393) : analysis of cognates, phonemes and allophones : анализ когнатов, фонем и аллофонов : հարազատ բառերի, ֆոնեմների և ալլոֆոնների վերլուծություն
+(4378, 396) : valence analysis : анализ валентностей : Կապակցության վերլուծություն
+(4378, 399) : Institute of Linguistics Russian Academy of Sciences : Институт языкознания РАН : Ռուսաստանի գիտությունների ակադեմիայի Լեզվաբանության ինստիտուտ
+(4378, 402) : Ivannikov Institute for System Programming of the Russian Academy of Sciences : Институт системного программирования им. В.П. Иванникова РАН : Ռուսաստանի գիտությունների ակադեմիայի Վ.Պ. Իվաննիկովի անվան Համակարգային ծրագրավորման ինստիտուտ
+(4378, 405) : Tomsk State University : Томский государственный университет : Տոմսկի պետական համալսարան
+(4378, 408) : Elecard-Med LLC : ООО Элекард-Мед : Elecard-Med ՍՊԸ
+(4378, 41) : Can approve lexical entries and publish : Может утверждать лексические входы и публиковать : Կարող է հաստատել բառային միավորները և հրապարակել
+(4378, 411) : Additional code : Дополнительный код : Լրացուցիչ կոդ
+(4378, 414) : Ask questions about the LingvoDoc program at : Вопросы по поводу работы программы LingvoDoc задавайте по адресу : Հարցեր LingvoDoc ծրագրի մասին ուղղեք՝
+(4378, 417) : Become a member : Стать участником : Դառնալ անդամ
+(4378, 420) : Become an administrator : Стать администратором : Դառնալ ադմինիստրատոր
+(4378, 423) : In processing : В обработке : Մշակման մեջ
+(4378, 426) : Yes : Да : Այո
+(4378, 429) : No : Нет : Ոչ
+(4378, 432) : Add organization : Добавить организацию : Ավելացնել կազմակերպություն
+(4378, 435) : About the organization : Об организации : Կազմակերպության մասին
+(4378, 438) : You are a member : Вы являетесь участником : Դուք անդամ եք
+(4378, 44) : Can create dictionary roles and assign collaborators : Может создавать роли в словаре и назначать сотрудников : Կարող է ստեղծել բառարանի դերեր և նշանակել համագործակիցներ
+(4378, 441) : You are an administrator : Вы являетесь администратором : Դուք ադմինիստրատոր եք
+(4378, 444) : Delete organization : Удалить организацию : Ջնջել կազմակերպությունը
+(4378, 447) : Deleting : Удаление : Ջնջվում է
+(4378, 450) : New organization : Новая организация : Նոր կազմակերպություն
+(4378, 453) : Failed to delete organization : Не удалось удалить организацию : Հնարավոր չեղավ ջնջել կազմակերպությունը
+(4378, 456) : Successfully deleted organization : Успешно удалена организация : Կազմակերպությունը հաջողությամբ ջնջվել է
+(4378, 459) : Organization : Организация : Կազմակերպություն
+(4378, 47) : Can create lexical entries : Может создавать лексические входы : Կարող է ստեղծել բառային միավորներ
+(4378, 5) : Search and map’s creating : Поиск и построение карт : Որոնում և քարտեզի ստեղծում
+(4378, 50) : Can create perspectives : Может создавать перспективы : Կարող է ստեղծել perspectives
+(4378, 53) : Can deactivate lexical entries : Может деактивировать лексические входы : Կարող է ապաակտիվացնել բառային միավորները
+(4378, 56) : Can delete dictionary : Может удалить словарь : Կարող է ջնջել բառարանը
+(4378, 59) : Can delete lexical entries and entities : Может удалять лексические входы и объекты : Կարող է ջնջել բառային միավորները և էությունները
+(4378, 62) : Can delete perspective : Может удалить перспективу : Կարող է ջնջել perspective-ը
+(4378, 65) : Can view published lexical entries : Может просматривать опубликованные лексические входы : Կարող է դիտել հրապարակված բառային միավորները
+(4378, 68) : Can view unpublished lexical entries : Может просматривать неопубликованные лексические входы : Կարող է դիտել չհրապարակված բառային միավորները
+(4378, 71) : Can get dictionary role list : Может получить список ролей словаря : Կարող է ստանալ բառարանի դերերի ցանկը
+(4378, 74) : Can edit dictionary options : Может редактировать параметры словаря : Կարող է խմբագրել բառարանի կարգավորումները
+(4378, 77) : Can edit dictionary status : Может редактировать статус словаря : Կարող է խմբագրել բառարանի կարգավիճակը
+(4378, 8) : Language genetic proximity map : Карта близости языков и диалектов : Լեզվի գենետիկ մոտության քարտեզ
+(4378, 80) : Can edit perspective : Может редактировать перспективу : Կարող է խմբագրել perspective-ը
+(4378, 83) : Can edit perspective status : Может редактировать статус перспективы : Կարող է խմբագրել perspective-ի կարգավիճակը
+(4378, 86) : Can merge dictionaries and perspectives : Может объединять словари и перспективы : Կարող է միավորել բառարաններ և perspectives
+(4378, 89) : Can resign users from dictionary editors : Может уволить пользователей из редакторов словарей : Կարող է հեռացնել օգտատերերին բառարանի խմբագիրներից
+(4378, 92) : Can resign users from perspective editors : Может уволить пользователей из редакторов перспектив : Կարող է հեռացնել օգտատերերին perspective-ի խմբագիրներից
+(4378, 95) : Can create perspective roles and assign collaborators : Может создавать роли перспективы и назначать сотрудников : Կարող է ստեղծել perspective-ի դերեր և նշանակել համագործակիցներ
+(4378, 98) : Can get perspective role list : Может получить список ролей перспективы : Կարող է ստանալ perspective-ի դերերի ցանկը
+(4387, 5915) : Analysis results : Результаты анализа : Վերլուծության արդյունքներ
+(4387, 5918) : dictionaries : словарей : բառարաններ
+(4387, 5921) :  cognate groups : этимологических групп : 
+(4387, 5924) : and : и : 
+(4387, 5927) : transcriptions : транскрипций : 
+(4387, 5930) : analysed : были проанализированы : 
+(4577, 11) : Type of discourse : Тип дискурса : Զրույցի տեսակ
+(4577, 14) : Type of speech : Тип речи : Խոսքի տեսակ
+(4577, 17) : Speech genre : Вид речи : Խոսքի ժանր
+(4577, 2) : Interrogator : Сборщик материала : Հարցիչ
+(4577, 20) : The theme of the text : Тематика текста : Տեքստի թեման
+(4577, 5) : Informant : Информант : Տեղեկատու
+(4577, 8) : Processing : Обработка данных : Մշակվում է
+(4583, 11) : selected by default : выбрано по умолчанию : ընտրված է ըստ լռելյայնի
+(4583, 14) : Search options : Опции поиска : Որոնման տարբերակներ
+(4583, 17) : Ignore adoptions : Не выделять заимствования : Անտեսել փոխառությունները
+(4583, 2) : Search in : Искать в : Որոնել՝
+(4583, 20) : Search for adoptions : Искать заимствования : Որոնել փոխառությունները
+(4583, 23) : Exclude adoptions : Исключить заимствования : Բացառել փոխառությունները
+(4583, 5) : Dictionaries : Словари : 
+(4583, 8) : Corpora : Корпуса : 
+(4586, 11) : Ignore diacritics : Не учитывать диакритики : Անտեսել դիակրիտիկները
+(4586, 2) : Ignore etymology : Не учитывать наличие этимологии : Անտեսել էտիմոլոգիան
+(4586, 5) : Has etymology : Искать среди исконной лексики : Ունի էտիմոլոգիա
+(4586, 8) : Doesn't have etymology : Искать среди слов без этимологии : Չունի էտիմոլոգիա
+(4818, 101) : Only registered users can work with valency data : Только зарегистрированные пользователи могут работать с данными о валентности : Միայն գրանցված օգտատերերը կարող են աշխատել կապակցության տվյալների հետ
+(4818, 104) : no prefix : без префикса : առանց նախածանցի
+(4818, 107) : Set valency annotation : Аннотация валентности выставлена : Նշել կապակցության անոտացիան
+(4818, 11) : Amount of Lexical and Paradigmatic entries : Количество лексических и парадигматических входов : Բառային և պարադիգմատիկ միավորների քանակ
+(4818, 110) : Created valency data : Созданы данные о валентности : Ստեղծված կապակցության տվյալներ
+(4818, 113) : Create valency data : Создать данные о валентности : Ստեղծել կապակցության տվյալներ
+(4818, 116) : Creating valency data : Создание данных о валентности : Կապակցության տվյալների ստեղծում
+(4818, 119) : Individual work : Индивидуальная работа : Անհատական աշխատանք
+(4818, 122) : Lexical entries : Лексические статьи : 
+(4818, 125) : From : От : 
+(4818, 128) : To : До : 
+(4818, 131) : published : опубликованный : հրապարակված
+(4818, 134) : unpublished : неопубликованный : չհրապարակված
+(4818, 137) : unaccepted : непринятый : չընդունված
+(4818, 14) : Please select perspective : Пожалуйста, выберите перспективу : Ընտրեք perspective
+(4818, 140) : No statistics for the selected period : Нет статистики за выбранный период : Ընտրված ժամանակահատվածի համար վիճակագրություն չկա
+(4818, 143) : Could not get user information : Не удалось получить информацию о пользователе : Հնարավոր չեղավ ստանալ օգտատիրոջ տեղեկատվությունը
+(4818, 146) : Passwords do not match : Пароли не совпадают : Գաղտնաբառերը չեն համընկնում
+(4818, 149) : Profile has been updated : Профиль был обновлен : Պրոֆիլը թարմացվել է
+(4818, 152) : Signin failure. Either no such login/password combination exists, or this user account has been deactivated : Ошибка входа. Либо такой комбинации логин/пароль не существует, либо эта учетная запись пользователя была деактивирована : Մուտքի ձախողում: Նման մուտքանուն/գաղտնաբառ զույգ գոյություն չունի, կամ այս օգտատիրոջ հաշիվը ապաակտիվացվել է
+(4818, 155) : Signup approval pending : Ожидается одобрение регистрации : Գրանցման հաստատումը սպասման մեջ է
+(4818, 158) : Signup success : Успешная регистрация : Գրանցումը հաջողվեց
+(4818, 161) : Add to TOC : Добавить в TOC : Ավելացնել պարունակությանը
+(4818, 164) : Adding : Добавление : Ավելացում
+(4818, 167) : Remove from TOC : Удалить из TOC : Հեռացնել պարունակությունից
+(4818, 17) : Sort by verbs : Сортировка по глаголам : Տեսակավորել ըստ բայերի
+(4818, 170) : Removing : Удаление : Հեռացվում է
+(4818, 173) : Failed to add : Не удалось добавить : Հնարավոր չեղավ ավելացնել
+(4818, 176) : Failed to remove : Не удалось удалить : Հնարավոր չեղավ հեռացնել
+(4818, 179) : Successfully added : Успешно добавлено : Հաջողությամբ ավելացվել է
+(4818, 182) : Successfully removed : Успешно удален : Հաջողությամբ հեռացվել է
+(4818, 185) : from TOC : из TOC : պարունակությունից
+(4818, 188) : to TOC : в TOC : պարունակությանը
+(4818, 191) : Case-sensitive : С учетом регистра : Մեծատառի հաշվառմամբ
+(4818, 194) : No translations : Нет переводов : Թարգմանություններ չկան
+(4818, 197) : Computing : Вычисления : Հաշվարկվում է
+(4818, 20) : Sort by cases : Сортировка по падежам : Տեսակավորել ըստ հոլովների
+(4818, 200) : Compute : Вычислить : Հաշվել
+(4818, 203) : All tables : Все таблицы : Բոլոր աղյուսակները
+(4818, 206) : Separate by paragraphs : Разделять абзацами : Բաժանել ըստ պարբերությունների
+(4818, 209) : No header : Нет заголовка : Վերնագիր չկա
+(4818, 212) : No parsing : Нет парсинга : Վերլուծություն չկա
+(4818, 215) : Please select .docx file for convertion : Пожалуйста, выберите файл .docx для преобразования : Ընտրեք .docx ֆայլ փոխարկման համար
+(4818, 218) : Converted successfully : Конвертировано успешно : Հաջողությամբ փոխարկվեց
+(4818, 221) : Convertion error : Ошибка конвертации : Փոխարկման սխալ
+(4818, 224) : Convertion failed : Конвертация не удалась : Փոխարկումը ձախողվեց
+(4818, 227) : .docx file for convertion: : файл .docx для конвертации: : 
+(4818, 23) : Sort by acceptance : Сортировка по принятию : Տեսակավորել ըստ ընդունման
+(4818, 230) : Only registered users can convert .docx to .eaf : Только зарегистрированные пользователи могут конвертировать .docx в .eaf : Միայն գրանցված օգտատերերը կարող են փոխարկել .docx-ը .eaf-ի
+(4818, 233) : .eaf file : файл .eaf : .eaf ֆայլ
+(4818, 236) : Total items : Всего записей : Ընդամենը տարրեր
+(4818, 239) : input file is not a .docx format file : входной файл не является файлом формата .docx : Մուտքային ֆայլը .docx ձևաչափի չէ
+(4818, 242) : .docx file does not have any tables : в файле .docx нет никаких таблиц : .docx ֆայլը չի պարունակում աղյուսակներ
+(4818, 245) : Please contact developers at : Пожалуйста, свяжитесь с разработчиками по адресу : Դիմեք մշակողներին՝
+(4818, 248) : or at : или в : կամ ժամը՝
+(4818, 251) : Lingvodoc Github : Лингводок Github : Lingvodoc Github
+(4818, 254) : Loading perspective data : Загрузка данных перспективы : Perspective-ի տվյալների բեռնում
+(4818, 257) : Loading role data : Загрузка данных роли : Դերի տվյալների բեռնում
+(4818, 26) : Instances : Экземпляры : Դեպքեր
+(4818, 260) : Accept Contributions : Принять этимологические предложения : Ընդունել ներդրումները
+(4818, 264) : Choose what : Выберите что : Ընտրեք ինչ
+(4818, 267) : Group doesn't have any unmerged lexical entries left : В группе не осталось ни одной неотмеченной лексической записи : Խմբում չմիավորված բառային միավորներ չեն մնացել
+(4818, 270) : Merges are disabled due to an error, please contact developers. : Слияния отключены из-за ошибки, пожалуйста, свяжитесь с разработчиками. : 
+(4818, 273) : Attached to another group : Присоединен к другой группе : Կցված է այլ խմբի
+(4818, 276) : Failed to merge selected lexical entries, please contact developers : Не удалось объединить выбранные лексические записи, пожалуйста, свяжитесь с разработчиками : Հնարավոր չեղավ միավորել ընտրված բառային միավորները, դիմեք մշակողներին
+(4818, 279) : Merge error : Ошибка слияния : Միավորման սխալ
+(4818, 282) : Perspective does not have any grouping fields, cognate analysis is impossible : Перспектива не имеет каких-либо группирующих полей, анализ когнатов невозможен : Perspective-ը չունի խմբավորման դաշտեր, հարազատ բառերի վերլուծությունը անհնար է
+(4818, 285) : Create new perspective : Создать новую перспективу : Ստեղծել նոր perspective
+(4818, 288) : All vowels : Все гласные : Բոլոր ձայնավորները
+(4818, 29) : No instances : Нет экземпляров : Դեպքեր չկան
+(4818, 291) : Only longest vowels and vowels with highest intensity : Только самые длинные гласные и гласные с наибольшей интенсивностью : Միայն ամենաերկար ձայնավորները և ամենաբարձր ինտենսիվությամբ ձայնավորները
+(4818, 294) : Show all translations of each word : Показать все переводы каждого слова : Ցույց տալ յուրաքանչյուր բառի բոլոր թարգմանությունները
+(4818, 297) : Show only the first translation of each word : Показать только первый перевод каждого слова : Ցույց տալ միայն յուրաքանչյուր բառի առաջին թարգմանությունը
+(4818, 300) : Use linked data : Использовать связанные данные : Օգտագործել կապված տվյալները
+(4818, 303) : Group phonology data by markup descriptions : Группировка фонологических данных по описаниям разметки : Խմբավորել հնչույթաբանության տվյալները ըստ markup նկարագրությունների
+(4818, 306) : Export phonology data to a CSV file : Экспорт фонологических данных в файл CSV : Արտահանել հնչույթաբանական տվյալները CSV ֆայլ
+(4818, 309) : Choose markup tiers : Выберите уровни разметки : Ընտրեք markup-ի մակարդակներ
+(4818, 312) : Keep skipped vowel interval characters : Сохранить пропущенные символы интервала гласных : Պահել բաց թողնված ձայնավորի ինտերվալի նիշերը
+(4818, 315) : Combine with adjacent interval characters : Комбинировать с соседними символами интервала : Միավորել հարակից ինտերվալի նիշերի հետ
+(4818, 318) : Fast Track formant extraction : Извлечение формант Fast Track : Fast Track ֆորմանտների արդյունահանում
+(4818, 32) : Selected by default : Выбрано по умолчанию : Ընտրված է ըստ լռելյայնի
+(4818, 321) : Phonology is being compiled. Please check out tasks for details : Фонология составляется. Пожалуйста, ознакомьтесь с задачами для получения более подробной информации : Հնչույթաբանությունը կազմվում է: Մանրամասների համար տես առաջադրանքները
+(4818, 324) : Loading linked perspective data : Загрузка связанных данных перспективы : Կապված perspective-ի տվյալների բեռնում
+(4818, 327) : Loading perspective selection : Загрузка выбора перспективы : Perspective-ի ընտրության բեռնում
+(4818, 330) : Loading skipped character data : Загрузка пропущенных символьных данных : Բաց թողնված նիշի տվյալների բեռնում
+(4818, 333) : Loading adjacent character data : Загрузка смежных символьных данных : Հարակից նիշի տվյալների բեռնում
+(4818, 336) : Loading tier data : Загрузка данных уровня : Մակարդակի տվյալների բեռնում
+(4818, 339) : Analysis library is absent, please contact system administrator : Библиотека анализа отсутствует, пожалуйста, свяжитесь с системным администратором : Վերլուծության գրադարանը բացակայում է, դիմեք համակարգի ադմինիստրատորին
+(4818, 342) : Debug flag : Флаг отладки : Debug դրոշակ
+(4818, 345) : Failed to compute phonemic analysis : Не удалось выполнить фонематический анализ : Հնարավոր չեղավ հաշվել ֆոնեմային վերլուծությունը
+(4818, 348) : Failed to launch phonology compilation : Не удалось запустить компиляцию фонологии : Հնարավոր չեղավ գործարկել հնչույթաբանության կազմումը
+(4818, 35) : on : вкл. : միացված
+(4818, 351) : Failed to launch phonological statistical distance computation : Не удалось запустить вычисление фонологического статистического расстояния : Հնարավոր չեղավ գործարկել հնչույթաբանական վիճակագրական հեռավորության հաշվարկը
+(4818, 354) : Failure : Неудача : Ձախողում
+(4818, 357) : Formant chart threshold : Формантный порог диаграммы : Ֆորմանտային գրաֆիկի շեմ
+(4818, 360) : Intermediate data : Промежуточные данные : Միջանկյալ տվյալներ
+(4818, 363) : Perspective does not have any text fields, phonemic analysis is impossible : Перспектива не имеет текстовых полей, фонематический анализ невозможен : Perspective-ը չունի տեքստային դաշտեր, ֆոնեմային վերլուծությունը անհնար է
+(4818, 366) : Perspectives selected for comparison : Перспективы, выбранные для сравнения : Համեմատության համար ընտրված perspectives
+(4818, 369) : Phonological statistical distance comparison is being computed. Please check out tasks for details : Вычисляется фонологическое статистическое сравнение расстояний. Пожалуйста, ознакомьтесь с задачами для получения более подробной информации : Հնչույթաբանական վիճակագրական հեռավորության համեմատությունը հաշվարկվում է: Մանրամասների համար տես առաջադրանքները
+(4818, 372) : Save intermediate data : Сохранение промежуточных данных : Պահպանել միջանկյալ տվյալները
+(4818, 375) : text entities analysed : проанализированные текстовые объекты : Վերլուծված տեքստային էություններ
+(4818, 378) : Translation field : Поле перевода : Թարգմանության դաշտ
+(4818, 38) : off : выкл. : անջատված
+(4818, 381) : Vowel formant count threshold : Порог подсчета формантов гласных : Ձայնավորի ֆորմանտների քանակի շեմ
+(4818, 384) : Source translation field : Исходное поле перевода : Աղբյուրի թարգմանության դաշտ
+(4818, 387) : Source transcription field : Исходное поле транскрипции : Աղբյուրի տրանսկրիպցիայի դաշտ
+(4818, 390) : Source transcription field selection : Выбор поля транскрипции источника : Աղբյուրի տրանսկրիպցիայի դաշտի ընտրություն
+(4818, 393) : Source translation field selection : Выбор поля перевода источника : Աղբյուրի թարգմանության դաշտի ընտրություն
+(4818, 396) : Tier : Уровень : Մակարդակ
+(4818, 399) : present at : присутствует в : ներկա է՝
+(4818, 402) : of markup records : записей разметки : markup-ի գրառումների
+(4818, 405) : Grouping field : Поле группировки : Խմբավորման դաշտ
+(4818, 408) : Selected dictionary group doesn't have multiple dictionaries with selected cognate grouping field present, cognate analysis is impossible : Выбранная группа словарей не содержит нескольких словарей с выбранным полем родственной группировки, анализ когнатов невозможен : Ընտրված բառարանների խումբը չունի մի քանի բառարան ընտրված հարազատ բառերի խմբավորման դաշտով, հարազատ բառերի վերլուծությունը անհնար է
+(4818, 41) : Go to page : На страницу : Գնալ էջին
+(4818, 411) : Select/deselect all language's dictionaries : Выбрать/отменить выбор всех языковых словарей : Ընտրել/չընտրել լեզվի բոլոր բառարանները
+(4818, 414) : Select/deselect all dictionaries : Выбрать/отменить выбор всех словарей : Ընտրել/չընտրել բոլոր բառարանները
+(4818, 417) : Grouping field selection : Выбор поля группировки : Խմբավորման դաշտի ընտրություն
+(4818, 420) : Add language : Добавить язык : Ավելացնել լեզու
+(4818, 423) : Multiple languages required : Требуется несколько языков : Պահանջվում են մի քանի լեզուներ
+(4818, 426) : Cognate multi-language reconstruction requires dictionaries from at least 2 languages : Для реконструкции праязыка нескольких языков требуются словари как минимум двух языков : Հարազատ բառերի բազմալեզու վերակառուցումը պահանջում է առնվազն 2 լեզվի բառարաններ
+(4818, 429) : Only for orphans (words not included in existing etymology groups) : Только для орфанов (слова, не входящие в существующие этимологические группы) : Միայն որբերի համար (գոյություն ունեցող էտիմոլոգիայի խմբերում չներառված բառեր)
+(4818, 432) : Match translations : Сопоставить переводы : Համադրել թարգմանությունները
+(4818, 435) : Any three consecutive characters. : Любые три последовательных символа. : 
+(4818, 438) : All characters. : Все символы. : 
+(4818, 44) : Items per page : Элементы на странице : Տարրեր մեկ էջում
+(4818, 441) : Source perspective word : Исходное перспективное слово : Սկզբնական perspective-ի բառ
+(4818, 444) : Suggested cognates : Предлагаемые когнаты : Առաջարկված հարազատ բառեր
+(4818, 447) : Connecting : Связывание : Կապում
+(4818, 450) : Connect all selected : Связать все выбранные : Կապել բոլոր ընտրվածները
+(4818, 453) : Cognate acoustic analysis is launched. Please check out tasks for details : Запущен акустический анализ когнатов. Пожалуйста, ознакомьтесь с задачами для получения более подробной информации : Հարազատ բառերի ակուստիկ վերլուծությունը գործարկվել է: Մանրամասների համար տես առաջադրանքները
+(4818, 456) : Etymological distance tree : Этимологическое дерево расстояний : Էտիմոլոգիական հեռավորության ծառ
+(4818, 459) : XLSX-exported analysis results : XLSX-экспортированные результаты анализа : XLSX-արտահանված վերլուծության արդյունքներ
+(4818, 462) : cognate groups were excluded from the analysis due to not having lexical entries in at least two selected dictionaries : групп(ы, а) когнатов было(-и, -а) исключено(-ы, -а) из анализа из-за отсутствия лексических записей по крайней мере в двух выбранных словарях : հարազատ բառերի խմբերը բացառվեցին վերլուծությունից, քանի որ առնվազն երկու ընտրված բառարաններում չկան բառային միավորներ
+(4818, 465) : No data for cognate analysis : Нет данных для анализа когнатов : Հարազատ բառերի վերլուծության համար տվյալներ չկան
+(4818, 468) : suggestions : предложений(-ие, -ия) : առաջարկություններ
+(4818, 47) : Go : Перейти : Գնալ
+(4818, 471) : Failed to compute cognate analysis! Server connection error : Не удалось вычислить анализ когнатов! Ошибка подключения к серверу : Հնարավոր չեղավ հաշվել հարազատ բառերի վերլուծությունը։ Սերվերի կապի սխալ
+(4818, 474) : Failed to compute cognate analysis : Не удалось вычислить анализ когнатов : Հնարավոր չեղավ հաշվել հարազատ բառերի վերլուծությունը
+(4818, 477) : Failed to compute cognate analysis! Analysis library or server connection error : Не удалось вычислить анализ когнатов! Ошибка подключения к библиотеке анализа или серверу : Հնարավոր չեղավ հաշվել հարազատ բառերի վերլուծությունը։ Վերլուծության գրադարանի կամ սերվերի կապի սխալ
+(4818, 480) : Minimum spanning tree (2d relative distance embedding) : Минимальное связующее дерево (встраивание относительного расстояния 2d) : Նվազագույն տարածքի ծառ (2d հարաբերական հեռավորության տեղադրում)
+(4818, 483) : Minimum spanning tree (3d relative distance embedding) : Минимальное связующее дерево (встраивание относительного расстояния в 3d) : Նվազագույն տարածքի ծառ (3d հարաբերական հեռավորության տեղադրում)
+(4818, 486) : Legend : Легенда : Լեգենդ
+(4818, 489) : dictionaries, : словарей(-я, -ь), : 
+(4818, 492) : cognate groups and : групп(ы, а) когнатов и : 
+(4818, 495) : transcriptions analysed : проанализированных транскрипций : Վերլուծված տրանսկրիպցիաներ
+(4818, 498) : Belongs to a group : Принадлежит к группе : Պատկանում է խմբի
+(4818, 5) : Verb valency : Валентности  глаголов : Բայի կապակցություն
+(4818, 50) : Accept all selected : Принять все выбранные : Ընդունել բոլոր ընտրվածները
+(4818, 501) : Suggested cognate groups : Предлагаемые группы когнатов : Առաջարկված հարազատ բառերի խմբեր
+(4818, 504) : Query error : Ошибка запроса : Հարցման սխալ
+(4818, 507) : Failed to connect selected lexical entries, please contact developers : Не удалось подключить выбранные лексические записи, пожалуйста, свяжитесь с разработчиками : Հնարավոր չեղավ կապել ընտրված բառային միավորները, դիմեք մշակողներին
+(4818, 510) : Another suggestion was accepted, source perspective word and/or one of suggested cognate words or cognate groups have been connected : Другое предложение было принято, исходное перспективное слово и / или одно из предложенных родственных слов или групп когнатов были связаны : Այլ առաջարկություն ընդունվեց, սկզբնական perspective-ի բառը և/կամ առաջարկված հարազատ բառերից կամ խմբերից մեկը կապվեցին
+(4818, 513) : Invalidated : Недействительно : Անվավեր
+(4818, 516) : Skipping text output, too long : Пропуск вывода текста, слишком длинный : Տեքստի ելքը բաց է թողնված, չափազանց երկար է
+(4818, 519) : Failed to launch cognate acoustic analysis : Не удалось запустить акустический анализ когнатов : Հնարավոր չեղավ գործարկել հարազատ բառերի ակուստիկ վերլուծությունը
+(4818, 522) : Unauthorized user : Неавторизованный пользователь : Չլիազորված օգտատեր
+(4818, 525) : Only authorized users can create new cognate connections based on cognate suggestions : Только авторизованные пользователи могут создавать новые соединения когнатов на основе предложений когнатов : Միայն լիազորված օգտատերերը կարող են ստեղծել նոր հարազատ կապեր հարազատ բառերի առաջարկությունների հիման վրա
+(4818, 528) : Perspective is not published : Перспектива не опубликована : Perspective-ը չի հրապարակված
+(4818, 53) : Reject all selected : Отклонить все выбранные : Մերժել բոլոր ընտրվածները
+(4818, 531) : Cognate suggestions are available only for perspectives in the “Published” or “Limited access” state : Предложения когнатов доступны только для перспектив в состоянии “Опубликовано” или “Ограниченный доступ” : Հարազատ բառերի առաջարկությունները հասանելի են միայն “Հրապարակված” կամ “Սահմանափակ հասանելիություն” կարգավիճակում գտնվող perspectives-ի համար
+(4818, 534) : errors : ошибки : սխալներ
+(4818, 537) : invalidated : недействительно : անվավեր
+(4818, 540) : connecting : связывание : կապում
+(4818, 543) : connected : связано : կապված
+(4818, 547) : Valency data is being compiled. Check out tasks for details : Ведется сбор данных о валентности. Подробности смотрите в задачах : Կապակցության տվյալները կազմվում են: Մանրամասների համար տես առաջադրանքները
+(4818, 550) : All characters : Все символы : Բոլոր նիշերը
+(4818, 553) : Any three consecutive characters : Любые три последовательных символа : Ցանկացած երեք հաջորդական նիշ
+(4818, 556) : left : оставлено : ձախ
+(4818, 559) : No results found : Результатов не найдено : Արդյունքներ չեն գտնվել
+(4818, 56) : accepted first : принято первым : սկզբում ընդունվածը
+(4818, 562) : Create perspective : Создать перспективу : Ստեղծել perspective
+(4818, 565) : Perspective fields : Поля перспективы : Perspective-ի դաշտեր
+(4818, 568) : Successfully created perspective : Перспектива создана успешно : Perspective-ը հաջողությամբ ստեղծվել է
+(4818, 571) : If you receive a grant for the development of the platform or intend to use it : В случае получения гранта на развитие платформы или намерения ее использования : Եթե ստանում եք դրամաշնորհ հարթակի զարգացման համար կամ մտադիր եք այն օգտագործել
+(4818, 574) : for commercial purposes, you must sign an agreement with ISP RAS : в коммерческих целях необходимо подписать соглашение с ИСП РАН : կոմերցիոն նպատակների համար անհրաժեշտ է պայմանագիր կնքել ISP RAS-ի հետ
+(4818, 577) : To get an agreement, you need to : Для получения соглашения необходимо : Պայմանագիր ստանալու համար անհրաժեշտ է
+(4818, 580) : register : зарегистрироваться : գրանցվել
+(4818, 583) : For grantees and commercial use : Для грантополучателей и коммерческого использования : Դրամաշնորհառուների և կոմերցիոն օգտագործման համար
+(4818, 586) : Disconnect : Разъединить : Անջատել
+(4818, 589) : Loading field data : Загрузка данных поля : Դաշտի տվյալների բեռնում
+(4818, 59) : accepted last : принято последним : վերջում ընդունվածը
+(4818, 592) : Valency data : Данные о валентности : Կապակցության տվյալներ
+(4818, 595) : Valency verb cases : Падежи глаголов валентности : Կապակցության բայական հոլովներ
+(4818, 598) : Valency verb cases (extended) : Падежи глаголов валентности (расширенные) : Կապակցության բայական հոլովներ (ընդլայնված)
+(4818, 601) : Show sentences : Показывать предложения : Ցույց տալ նախադասությունները
+(4818, 604) : Verb lexeme/translation filter : Глагольная лексема/фильтр перевода : Բայի լեքսեմայի/թարգմանության ֆիլտր
+(4818, 607) : XLSX-exported data : XLSX-экспортированные данные : XLSX-արտահանված տվյալներ
+(4818, 62) : Accepted : Принято : Ընդունված է
+(4818, 623) : Parallel corpora : Параллельные корпуса : Զուգահեռ կորպուսներ
+(4818, 626) : Import parallel corpora : Импорт параллельных корпусов : Ներմուծել զուգահեռ կորպուսներ
+(4818, 629) : My parallel corpora : Мои параллельные корпуса : Իմ զուգահեռ կորպուսները
+(4818, 632) : Available parallel corpora : Доступные параллельные корпуса : Հասանելի զուգահեռ կորպուսներ
+(4818, 635) : Choose at least two parent corpora : Выберите по крайней мере два родительских корпуса : Ընտրեք առնվազն երկու մայր կորպուս
+(4818, 638) : Parent Corpora : Родительский корпус : Մայր կորպուսներ
+(4818, 641) : Choose parallel corpora : Выберите параллельные корпуса : Ընտրեք զուգահեռ կորպուսներ
+(4818, 644) : Map columns to LingvoDoc types : Сопоставьте столбцы с типами LingvoDoc : Համադրել սյունակները LingvoDoc-ի տեսակների հետ
+(4818, 647) : Map dictionary to LingvoDoc language : Сопоставьте словарь с языком LingvoDoc : Համադրել բառարանը LingvoDoc-ի լեզվի հետ
+(4818, 65) : Accepted by : Принят : Ընդունված է՝
+(4818, 650) : No data : Нет данных : Տվյալներ չկան
+(4818, 653) : Please map all the columns to different Lingvodoc types. Meet the previous terms : Пожалуйста, сопоставьте все столбцы с разными Lingvodoc типами. Соблюдайте предыдущие условия : Համադրեք բոլոր սյունակները տարբեր Lingvodoc տեսակների հետ: Բավարարեք նախորդ պայմանները
+(4818, 656) : Please select parent language and specify at least one translation to name the dictionary. Meet the previous terms : Пожалуйста, выберите исходный язык и укажите хотя бы один перевод для названия словаря. Соблюдайте предыдущие условия : Ընտրեք մայր լեզուն և նշեք առնվազն մեկ թարգմանություն բառարանը անվանելու համար: Բավարարեք նախորդ պայմանները
+(4818, 659) : Languages databases : Языковые базы данных : Լեզուների տվյալների բազաներ
+(4818, 662) : Detach the user : Отсоедините пользователя : Անջատել օգտատիրոջը
+(4818, 665) : Attach new user : Присоединить нового пользователя : Կցել նոր օգտատեր
+(4818, 668) : Add roles : Добавление ролей : Ավելացնել դերեր
+(4818, 671) : Excel file : Excel файл : Excel ֆայլ
+(4818, 674) : Word file : Word файл : Word ֆայլ
+(4818, 677) : Your dictionary is scheduled for conversion. Please, check tasks tab for conversion status : Преобразование вашего словаря запланировано. Пожалуйста, проверьте статус преобразования во вкладке задачи : Ձեր բառարանը պլանավորվել է փոխարկման համար: Ստուգեք առաջադրանքների ներդիրը փոխարկման կարգավիճակի համար
+(4818, 68) : Apply filter : Применить фильтр : Կիրառել ֆիլտրը
+(4818, 680) : Subscribe all the existing dictionaries and corpora related to this language and its sublanguages : Подпишитесь на все существующие словари и корпуса, относящиеся к этому языку и его подъязыкам : Բաժանորդագրվել այս լեզվի և նրա ենթալեզուների բոլոր առկա բառարաններին և կորպուսներին
+(4818, 683) : Own and inherited users : Собственные и унаследованные пользователи : Սեփական և ժառանգված օգտատերեր
+(4818, 686) : No assigned users : Нет назначенных пользователей : Նշանակված օգտատերեր չկան
+(4818, 689) : base sentence : основное предложение : Բազային նախադասություն
+(4818, 692) : sentence : предложение : Նախադասություն
+(4818, 695) : Drop Here : Бросай сюда : Տեղադրեք այստեղ
+(4818, 698) : Hide dashes : Скрыть дефисы : Թաքցնել գծերը
+(4818, 701) : Disambiguation statistics (not restricted by time interval, may take quite a lot of time to compute) : Статистика устранения неоднозначности (не ограничена временным интервалом, вычисление может занять довольно много времени) : Միիմաստեցման վիճակագրություն (չի սահմանափակվում ժամանակային ինտերվալով, հաշվարկը կարող է զգալի ժամանակ պահանջել)
+(4818, 71) : Verbs : Глаголы : Բայեր
+(4818, 74) : verbs : глаголов : բայեր
+(4818, 77) : Verb prefix filter : Фильтр префиксов глаголов : Բայի նախածանցի ֆիլտր
+(4818, 8) : Result : Результат : Արդյունք
+(4818, 80) : User sign-in error, please sign in; if not successful, please contact administrators : Ошибка входа пользователя, пожалуйста, войдите в систему; если не удалось, пожалуйста, свяжитесь с администраторами : Օգտատիրոջ մուտքի սխալ, մուտք գործեք; եթե չի հաջողվում, դիմեք ադմինիստրատորներին
+(4818, 83) : Filtered verbs : Отфильтрованные глаголы : Զտված բայեր
+(4818, 86) : General error, please contact administrators : Общая ошибка, пожалуйста, свяжитесь с администраторами : Ընդհանուր սխալ, դիմեք ադմինիստրատորներին
+(4818, 89) : No filtered verbs : Нет отфильтрованных глаголов : Զտված բայեր չկան
+(4818, 92) : No verbs : Нет глаголов : Բայեր չկան
+(4818, 95) : prefix : префикс : Նախածանց
+(4818, 98) : Loading valency data... : Загрузка данных о валентности... : 
+(4986, 11) : Create new : Создать новую : Ստեղծել նորը
+(4986, 14) : perspective : перспективу : perspective
+(4986, 17) : Regular expression : Регулярное выражение : Կանոնավոր արտահայտություն
+(4986, 2) : Clear completed : Удалить завершенные : Մաքրել ավարտվածները
+(4986, 20) : Proprietary : Проприетарная : Սեփականատիրական
+(4986, 23) : Confirmation : Подтверждение : Հաստատում
+(4986, 26) : Are you sure you want to delete perspective : Вы уверены, что хотите удалить перспективу : Վստա՞հ եք, որ ուզում եք ջնջել perspective-ը
+(4986, 29) : Are you sure you want to delete dictionary : Вы уверены, что хотите удалить словарь : Վստա՞հ եք, որ ուզում եք ջնջել բառարանը
+(4986, 32) : Unknown dictionary : Неизвестный словарь : Անհայտ բառարան
+(4986, 35) : Unknown grant : Неизвестный грант : Անհայտ դրամաշնորհ
+(4986, 38) : Match : Соответствие : Համադրում
+(4986, 42) : Dialeqt : Dialeqt : Dialeqt
+(4986, 46) : Link data loading error, please contact administrators : Ошибка загрузки ссылочных данных, пожалуйста, свяжитесь с администраторами : Հղման տվյալների բեռնման սխալ, դիմեք ադմինիստրատորներին
+(4986, 49) : PDF : PDF : PDF
+(4986, 5) : Add new field : Добавить новое поле : Ավելացնել նոր դաշտ
+(4986, 53) : Table of contents : Оглавление : Պարունակություն
+(4986, 8) : Loading metadata : Загрузка метаданных : Մետատվյալների բեռնում
+(5650, 2) : results : результатов : արդյունքներ
+(6520, 180398) : Glottochronology : Глоттохронологический анализ диалектов : Գլոտոքրոնոլոգիա
+(6520, 180401) : Glottochronology multi-language : Глоттохронологический анализ языков : Գլոտոքրոնոլոգիա բազմալեզու
+(7408, 44459) : Glottochronology (Swadesh-Starostin) : Глоттохронология диалектов (Сводеш-Старостин) : 
+(7443, 2) : Glottochronology (Swadesh-Starostin) multi-language : Глоттохронология языков (Сводеш-Старостин)  : 
+(7443, 5) : Morphology distance multi-language : Степень морфологической близости между языками : 
+(7443, 7) : Morphology distance : Степень морфологической близости между диалектами : 
+(7854, 2) : Ordering : Сортировка : 
+(9427, 24) : Source lexeme field (optional) : Исходное поле лексемы (дополнительно) : Աղբյուրի լեքսեմայի դաշտ (ոչ պարտադիր)
+(9427, 27) : Source lexeme field selection : Выбор поля лексемы источника : Աղբյուրի լեքսեմայի դաշտի ընտրություն
+(9770, 8800) : Get composite distance between languages : Суммарное расстояние между языками : Ստանալ լեզուների միջև բարդ հեռավորություն

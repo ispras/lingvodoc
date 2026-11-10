@@ -1,0 +1,947 @@
+ Language degree of endangerment (selection affects selected languages and dictionaries) : Степень сохранности языка (выбор влияет на выбранные языки и словари)
+ cognate groups : этимологических групп
+ left : влево
+ right : вправо
+(for example, Eastern Mansi) as well as those that are in danger of extinction (that is, languages that have no more than 10 speakers over 60 years old left) : (например, восточный мансийский), а также находящиеся под угрозой исчезновения (то есть языки, на которых осталось не более 10 носителей старше 60 лет)
+.docx file does not have any tables : .docx-файл не содержит таблиц
+.docx file for convertion: : .docx-файл для конвертации:
+.eaf file : .eaf-файл
+.xlsx file : .xlsx-файл
+300 text corpora : 300 текстовых корпусов
+A chance for many researchers to work simultaneously and independently : Возможность одновременной и независимой работы множества исследователей
+A possibility to automatically check for errors in the processed data : Возможность автоматической проверки ошибок в обрабатываемых данных
+AND : И
+AND block : Блок И
+About : О программе
+About the organization : Об организации
+Accept : Принять
+Accept Contributions : Принять правки
+Accept all selected : Принять все выбранные
+Accept contributions : Принять правки
+Accepted : Принято
+Accepted by : Принято
+Action : Действие
+Actions : Действия
+Activate : Активировать
+Activate / Deactivate : Активировать / Деактивировать
+Add : Добавить
+Add AND block : Добавить блок И
+Add AND condition : Добавить условие И
+Add OR block : Добавить блок ИЛИ
+Add OR condition : Добавить условие ИЛИ
+Add Translation : Добавить перевод
+Add all markers of the groups to which this marker belongs to the group : Добавить в группу все метки групп, к которым принадлежит эта метка
+Add connection : Добавить связь
+Add field : Добавить поле
+Add language : Добавить язык
+Add lexical entry : Добавить лексическую запись
+Add link : Добавить ссылку
+Add marker to group : Добавить метку в группу
+Add new column : Добавить новый столбец
+Add new field : Добавить новое поле
+Add new translation gist : Добавить новую тему перевода
+Add one or more perspectives : Добавить одну или несколько перспектив
+Add one or more translations : Добавить один или несколько переводов
+Add organization : Добавить организацию
+Add perspective : Добавить перспективу
+Add red star : Добавить красную звезду
+Add roles : Добавить роли
+Add to TOC : Добавить в оглавление
+Add translation : Добавить перевод
+Add yellow star : Добавить жёлтую звезду
+Added : Добавлено
+Added roles successfully : Роли успешно добавлены
+Adding : Добавление
+Additional code : Дополнительный код
+Adjust perspectives set : Настроить набор перспектив
+Administrate : Администрировать
+Administrators : Администраторы
+Adverb data : Данные наречий
+Adverb prefix filter : Фильтр по префиксу наречия
+Adverb specificity : Специфичность наречия
+Adverbs : Наречия
+All : Все
+All added : Все добавлены
+All characters : Все символы
+All characters. : Все символы.
+All removed : Все удалены
+All replaced : Все заменены
+All tables : Все таблицы
+All vowels : Все гласные
+Allow sync : Разрешить синхронизацию
+Allow sync / Deny sync : Разрешить синхронизацию / Запретить синхронизацию
+Amount of Lexical and Paradigmatic entries : Количество лексических и парадигматических записей
+An opportunity for many researchers to work simultaneously and independently : Возможность одновременной и независимой работы множества исследователей
+An option to create results of intellectual activity (RIAs) for the needs of writing reports and working with data : Возможность создавать результаты интеллектуальной деятельности (РИД) для написания отчётов и работы с данными
+Analysis library is absent, please contact system administrator : Библиотека анализа отсутствует, обратитесь к системному администратору
+Analysis results : Результаты анализа
+Another suggestion was accepted, source perspective word and/or one of suggested cognate words or cognate groups have been connected : Принято другое предложение: исходное слово перспективы и/или одно из предложенных когнатов или групп когнатов были связаны
+Antonymous translation : Антонимический перевод
+Any three consecutive characters : Любые три последовательных символа
+Any three consecutive characters. : Любые три последовательных символа.
+Apply filter : Применить фильтр
+Applying : Применение
+Archive : Архив
+Are you sure you want to delete dictionary : Вы уверены, что хотите удалить словарь
+Are you sure you want to delete perspective : Вы уверены, что хотите удалить перспективу
+Are you sure you want to delete this variant : Вы уверены, что хотите удалить этот вариант
+Are you sure you want to move selected element : Вы уверены, что хотите переместить выбранный элемент
+Areas mode : Режим областей
+Ask questions about the LingvoDoc program at : Задавайте вопросы о программе LingvoDoc по адресу
+Attach new user : Привязать нового пользователя
+Attached to another group : Привязано к другой группе
+Attention! To access all capability of the system (including the creation and editing of dictionaries, their publication, binding metadata dictionaries, search based on geolocation, download dictionaries from the desktop version), you must register and log in. The registration / login there is in the upper right corner of the page. : Внимание! Для доступа ко всем возможностям системы (включая создание и редактирование словарей, их публикацию, привязку метаданных словарей, поиск по геолокации, загрузку словарей из настольной версии) необходимо зарегистрироваться и войти. Регистрация / вход находятся в правом верхнем углу страницы.
+Audio : Аудио
+Author : Автор
+Authors : Авторы
+Available corpora : Доступные корпуса
+Available dictionaries : Доступные словари
+Available parallel corpora : Доступные параллельные корпуса
+Back : Назад
+Base blob : Базовый blob
+Become a member : Стать участником
+Become an administrator : Стать администратором
+Begin : Начало
+Beloborodov Ivan Borisovich : Белобородов Иван Борисович
+Belongs to a group : Принадлежит группе
+Bibliographic data of the source : Библиографические данные источника
+Bibliographic data of the translation : Библиографические данные перевода
+Bogomolov Igor Vladimirovich : Богомолов Игорь Владимирович
+Borisenko Oleg Dmitrievich : Борисенко Олег Дмитриевич
+Browse : Обзор
+By Grants : По грантам
+By Languages : По языкам
+By Organizations : По организациям
+Calque : Калька
+Can approve lexical entries and publish : Может утверждать лексические записи и публиковать
+Can create dictionary roles and assign collaborators : Может создавать роли словаря и назначать участников
+Can create lexical entries : Может создавать лексические записи
+Can create perspective roles and assign collaborators : Может создавать роли перспективы и назначать участников
+Can create perspectives : Может создавать перспективы
+Can deactivate lexical entries : Может деактивировать лексические записи
+Can delete dictionary : Может удалять словарь
+Can delete lexical entries and entities : Может удалять лексические записи и сущности
+Can delete perspective : Может удалять перспективу
+Can delete translationgist : Может удалять темы переводов
+Can edit dictionary options : Может изменять настройки словаря
+Can edit dictionary status : Может изменять статус словаря
+Can edit perspective : Может редактировать перспективу
+Can edit perspective status : Может изменять статус перспективы
+Can edit translationatom : Может редактировать переводы
+Can get dictionary role list : Может получать список ролей словаря
+Can get perspective role list : Может получать список ролей перспективы
+Can merge dictionaries and perspectives : Может объединять словари и перспективы
+Can resign users from dictionary editors : Может исключать пользователей из редакторов словаря
+Can resign users from perspective editors : Может исключать пользователей из редакторов перспективы
+Can view published lexical entries : Может просматривать опубликованные лексические записи
+Can view unpublished lexical entries : Может просматривать неопубликованные лексические записи
+Can't get data of the : Не удалось получить данные
+Cancel : Отмена
+Case-sensitive : С учётом регистра
+Check all : Выбрать все
+Choose at least two parent corpora : Выберите не менее двух родительских корпусов
+Choose at least two txt corpora or one json file : Выберите не менее двух txt-корпусов или один json-файл
+Choose groups for areas : Выберите группы для областей
+Choose markup tiers : Выберите слои разметки
+Choose parallel corpora : Выберите параллельные корпуса
+Choose what : Выберите что
+Clean any star : Убрать все звёзды
+Clear : Очистить
+Clear all : Очистить всё
+Clear completed : Очистить завершённые
+Click here to download XLSX report : Нажмите здесь, чтобы скачать отчёт XLSX
+Client type : Тип клиента
+Close : Закрыть
+Close input of language : Закрыть ввод языка
+Cognate acoustic analysis : Акустический анализ когнатов
+Cognate acoustic analysis is launched. Please check out tasks for details : Акустический анализ когнатов запущен. Подробности смотрите в задачах
+Cognate analysis : Анализ когнатов
+Cognate multi-language analysis : Мультиязычный анализ когнатов
+Cognate multi-language reconstruction : Мультиязычная реконструкция когнатов
+Cognate multi-language reconstruction requires dictionaries from at least 2 languages : Мультиязычная реконструкция когнатов требует словарей как минимум 2 языков
+Cognate multi-language suggestions : Мультиязычные предложения когнатов
+Cognate multi-language suggestions (disabled, perspective is not published) : Мультиязычные предложения когнатов (отключено, перспектива не опубликована)
+Cognate reconstruction : Реконструкция когнатов
+Cognate suggestions : Предложения когнатов
+Cognate suggestions (disabled, perspective is not published) : Предложения когнатов (отключено, перспектива не опубликована)
+Cognate suggestions are available only for perspectives in the “Published” or “Limited access” state : Предложения когнатов доступны только для перспектив в состоянии «Опубликовано» или «Ограниченный доступ»
+Cognates summary : Сводка по когнатам
+Columns Mapping : Соответствие столбцов
+Combine with adjacent interval characters : Объединить с соседними интервальными символами
+Compare : Сравнить
+Compare data loading error : Ошибка загрузки данных для сравнения
+Compensation : Компенсация
+Composite distance : Композитное расстояние
+Computation is going. Please see the sidebar with tasks : Выполняется вычисление. См. панель задач сбоку
+Compute : Вычислить
+Computing : Вычисление
+Confirm Password : Подтвердите пароль
+Confirmation : Подтверждение
+Connect : Связать
+Connect all selected : Связать все выбранные
+Connected : Связано
+Connecting : Связывание
+Contacts : Контакты
+Contributions : Правки
+Conversion is in progress : Идёт конвертация
+Convert : Конвертировать
+Convert to dictionary : Конвертировать в словарь
+Converted successfully : Успешно сконвертировано
+Converting : Конвертация
+Converting 15% : Конвертация 15%
+Converting 80% : Конвертация 80%
+Convertion error : Ошибка конвертации
+Convertion failed : Конвертация не удалась
+Corpora : Корпуса
+Corpora names and metadata : Названия корпусов и метаданные
+Corpus created : Корпус создан
+Corpus names and metadata : Названия корпусов и метаданные
+Could not get user information : Не удалось получить информацию о пользователе
+Could not sign out : Не удалось выйти
+Create : Создать
+Create a new field : Создать новое поле
+Create a new perspective : Создать новую перспективу
+Create corpus : Создать корпус
+Create dictionary : Создать словарь
+Create dictionary... : Создать словарь...
+Create field : Создать поле
+Create language : Создать язык
+Create markup : Создать разметку
+Create new : Создать новый
+Create new perspective : Создать новую перспективу
+Create one or more perspectives : Создать одну или несколько перспектив
+Create organization : Создать организацию
+Create perspective : Создать перспективу
+Create valency data : Создать данные валентности
+Created : Создано
+Created at : Создано
+Created by : Создано пользователем
+Created valency data : Данные валентности созданы
+Creating valency data : Создание данных валентности
+Critically endangered : На грани исчезновения
+Dashboard : Панель управления
+Data source : Источник данных
+Date : Дата
+Deactivate : Деактивировать
+Debug flag : Флаг отладки
+Definitely endangered : Находящийся под угрозой
+Delete : Удалить
+Delete groups : Удалить группы
+Delete markup(s) : Удалить разметку
+Delete markup(s) with related groups : Удалить разметку со связанными группами
+Delete organization : Удалить организацию
+Delete parser results : Удалить результаты парсера
+Delete selected markups and related groups? Are you sure : Удалить выбранные разметки и связанные группы? Вы уверены
+Deleting : Удаление
+Deny sync : Запретить синхронизацию
+Descriptive translation : Описательный перевод
+Designed for compiling, analyzing and storing dictionaries, corpora and concordances of various languages and dialects : Предназначена для составления, анализа и хранения словарей, корпусов и конкордансов различных языков и диалектов
+Desktop : Настольная версия
+Detach the user : Отвязать пользователя
+Dialeqt : Dialeqt
+Dialeqt file : Файл Dialeqt
+Dictionaries : Словари
+Dictionaries created out of grant : Словари, созданные вне грантов
+Dictionary : Словарь
+Dictionary created : Словарь создан
+Dictionary data loading error, please contact administrators : Ошибка загрузки данных словаря, обратитесь к администраторам
+Dictionary info loading error, please contact adiministrators : Ошибка загрузки информации о словаре, обратитесь к администраторам
+Dictionary names : Названия словарей
+Dictionary names and metadata : Названия словарей и метаданные
+Directed Link : Направленная связь
+Disable all markers of the groups this marker belongs to : Отключить все метки групп, к которым принадлежит эта метка
+Disable marker : Отключить метку
+Disambiguation statistics (not restricted by time interval, may take quite a lot of time to compute) : Статистика снятия омонимии (не ограничена временным интервалом, вычисление может занять много времени)
+Disconnect : Отсоединить
+Disconnected : Отсоединено
+Display mode : Режим отображения
+Distance map : Карта расстояний
+Doesn't have etymology : Не имеет этимологии
+Drop Here : Перетащите сюда
+Dybo Anna Vladimirovna : Дыбо Анна Владимировна
+ELAN markup : Разметка ELAN
+Edit : Редактировать
+Edit of the dialects classification : Редактирование классификации диалектов
+Edit profile : Редактировать профиль
+Edit translations : Редактировать переводы
+Elecard-Med LLC : ООО «Элекард-Мед»
+Email : Электронная почта
+Email is required : Требуется электронная почта
+End : Конец
+Entities : Сущности
+Entity matching algorithm : Алгоритм сопоставления сущностей
+Entity matching threshold : Порог сопоставления сущностей
+Entity status : Статус сущности
+Entity type : Тип сущности
+Etymological distance tree : Дерево этимологических расстояний
+Excel file : Файл Excel
+Exclude adoptions : Исключить заимствования
+Expedition : Экспедиция
+Export phonology data to a CSV file : Экспортировать данные фонологии в CSV-файл
+Export to XLSX : Экспорт в XLSX
+Extinct : Вымерший
+Failed to add : Не удалось добавить
+Failed to ban user : Не удалось заблокировать пользователя
+Failed to compute cognate analysis : Не удалось выполнить анализ когнатов
+Failed to compute cognate analysis! Analysis library or server connection error : Не удалось выполнить анализ когнатов! Ошибка библиотеки анализа или соединения с сервером
+Failed to compute cognate analysis! Server connection error : Не удалось выполнить анализ когнатов! Ошибка соединения с сервером
+Failed to compute phonemic analysis : Не удалось выполнить фонематический анализ
+Failed to connect selected lexical entries, please contact developers : Не удалось связать выбранные лексические записи, обратитесь к разработчикам
+Failed to delete organization : Не удалось удалить организацию
+Failed to launch cognate acoustic analysis : Не удалось запустить акустический анализ когнатов
+Failed to launch neuro cognate analysis : Не удалось запустить нейросетевой анализ когнатов
+Failed to launch phonological statistical distance computation : Не удалось запустить вычисление фонологического статистического расстояния
+Failed to launch phonology compilation : Не удалось запустить компиляцию фонологии
+Failed to launch saving dictionary task : Не удалось запустить задачу сохранения словаря
+Failed to launch sound and markup compilation : Не удалось запустить компиляцию звука и разметки
+Failed to merge selected lexical entries, please contact developers : Не удалось объединить выбранные лексические записи, обратитесь к разработчикам
+Failed to remove : Не удалось удалить
+Failure : Ошибка
+Fast Track formant extraction : Извлечение формант Fast Track
+Favorite corpora : Избранные корпуса
+Favorite dictionaries : Избранные словари
+Field : Поле
+Field Type : Тип поля
+Fields : Поля
+File selection : Выбор файла
+Files : Файлы
+Fill metadata information : Заполните информацию метаданных
+Filter : Фильтр
+Filtered adverbs : Отфильтрованные наречия
+Filtered verbs : Отфильтрованные глаголы
+Finish : Завершить
+Follow : Подписаться
+Follow the link to learn more about using these options : Перейдите по ссылке, чтобы узнать больше об использовании этих опций
+For grantees and commercial use : Для грантополучателей и коммерческого использования
+For the time being Distance Map functionality is available only for the administrator : В настоящее время функция карты расстояний доступна только администратору
+Formant chart threshold : Порог формантной диаграммы
+Found : Найдено
+From : От
+Full name : Полное имя
+Full string : Полная строка
+General error, please contact administrators : Общая ошибка, обратитесь к администраторам
+Genre : Жанр
+Get cognates summary : Получить сводку по когнатам
+Get composite distance between languages : Получить композитное расстояние между языками
+Get link to search results : Получить ссылку на результаты поиска
+Glottochronology : Глоттохронология
+Glottochronology (Swadesh-Starostin) : Глоттохронология (Сводеш—Старостин)
+Glottochronology (Swadesh-Starostin) multi-language : Глоттохронология (Сводеш—Старостин) мультиязычная
+Glottochronology multi-language : Глоттохронология мультиязычная
+Go : Перейти
+Go to page : Перейти на страницу
+Grammar : Грамматика
+Grant : Грант
+Grant Issuer : Организация, выдавшая грант
+Grant Number : Номер гранта
+Grant URL : URL гранта
+Grant of President of Russia  MD -7005.2015.6 "Comparative historical dialect audioditionary of Uralic languages", 2015-2016 (head Ju. V. Normanskaja) : Грант Президента России МД-7005.2015.6 «Сравнительно-исторический диалектный аудиословарь уральских языков», 2015-2016 (рук. Ю. В. Норманская)
+Grants : Гранты
+GraphQL error: Request already exists : Ошибка GraphQL: запрос уже существует
+Group : Группа
+Group doesn't have any unmerged lexical entries left : В группе не осталось необъединённых лексических записей
+Group phonology data by markup descriptions : Сгруппировать данные фонологии по описаниям разметки
+Grouping Tag : Тег группировки
+Grouping field : Поле группировки
+Grouping field selection : Выбор поля группировки
+Grouping tag : Тег группировки
+Has audio : С аудио
+Has etymology : С этимологией
+Help : Помощь
+Hidden : Скрытый
+Hide dashes : Скрыть дефисы
+Human settlement : Населённый пункт
+If you receive a grant for the development of the platform or intend to use it : Если вы получили грант на развитие платформы или намерены использовать её
+Ignore adoptions : Игнорировать заимствования
+Ignore diacritics : Игнорировать диакритику
+Ignore etymology : Игнорировать этимологию
+Image : Изображение
+Import Dialeqt dictionary : Импортировать словарь Dialeqt
+Import Excel and Starling dictionaries : Импортировать словари Excel и Starling
+Import Starling dictionaries : Импортировать словари Starling
+Import parallel corpora : Импортировать параллельные корпуса
+In field : В поле
+In processing : В обработке
+Individual work : Индивидуальная работа
+Info : Информация
+Informant : Информант
+Instances : Экземпляры
+Institute of Linguistics Russian Academy of Sciences : Институт языкознания РАН
+Intermediate data : Промежуточные данные
+Interrogator : Лицо, проводящее опрос
+Invalid email address : Недопустимый адрес электронной почты
+Invalidated : Аннулировано
+Ipatov Stepan Anatolievich : Ипатов Степан Анатольевич
+Issuer URL : URL организации-выдателя
+It currently contains : В настоящее время она содержит
+It keeps records on some : Она содержит данные по некоторым
+It stores : Она хранит
+Items per page : Элементов на странице
+Ivannikov Institute for System Programming of the Russian Academy of Sciences : Институт системного программирования им. В. П. Иванникова РАН
+JSON-exported analysis results : Результаты анализа, экспортированные в JSON
+Join : Присоединиться
+Join markups : Объединить разметки
+Keep : Оставить
+Keep skipped vowel interval characters : Сохранять пропущенные символы гласных интервалов
+Kildin dialect (village Voronino) Saami language : Кильдинский диалект (деревня Воронье) саамского языка
+Language : Язык
+Language Selection : Выбор языка
+Language corpora : Языковые корпуса
+Language databases : Базы данных языков
+Language degree of endangerment : Степень сохранности языка
+Language edit : Редактирование языка
+Language genetic proximity map : Карта генетической близости языков
+Language(s) closest parent group : Ближайшая родительская группа языка(ов)
+Language(s) group or title : Группа или название языка(ов)
+Languages : Языки
+Languages databases : Базы данных языков
+Last modified at : Последнее изменение
+Legend : Легенда
+Levenshtein distance limit for entity content matching : Предел расстояния Левенштейна для сопоставления содержимого сущностей
+Lexical Entries : Лексические записи
+Lexical entries : Лексические записи
+Lexico-grammatical replacement : Лексико-грамматическая замена
+Library of linguistic maps : Библиотека лингвистических карт
+License : Лицензия
+Limited access : Ограниченный доступ
+LingvoDoc is a linguistic platform : LingvoDoc — лингвистическая платформа
+Lingvodoc Github : Lingvodoc на Github
+Lingvodoc creators : Создатели Lingvodoc
+Link : Ссылка
+Link columns from files with each other : Связать столбцы из файлов между собой
+Link data loading error, please contact administrators : Ошибка загрузки данных связи, обратитесь к администраторам
+Link requested : Запрошена ссылка
+Link to search results : Ссылка на результаты поиска
+Linked organizations : Связанные организации
+Linking : Связывание
+Loading : Загрузка
+Loading additional filter data : Загрузка дополнительных данных фильтра
+Loading adjacent character data : Загрузка данных соседних символов
+Loading adverb data : Загрузка данных наречий
+Loading field data : Загрузка данных полей
+Loading language data : Загрузка данных языков
+Loading linked perspective data : Загрузка данных связанной перспективы
+Loading metadata : Загрузка метаданных
+Loading perspective data : Загрузка данных перспективы
+Loading perspective selection : Загрузка выбора перспективы
+Loading role data : Загрузка данных ролей
+Loading sign-in data : Загрузка данных входа
+Loading skipped character data : Загрузка данных пропущенных символов
+Loading suggestions : Загрузка предложений
+Loading tier data : Загрузка данных слоёв
+Loading user data : Загрузка данных пользователя
+Loading valency data... : Загрузка данных валентности...
+Local : Локально
+Location : Местоположение
+Login : Логин
+Login is required : Требуется логин
+Many dialects have already disappeared, and the LingvoDoc platform holds data from archives, which are presently stacked and inaccessible : Многие диалекты уже исчезли, а платформа LingvoDoc хранит данные из архивов, которые в настоящее время недоступны
+Map : Карта
+Map columns to LingvoDoc types : Сопоставить столбцы с типами LingvoDoc
+Map dictionaries to LingvoDoc languages : Сопоставить словари с языками LingvoDoc
+Map dictionary to LingvoDoc language : Сопоставить словарь с языком LingvoDoc
+Map linked columns to LingvoDoc types : Сопоставить связанные столбцы с типами LingvoDoc
+Map of the languages and dialects : Карта языков и диалектов
+Map search : Поиск на карте
+Maps : Карты
+Markup : Разметка
+Markup groups were saved into xlsx file : Группы разметки сохранены в xlsx-файл
+Markup was created : Разметка создана
+Markup was deleted : Разметка удалена
+Markup was edited or moved : Разметка отредактирована или перемещена
+Markup(s) with related groups were removed : Разметки со связанными группами удалены
+Match : Сопоставить
+Match translations : Сопоставить переводы
+Members : Участники
+Merge all : Объединить все
+Merge error : Ошибка объединения
+Merge group : Объединить группу
+Merge lexical entries : Объединить лексические записи
+Merge master : Мастер объединения
+Merge selected on current page : Объединить выбранные на текущей странице
+Merge suggestions : Предложения объединения
+Merge task created successfully : Задача объединения успешно создана
+Merged successfully : Успешно объединено
+Merges are disabled due to an error, please contact developers. : Объединения отключены из-за ошибки, обратитесь к разработчикам.
+Merging selected on current page : Объединение выбранных на текущей странице
+Message : Сообщение
+Metadata : Метаданные
+Mikhail Oslon : Михаил Ослоть
+Minimum spanning tree (2d relative distance embedding) : Минимальное остовное дерево (2d-вложение относительных расстояний)
+Minimum spanning tree (3d relative distance embedding) : Минимальное остовное дерево (3d-вложение относительных расстояний)
+More than : Более чем
+Morphology distance : Морфологическое расстояние
+Morphology distance multi-language : Морфологическое расстояние мультиязычное
+Move copied markup element : Переместить скопированный элемент разметки
+Move marker to group : Переместить метку в группу
+Move markup element : Переместить элемент разметки
+Multiple languages required : Требуется несколько языков
+My corpora : Мои корпуса
+My dictionaries : Мои словари
+My files : Мои файлы
+My parallel corpora : Мои параллельные корпуса
+Name : Имя
+Name is required : Требуется имя
+Naumova Alexandra Vladimirovna : Наумова Александра Владимировна
+Neologism : Неологизм
+Neuro cognate analysis is launched. Please check out tasks for details : Нейросетевой анализ когнатов запущен. Подробности смотрите в задачах
+New organization : Новая организация
+New password : Новый пароль
+Next : Далее
+Next Step : Следующий шаг
+No : Нет
+No adverbs : Нет наречий
+No assigned users : Нет назначенных пользователей
+No audio : Нет аудио
+No authors found : Авторы не найдены
+No background tasks : Нет фоновых задач
+No data : Нет данных
+No data for cognate analysis : Нет данных для анализа когнатов
+No data found for analysis, please select another dictionary : Данные для анализа не найдены, выберите другой словарь
+No entries : Нет записей
+No fields, click button below to add a new one : Нет полей, нажмите кнопку ниже, чтобы добавить новое
+No file selected : Файл не выбран
+No filtered adverbs : Нет отфильтрованных наречий
+No filtered verbs : Нет отфильтрованных глаголов
+No groups to select : Нет групп для выбора
+No header : Нет заголовка
+No instances : Нет экземпляров
+No language degree of endangerment found : Степень сохранности языка не найдена
+No more locales : Больше нет локалей
+No parsing : Нет разбора
+No results found : Результаты не найдены
+No settlement found : Населённый пункт не найден
+No statistics for the selected period : Нет статистики за выбранный период
+No suggestions : Нет предложений
+No translations : Нет переводов
+No verbs : Нет глаголов
+No years found : Годы не найдены
+None : Нет
+Normanskaya Julia Viktorovna : Норманская Юлия Викторовна
+Not accepted : Не принято
+Not chosen : Не выбрано
+Not enough permissions to download or update perspective : Недостаточно прав для загрузки или обновления перспективы
+Not supported : Не поддерживается
+Nothing here, sorry : Здесь ничего нет, извините
+Nothing to : Нечего
+Number of native speakers : Число носителей языка
+OR : ИЛИ
+OR block : Блок ИЛИ
+OR/AND mode : Режим ИЛИ/И
+Off-grant projects : Внегрантовые проекты
+Old password : Старый пароль
+Only authorized users can create new cognate connections based on cognate suggestions : Только авторизованные пользователи могут создавать новые связи когнатов на основе предложений когнатов
+Only for orphans (words not included in existing etymology groups) : Только для «сирот» (слов, не входящих в существующие этимологические группы)
+Only high-order languages : Только языки верхнего уровня
+Only longest vowels and vowels with highest intensity : Только самые долгие гласные и гласные с наивысшей интенсивностью
+Only registered users can convert .docx to .eaf : Только зарегистрированные пользователи могут конвертировать .docx в .eaf
+Only registered users can convert .docx to .xlsx : Только зарегистрированные пользователи могут конвертировать .docx в .xlsx
+Only registered users can work with adverb data : Только зарегистрированные пользователи могут работать с данными наречий
+Only registered users can work with distance map : Только зарегистрированные пользователи могут работать с картой расстояний
+Only registered users can work with files : Только зарегистрированные пользователи могут работать с файлами
+Only registered users can work with valency data : Только зарегистрированные пользователи могут работать с данными валентности
+Open map : Открыть карту
+Opportunities : Возможности
+Or, if you would like to search just for dictionaries and perspective based on metadata, use OR mode and delete all search conditions : Или, если вы хотите искать только словари и перспективы по метаданным, используйте режим ИЛИ и удалите все условия поиска
+Ordering : Сортировка
+Organization : Организация
+Organization admins : Администраторы организации
+Organization name : Название организации
+Organization users : Пользователи организации
+Organizations : Организации
+Organizations available to link to : Организации, доступные для привязки
+Own and inherited users : Собственные и унаследованные пользователи
+Owners : Владельцы
+PDF : PDF
+PDF file : Файл PDF
+Page : Страница
+Paradigm : Парадигма
+Paradigm sentence column source tiers : Исходные слои столбца парадигматических предложений
+Paradigmatic forms and contexts : Парадигматические формы и контексты
+Parallel corpora : Параллельные корпуса
+Parent Corpora : Родительские корпуса
+Parent language : Родительский язык
+Parse element : Элемент разбора
+Participants of the project : Участники проекта
+Password : Пароль
+Passwords do not match : Пароли не совпадают
+Pavel Grashchenkov : Павел Гращенков
+Perspective : Перспектива
+Perspective does not have any grouping fields, cognate analysis is impossible : У перспективы нет полей группировки, анализ когнатов невозможен
+Perspective does not have any text fields, phonemic analysis is impossible : У перспективы нет текстовых полей, фонематический анализ невозможен
+Perspective fields : Поля перспективы
+Perspective is not published : Перспектива не опубликована
+Perspective names : Названия перспектив
+Perspective state : Состояние перспективы
+Perspectives : Перспективы
+Perspectives limit : Лимит перспектив
+Perspectives offset : Смещение перспектив
+Perspectives selected for comparison : Перспективы, выбранные для сравнения
+Phonemic analysis : Фонематический анализ
+Phonological statistical distance : Фонологическое статистическое расстояние
+Phonological statistical distance comparison is being computed. Please check out tasks for details : Выполняется вычисление сравнения фонологических статистических расстояний. Подробности смотрите в задачах
+Phonology : Фонология
+Phonology is being compiled. Please check out tasks for details : Выполняется компиляция фонологии. Подробности смотрите в задачах
+Please contact administrators : Обратитесь к администраторам
+Please contact developers at : Обратитесь к разработчикам по адресу
+Please map all Starling columns to Lingvodoc types : Сопоставьте все столбцы Starling с типами Lingvodoc
+Please map all the columns to different Lingvodoc types. Meet the previous terms : Сопоставьте все столбцы с различными типами Lingvodoc. Соблюдайте предыдущие условия
+Please select .docx file for convertion : Выберите .docx-файл для конвертации
+Please select a user : Выберите пользователя
+Please select parent language and specify at least one translation to name the dictionary. Meet the previous terms : Выберите родительский язык и укажите хотя бы один перевод для названия словаря. Соблюдайте предыдущие условия
+Please select parent language for each Starling dictionary : Выберите родительский язык для каждого словаря Starling
+Please select perspective : Выберите перспективу
+Please select type : Выберите тип
+Please set markups in both fields of the table : Установите разметки в обоих полях таблицы
+Please sign in : Войдите
+Please use at least one Starling column : Используйте хотя бы один столбец Starling
+Please, select the parent language : Пожалуйста, выберите родительский язык
+Pre-marked corpora : Предварительно размеченные корпуса
+Processing : Обработка
+Profile has been updated : Профиль обновлён
+Project funded by grants : Проект, финансируемый грантами
+Properties : Свойства
+Proprietary : Проприетарный
+Publish : Опубликовать
+Publish Entities : Опубликовать сущности
+Publish result of entity merge if any merged entity is published : Опубликовать результат объединения сущностей, если хотя бы одна объединённая сущность опубликована
+Published : Опубликовано
+Published dictionaries : Опубликованные словари
+Quantitative characteristic : Количественная характеристика
+Query error : Ошибка запроса
+RFH № 15-04-00361 "The first written texts on the Ural and Altai languages" (head Ju. V. Normanskaja). : РГНФ № 15-04-00361 «Первые письменные тексты на уральских и алтайских языках» (рук. Ю. В. Норманская).
+RFH №14-04-12019 "Creating multimedia dictionaries Samoyed languages", 2014-2016 (head Ju. V. Normanskaja) : РГНФ №14-04-12019 «Создание мультимедийных словарей самодийских языков», 2014-2016 (рук. Ю. В. Норманская)
+RNF № 15-18-00044 "Information system for description of minority languages of the world. Development of descriptions for endangered Altaic and Uralic languages of Russia", 2015-2017 (head V. M. Alpatov) : РНФ № 15-18-00044 «Информационная система для описания малых языков мира. Разработка описаний исчезающих алтайских и уральских языков России», 2015-2017 (рук. В. М. Алпатов)
+Redo parser execution : Повторить выполнение парсера
+Refresh : Обновить
+Regexp : Регулярное выражение
+Regular expression : Регулярное выражение
+Reject : Отклонить
+Reject all selected : Отклонить все выбранные
+Relation : Связь
+Remote : Удалённый
+Remote submit : Удалённая отправка
+Remove : Удалить
+Remove dictionary : Удалить словарь
+Remove failed : Удаление не удалось
+Remove from TOC : Удалить из оглавления
+Remove lexical entries : Удалить лексические записи
+Remove perspective : Удалить перспективу
+Remove selection : Снять выделение
+Remove successful : Удаление успешно
+Remove user : Удалить пользователя
+Removing : Удаление
+Replaced : Заменено
+Request error : Ошибка запроса
+Request has been sent to the grant's owner : Запрос отправлен владельцу гранта
+Request has been sent to the organization's administrator : Запрос отправлен администратору организации
+Request link : Запросить ссылку
+Requests : Запросы
+Result : Результат
+Return to tree : Вернуться к дереву
+RichText file : Файл RichText
+Role : Роль
+Roles : Роли
+Roles... : Роли...
+Rozhkov Artyom Vladimirovich : Рожков Артём Владимирович
+Safe : В безопасности
+Save : Сохранить
+Save adverb data : Сохранить данные наречий
+Save all : Сохранить всё
+Save dictionary : Сохранить словарь
+Save intermediate data : Сохранить промежуточные данные
+Save markup : Сохранить разметку
+Save only published : Сохранять только опубликованное
+Save sound recordings : Сохранять звукозаписи
+Save to XLSX : Сохранить в XLSX
+Saving adverb data : Сохранение данных наречий
+Search : Поиск
+Search and map’s creating : Поиск и создание карты
+Search for adoptions : Поиск заимствований
+Search in : Искать в
+Search in found : Искать в найденном
+Search options : Параметры поиска
+Search string : Строка поиска
+Select : Выбрать
+Select Dialeqt file for import : Выберите файл Dialeqt для импорта
+Select Language for : Выберите язык для
+Select Parent Language : Выберите родительский язык
+Select a dictionary for analysis : Выберите словарь для анализа
+Select a license : Выберите лицензию
+Select a new position for a markup element : Выберите новую позицию для элемента разметки
+Select all : Выбрать все
+Select all on current page : Выбрать все на текущей странице
+Select audio : Выбрать аудио
+Select authors : Выбрать авторов
+Select data source : Выбрать источник данных
+Select dictionary : Выбрать словарь
+Select dictionary to be updated : Выберите словарь для обновления
+Select language : Выбрать язык
+Select language degree of endangerment : Выберите степень сохранности языка
+Select language for the new dictionary : Выберите язык для нового словаря
+Select languages : Выбрать языки
+Select parent language : Выбрать родительский язык
+Select settlement : Выбрать населённый пункт
+Select tags : Выбрать теги
+Select user : Выбрать пользователя
+Select years : Выбрать годы
+Select/deselect all dictionaries : Выбрать/снять выбор со всех словарей
+Select/deselect all language's dictionaries : Выбрать/снять выбор со всех словарей языка
+Selected by default : Выбрано по умолчанию
+Selected dictionary group doesn't have multiple dictionaries with selected cognate grouping field present, cognate analysis is impossible : В выбранной группе словарей нет нескольких словарей с выбранным полем группировки когнатов, анализ когнатов невозможен
+Semi-calque : Полукалька
+Separate by alphabet : Разделить по алфавиту
+Separate by paragraphs : Разделить по абзацам
+Service : Сервис
+Set adverb annotation : Установить аннотацию наречия
+Set corpora name, translations and metadata : Установить название корпусов, переводы и метаданные
+Set corpus name, translations and metadata : Установить название корпуса, переводы и метаданные
+Set dictionary name and translations : Установить название словаря и переводы
+Set dictionary name, translations and metadata : Установить название словаря, переводы и метаданные
+Set group name or leave empty : Установите название группы или оставьте пустым
+Set parent group as well : Установить также родительскую группу
+Set title or leave empty : Установите название или оставьте пустым
+Set valency annotation : Установить аннотацию валентности
+Settlement : Населённый пункт
+Severely endangered : Серьёзно находящийся под угрозой
+Show : Показать
+Show All : Показать все
+Show Unpublished Only : Показать только неопубликованные
+Show all translations of each word : Показать все переводы каждого слова
+Show only the first translation of each word : Показать только первый перевод каждого слова
+Show sentences : Показать предложения
+Show statistics : Показать статистику
+Sign In : Войти
+Sign Up : Регистрация
+Sign out : Выйти
+Signed successfully : Вход выполнен успешно
+Signin failure. Either no such login/password combination exists, or this user account has been deactivated : Ошибка входа. Такой комбинации логина/пароля не существует или учётная запись деактивирована
+Signup approval pending : Ожидается подтверждение регистрации
+Signup success : Регистрация успешна
+Similatory translation : Уподобительный перевод
+Simple : Простой
+Skipping text output, too long : Вывод текста пропущен, слишком длинный
+Something went wrong : Что-то пошло не так
+Sort by acceptance : Сортировать по принятию
+Sort by adverbs : Сортировать по наречиям
+Sort by cases : Сортировать по падежам
+Sort by marks : Сортировать по меткам
+Sort by specificity : Сортировать по специфичности
+Sort by verbs : Сортировать по глаголам
+Sound : Звук
+Sound and markup : Звук и разметка
+Sound and markup compilation is being created. Check out tasks for details : Создаётся компиляция звука и разметки. Подробности смотрите в задачах
+Source lexeme field (optional) : Поле исходной лексемы (необязательно)
+Source lexeme field selection : Выбор поля исходной лексемы
+Source perspective word : Исходное слово перспективы
+Source transcription field : Поле исходной транскрипции
+Source transcription field selection : Выбор поля исходной транскрипции
+Source translation field : Поле исходного перевода
+Source translation field selection : Выбор поля исходного перевода
+Speech genre : Жанр речи
+Speech recognition (Armenian) : Распознавание речи (армянский)
+Speech synthesis (Armenian) : Синтез речи (армянский)
+Split contents of the field on punctuation before matching : Разделить содержимое поля по знакам препинания перед сопоставлением
+Split contents of the field on whitespace before matching : Разделить содержимое поля по пробелам перед сопоставлением
+Spread : Распространение
+Start typing language name : Начните вводить название языка
+Statistics : Статистика
+Statistics error : Ошибка статистики
+Statistics... : Статистика...
+Sub string : Подстрока
+Subject : Тема
+Submit : Отправить
+Subscribe all the existing dictionaries and corpora related to this language and its sublanguages : Подписать все существующие словари и корпуса, связанные с этим языком и его подъязыками
+Successfully added : Успешно добавлено
+Successfully created perspective : Перспектива успешно создана
+Successfully deleted organization : Организация успешно удалена
+Successfully removed : Успешно удалено
+Such group already exists : Такая группа уже существует
+Suggested cognate groups : Предложенные группы когнатов
+Suggested cognates : Предложенные когнаты
+Support : Поддержка
+Support@Telegram : Поддержка@Telegram
+Sync : Синхронизация
+Table of contents : Оглавление
+Tapekhin Andrey Nikolaevich : Тапехин Андрей Николаевич
+Tasks : Задачи
+Text : Текст
+The Armenian speech synthesis service is not responding at : Сервис синтеза армянской речи не отвечает по адресу
+The entity is NOT currently published. Click to publish : Сущность НЕ опубликована. Нажмите, чтобы опубликовать
+The entity is currently published. Click to unpublish : Сущность опубликована. Нажмите, чтобы снять с публикации
+The group was successfully added : Группа успешно добавлена
+The group was successfully deleted : Группа успешно удалена
+The project was supported by : Проект поддержан
+The pros of the LingvoDoc platform : Преимущества платформы LingvoDoc
+The theme of the text : Тема текста
+The village Beloyarsk district Priuralsky YaNAO : Село Белоярск Приуральского района ЯНАО
+The work is supported by the following grants : Работа поддержана следующими грантами
+There is no languages and dictionaries with chosen language degree of endangerment. The search will be performed with all languages and dictionaries : Нет языков и словарей с выбранной степенью сохранности. Поиск будет выполнен по всем языкам и словарям
+This page is available for administrator only : Эта страница доступна только администратору
+This page is available for registered users only : Эта страница доступна только зарегистрированным пользователям
+Tier : Слой
+Time of writing : Время написания
+Title of the work : Название работы
+To : Кому
+To get an agreement, you need to : Чтобы получить договор, необходимо
+Tomsk State University : Томский государственный университет
+Tools : Инструменты
+Total items : Всего элементов
+Transcription : Транскрипция
+Transcription of paradigmatic forms : Транскрипция парадигматических форм
+Transcription rules : Правила транскрипции
+Translation field : Поле перевода
+Translation for : Перевод для
+Translations : Переводы
+Translator : Переводчик
+Transliteration : Транслитерация
+Transposition : Транспозиция
+Truth threshold must be between 0,7 and 0,999 : Порог достоверности должен быть между 0,7 и 0,999
+Try reloading the page; if the error persists, please contact administrators : Попробуйте перезагрузить страницу; если ошибка повторяется, обратитесь к администраторам
+Type : Тип
+Type of discourse : Тип дискурса
+Type of speech : Тип речи
+Type to search : Введите для поиска
+URL with results of saving data should appear soon after clicking save button in the tasks : URL с результатами сохранения данных должен появиться вскоре после нажатия кнопки сохранения в задачах
+Unauthorized user : Неавторизованный пользователь
+Uncheck all : Снять выбор со всех
+Unique software that reproduces the experimental-phonetic, etymological and morphological work of a researcher 100 times faster : Уникальное ПО, воспроизводящее экспериментально-фонетическую, этимологическую и морфологическую работу исследователя в 100 раз быстрее
+Unknown dictionary : Неизвестный словарь
+Unknown grant : Неизвестный грант
+Unknown request type : Неизвестный тип запроса
+Unknown type : Неизвестный тип
+Unsigned successfully : Успешно отписано
+Up : Вверх
+Update : Обновить
+Update dictionary : Обновить словарь
+Upload : Загрузить
+Upload failed : Загрузка не удалась
+Uploaded at : Загружено
+Uploaded corpora : Загруженные корпуса
+Use linked data : Использовать связанные данные
+User : Пользователь
+User account activation / deactivation : Активация / деактивация учётной записи пользователя
+User account activation/deactivation : Активация/деактивация учётной записи пользователя
+User data loading error : Ошибка загрузки данных пользователя
+User options for mapping linguistic features : Пользовательские настройки для сопоставления лингвистических признаков
+User options for working with dictionaries : Пользовательские настройки для работы со словарями
+User options for working with text corpora : Пользовательские настройки для работы с текстовыми корпусами
+User sign-in error, please sign in; if not successful, please contact administrators : Ошибка входа пользователя, войдите снова; если не поможет, обратитесь к администраторам
+Valency : Валентность
+Valency data : Данные валентности
+Valency data is being compiled. Check out tasks for details : Выполняется компиляция данных валентности. Подробности смотрите в задачах
+Valency verb cases : Падежи валентности глагола
+Valency verb cases (extended) : Падежи валентности глагола (расширенные)
+Verb lexeme/translation filter : Фильтр по лексеме/переводу глагола
+Verb prefix filter : Фильтр по префиксу глагола
+Verb valency : Валентность глагола
+Verbs : Глаголы
+Version : Версия
+View : Просмотр
+View contributions : Просмотр правок
+View published : Просмотр опубликованных
+View suggestions : Просмотр предложений
+Village Forest Tsibaevo : Деревня Лесная Цибаево
+Vowel formant count threshold : Порог количества формант гласных
+Vulnerable : Уязвимый
+WiP : WiP
+With field selection : С выбором полей
+Word file : Файл Word
+XLSX-exported analysis results : Результаты анализа, экспортированные в XLSX
+XLSX-exported data : Данные, экспортированные в XLSX
+Years : Годы
+Yes : Да
+You are a member : Вы участник
+You are an administrator : Вы администратор
+You are going to delete a markup and related groups? Are you sure : Вы собираетесь удалить разметку и связанные группы? Вы уверены
+You have selected : Вы выбрали
+Your corpora is created, click here to view : Ваш корпус создан, нажмите здесь для просмотра
+Your dictionaries are scheduled for conversion. Please, check tasks tab for conversion status : Ваши словари поставлены в очередь на конвертацию. Статус смотрите на вкладке задач
+Your dictionary is created, click here to view : Ваш словарь создан, нажмите здесь для просмотра
+Your dictionary is scheduled for conversion. Please, check tasks tab for conversion status : Ваш словарь поставлен в очередь на конвертацию. Статус смотрите на вкладке задач
+Zharov Andrey Anatolievich : Жаров Андрей Анатольевич
+accepted first : сначала принятые
+accepted last : принятые последними
+adverbs : наречия
+an option to save the online map one has created as a link, and its automatic update when adding new materials to LingvoDoc : возможность сохранить созданную онлайн-карту в виде ссылки и её автоматическое обновление при добавлении новых материалов в LingvoDoc
+analysed : проанализировано
+analysis of cognates, phonemes and allophones : анализ когнатов, фонем и аллофонов
+and : и
+automatic creation of dictionaries from text corpora : автоматическое создание словарей из текстовых корпусов
+automatic segmentation of native speaker surveys, uploaded into the Telegram channel “LingvoDoc Support”, into separate words : автоматическая сегментация на отдельные слова опросов носителей, загруженных в Telegram-канал «LingvoDoc Support»
+base sentence : базовое предложение
+changed at : изменено
+cognate groups and : группы когнатов и
+cognate groups were excluded from the analysis due to not having lexical entries in at least two selected dictionaries : группы когнатов были исключены из анализа, так как не имеют лексических записей как минимум в двух выбранных словарях
+computing modules of the system : вычислительные модули системы
+confidence : достоверность
+connected : связано
+connecting : связывание
+creating any columns; adding any text, audio files, marking spectrograms using the Praat phonetic software; creating etymological connections between words from different dictionaries : создание любых столбцов; добавление любых текстов, аудиофайлов, разметка спектрограмм с помощью фонетической программы Praat; создание этимологических связей между словами из разных словарей
+creating search queries of any type of complexity and plotting them on the map : создание поисковых запросов любой сложности и нанесение их на карту
+data processing and analysis software: phonetic analysis; search for etymologies; analysis of cognates in dialects and several languages; acoustic analysis of cognates; measuring phonological statistical distance; phonemic analysis; reconstruction of cognates in dialects and several languages : ПО для обработки и анализа данных: фонетический анализ; поиск этимологий; анализ когнатов в диалектах и нескольких языках; акустический анализ когнатов; измерение фонологического статистического расстояния; фонематический анализ; реконструкция когнатов в диалектах и нескольких языках
+data processing with existing parsers (for the Erzya, Moksha, Udmurt, Komi, Kazakh, Tatar languages) or creating new parsers quickly and integrating them into LingvoDoc : обработка данных существующими парсерами (для эрзянского, мокшанского, удмуртского, коми, казахского, татарского языков) или быстрое создание новых парсеров и их интеграция в LingvoDoc
+desktop : настольная версия
+development of the architecture and core of the system : разработка архитектуры и ядра системы
+development of the system core : разработка ядра системы
+dictionaries : словари
+dictionaries, : словари,
+editor-in-chief of the website : главный редактор сайта
+errors : ошибки
+extinct languages : вымершие языки
+for commercial purposes, you must sign an agreement with ISP RAS : в коммерческих целях необходимо заключить договор с ИСП РАН
+from TOC : из оглавления
+frontend : фронтенд
+has linked field : имеет связанное поле
+input file is not a .docx format file : входной файл не является файлом формата .docx
+intersections : пересечения
+invalidated : аннулировано
+left : слева
+map : карта
+mapping geographic areas : разметка географических областей
+more than 1000 audio dictionaries : более 1000 аудиословарей
+moved on : перемещено на
+never : никогда
+no prefix : без префикса
+of : из
+of markup records : записей разметки
+off : выкл.
+on : вкл.
+on the endangered languages of Russia : по исчезающим языкам России
+or at : или по адресу
+perspective : перспектива
+prefix : префикс
+present at : присутствует в
+presenting results as online fragments of audio dictionaries and corpora which can be further edited or in the Excel file format : представление результатов в виде онлайн-фрагментов аудиословарей и корпусов, которые можно редактировать, или в формате Excel
+published : опубликовано
+register : зарегистрироваться
+removed : удалено
+representing the dialects of various world languages : представляющие диалекты различных языков мира
+responsible editor of Altai dictionaries : ответственный редактор алтайских словарей
+responsible editor of Ural dictionaries : ответственный редактор уральских словарей
+result url : URL результата
+results : результаты
+results on : результаты по
+search : поиск
+selected : выбрано
+selected by default : выбрано по умолчанию
+sentence : предложение
+software for morphological analysis of glossed corpora, in particular, automatic identification of government models : ПО для морфологического анализа глоссированных корпусов, в частности, автоматическое выявление моделей управления
+suggestions : предложения
+text entities analysed : проанализировано текстовых сущностей
+to TOC : в оглавление
+total : всего
+transcriptions : транскрипции
+transcriptions analysed : проанализировано транскрипций
+unaccepted : непринятые
+unique data : уникальные данные
+unpublished : неопубликованные
+uploading audio files of any size, (audio)corpora in ELAN format, texts in Word .odt format : загрузка аудиофайлов любого размера, (аудио)корпусов в формате ELAN, текстов в формате Word .odt
+user-friendly interface for online manual word sense disambiguation which may arise after the text has been processed by the parser : удобный интерфейс для ручного онлайн-снятия омонимии, которая может возникнуть после обработки текста парсером
+valence analysis : анализ валентности
+verbs : глаголы
+web : веб
+will be downloaded from another server : будет загружено с другого сервера
+will be renewed : будет обновлено
+with own dictionaries and perspectives : со своими словарями и перспективами
+with own perspectives : со своими перспективами

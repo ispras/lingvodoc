@@ -1,0 +1,330 @@
+(Орфографическая проблема) перевод с алюторского : Orthographic problem + translation from Alyutor
+c : c
+Classical mongol : Classical Mongol
+CT : CT
+rrgg : rrgg
+The Sara yogurs in Kluadjek-gol : The Sara yogurs in Kluadjek-gol
+The Shera Yogurs in Kluadjek-gol : The Shera Yogurs in Kluadjek-gol
+The Shera-Yogurs in K’anglungssŭ : [TO TRANSLATE]
+word_correct : word_correct
+word_morph : word_morph
+а. п. : accent paradigm
+Авгаский : Avgasky
+Авторская запись (графическая вариативность) : Author's recording (graphic variability)
+Акцентная парадигма : Accent paradigm
+Акцентуация 1Sg Prae : Accentuation 1Sg Prae
+Акцентуация 2Pl Prae : Accentuation 2Pl Prae
+Акцентуация л-part : Accentuation l-part
+Акцентуация н-part : Accentuation n-part
+Акцентуация ш-part : Accentuation sh-part
+Алашанский : Alashansky
+Анг. пер. зн. 2 : Eng. trans. mean. 2
+Анг. пер. зн. 3 : Eng. trans. mean. 3
+Анг. пер. прим. зн. 2 : Eng. trans. ex. mean. 2
+Анг. пер. прим. зн. 3 : Eng. trans. ex. mean. 3
+Английский : English
+Английский перевод : English translation
+Английский перевод примера : English translation of example
+Арухорчинский : Arukhorchinsky
+архив Шёгрена : Sjögren archive
+Аспектуальная форма : Aspectual form
+атрибуты, спутники : attributes, satellites
+Баарин баруун хошун : Barin baruun khoshun
+Баллы : Points/Scores
+баоаньский : Baoanese
+Баоаньский, лексема : Baoanese, lexeme
+Баоаньский, перевод : Baoanese, translation
+Баринский : Barinsky
+березовский : Berezovsky
+Березовский мансийский на р. Сосьва (архив Миллера) : Berezovsky Mansi on r. Sosva (Miller archive)
+Библиография : Bibliography
+Бованский : Bovansky
+Ботаническое название на русском : Botanical name in Russian
+Буквальный перевод : Literal translation
+бурятский : Buryat
+Бурятский, лексема : Buryat, lexeme
+Бурятский, перевод : Buryat, translation
+Варианты орфографической записи : Orthographic variants
+верхотурский : Verkhotursky
+взаимоотношения : interrelations
+Возраст : Age
+время : time
+Генеалогия : Genealogy
+генезис : genesis
+Географические координаты : Geographic coordinates
+Географические координаты из Яндекс.Карты : Geographic coordinates from Yandex.Maps
+Географический термин : Geographic term
+География : Geography
+Горлосский : Gorlosky
+Гр. инф. зн. 2 : Gr. inf. mean. 2
+Гр. инф. зн. 3 : Gr. inf. mean. 3
+Группа : Group
+дагурский : Dagur
+Дагурский, лексема : Dagur, lexeme
+Дагурский, перевод : Dagur, translation
+Дархан-мянгатский : Darkhan-myangatsky
+Дарханский : Darhansk
+Джалайтский : Jalaitsky
+Джарутский : Jarutsky
+Джастуйский : Jastuitsky
+Диагностические контексты 10 : Diagnostic contexts 10
+Диагностические контексты 11 : Diagnostic contexts 11
+Диагностические контексты 2 : Diagnostic contexts 2
+Диагностические контексты 3 : Diagnostic contexts 3
+Диагностические контексты 4 : Diagnostic contexts 4
+Диагностические контексты 5 : Diagnostic contexts 5
+Диагностические контексты 6 : Diagnostic contexts 6
+Диагностические контексты 7 : Diagnostic contexts 7
+Диагностические контексты 8 : Diagnostic contexts 8
+Диагностические контексты 9 : Diagnostic contexts 9
+Диагностический контекст 1 : Diagnostic context 1
+диал. Аб. : dial. Ab.
+диал. Ал. : dial. Al.
+диал. Алд. : dial. Ald.
+диал. Аллаих. : dial. Allaikh.
+диал. Анабар. : dial. Anabar.
+диал. Бул. : dial. Bul.
+диал. бул. : dial. bul.
+диал. В.-Вил. : dial. V.-Vil.
+диал. В.-Кол. : dial. V.-Kol.
+диал. Верх. : dial. Verkh.
+диал. Вилюй. : dial. Vilyuy.
+диал. Горн. : dial. Horn.
+диал. Ессей. : dial. Essey.
+диал. жиг. : dial. zhig.
+диал. Жиг. : dial. Zhig.
+диал. Кобяй. : dial. Kobyay.
+диал. Лен. : dial. Len.
+диал. лен. : dial. len.
+диал. ленск. : dial. lensk.
+диал. Мег.-Кан. : dial. Meg.-Kan.
+диал. Мом. : dial. Mom.
+диал. Нюр. : dial. Nyur.
+диал. Ойм. : dial. Oym.
+диал. олекм. : dial. olekm.
+диал. Олекм. : dial. Olekm.
+диал. Оленёк. : dial. Olenek.
+диал. Ср.-Кол. : dial. Sr.-Kol.
+диал. Сунт. : dial. Sunt.
+диал. Таттин. : dial. Tattin.
+диал. УА. : dial. UA.
+диал. УЯ : dial. UYa
+диал. УЯ. : dial. UYa.
+диал. Ханг. : dial. Khang.
+диал. Чур. : dial. Chur.
+диал. Эв.-Быт. : dial. Ev.-Byt.
+Диалект (район) : Dialect (region)
+дополнительные характеристики : additional characteristics
+Другой диалект : Other dialect
+другой диалект : other dialect
+ДСЯС : DSYAS
+ДСЯЯ : DSYAYA
+Дуланский : Dulansky
+дунсянский : Dunxianese
+Дунсянский, лексема : Dunxianese, lexeme
+Дунсянский, перевод : Dunxianese, translation
+Дурбетский : Durbetsky
+Дурбэн-Хухский : Durben-Hukhsky
+Животное : Animal
+Заимствование : Borrowing
+звук : sound
+Звук : Sound
+Звучание : Pronunciation
+Значение в БТСЯЯ : Meaning in BTSYAYA
+Значение в словаре Э.К.Пекарского : Meaning in E.K. Pekarsky's dictionary
+Значение на англ. яз. : Meaning in English
+Значение на башкирском : Meaning in Bashkir
+Значение на русском : Meaning in Russian
+ипостась : hypostasis
+Испанский : Spanish
+Источник данных : Data source
+калмыцкий : Kalmyk
+Калмыцкий, лексема : Kalmyk, lexeme
+Калмыцкий, перевод : Kalmyk, translation
+Карельский 1 : Karelian 1
+Карельский 2 : Karelian 2
+Картографическое название : Cartographic name
+класс глагола : verb class
+Класс топонима : Toponym class
+Когнаты : Cognates
+Количество носителей : Number of speakers
+Комментарий, кит. : Comment, Chinese
+Комментарий, тиб. : Comment, Tibetan
+Комментарий, цинхайский : Comment, Qinghai
+Контексты и парадигма : Contexts and paradigm
+Контексты, парадигма : Contexts, paradigm
+Координаты : Coordinates
+Кулаковский : Kulakovsky
+кунгурский : Kungursky
+Лексема на голландском языке : Lexeme in Dutch
+Лексема на немецком языке : Lexeme in German
+Лексема, Аларский диалект : Lexeme, Alarsky dialect
+ЛЕксема, Балаганский диалект : Lexeme, Balagansky dialect
+Лексема, Капсальский диалект : Lexeme, Kapsalsky dialect
+Лексема, минхэ : Lexeme, Minhei
+Лексема, монгольский : Lexeme, Mongolian
+Лексема, Нижнеудинский диалект : Lexeme, Nizhneudinsky dialect
+Лексема, Селенгинский диалект : Lexeme, Selengininsky dialect
+Лексема, Тункинский диалект : Lexeme, Tunkininsky dialect
+Лексема, Хоринский диалект : Lexeme, Horinsky dialect
+Лексема, хуцзу : Lexeme, Hui
+Лексема_Боу-нань : Lexeme_Bao-nan
+Лексема_дагурский : Lexeme_Dagur
+Лексема_китайский : Lexeme_Chinese
+Лексема_маньчжурский : Lexeme_Manchu
+Лексема_монгольский : Lexeme_Mongolian
+Лексема_ойратский : Lexeme_Oirat
+Лексема_тибетский : Lexeme_Tibetan
+Лексема_Тун-сян : Lexeme_Tung-hsiang
+Лексема_У-янь-бу : Lexeme_Wu-yen-bu
+Лексема_Шира-югуры : Lexeme_Shira-Yugur
+Лексическая особенность : Lexical feature
+локус : locus
+Локус / народ : Locus / people
+Место : Place
+Место произрастания : Growing place/Habitat
+Могольский, лексема : Moghul, lexeme
+модус : modus
+Монгольский, лексема : Mongolian, lexeme
+монгорский : Mongor
+Монгорский, лексема : Mongor, lexeme
+Монгорский, перевод : Mongor, translation
+морфологический признак : morphological feature
+Мотивационный признак : Motivational feature
+Название : Name
+название географического термина на якутском языке : name of geographic term in Yakut
+Название на латинском : Name in Latin
+Название на русском : Name in Russian
+Название на якутском : Name in Yakut
+Найманский : Naimansk
+нет : no
+Однокоренные слова : Cognate words
+Олетский : Oletsky
+Оннютский : Onnyu
+Описание ситуации : Situation description
+Ордосский : Ordos
+Ордосский, лексема : Ordos, lexeme
+Орфографическая проблема + перевод с алюторского : Orthographic problem + translation from Alyutor
+Особенности : Features
+Отгский : Otgsky
+отношения : relations
+Отогский : Otogsky
+параллели : parallels
+Перевод на английский : Translation into English
+Перевод на калмыцкий язык : Translation into Kalmyk
+Перевод на латинский : Translation into Latin
+Перевод на немецкий : Translation into German
+Перевод на рус. яз с гол. яз. : Translation into Russian from Dutch
+Перевод праформы или источника : Translation of proto-form or source
+Перевод примеров : Translation of examples
+Перевод с голландского языка : Translation from Dutch
+Перевод с пометами : Translation with labels
+Письменно-монгольский, лексема : Written Mongolian, lexeme
+Подгруппа : Subgroup
+подкласс : subclass
+Позиция : Position
+Праоснова : Proto-stem
+Праформа или источник : Proto-form or source
+Прим. зн. 2 : Ex. mean. 2
+Прим. зн. 3 : Ex. mean. 3
+Пример : Example
+Примеры на калмыцком языке : Examples in Kalmyk
+Примечания : Notes
+Происхождение : Origin
+происхождение : origin
+Реакция : Reaction
+Реконструкция  (протоформа) : Reconstruction (proto-form)
+Рус. пер. зн. 2 : Rus. trans. mean. 2
+Рус. пер. зн. 3 : Rus. trans. mean. 3
+Рус. пер. прим. зн. 2 : Rus. trans. ex. mean. 2
+Рус. пер. прим. зн. 3 : Rus. trans. ex. mean. 3
+русский : Russian
+Русский : Russian
+Русский перевод : Russian translation
+Русский перевод примера : Russian translation of example
+свойства : properties
+Североюкагир. : North Yukaghir
+Сема : Seme
+Семантическое значение : Semantic meaning
+Семейство : Family
+Сибирско-татарский : Siberian Tatar
+Синонимы : Synonyms
+Словарная статья : Dictionary entry
+словарная форма : dictionary form
+словарь ДРС : DRS dictionary
+слово : word
+Слово в словаре : Word in dictionary
+Слово на пелымском диалекте : Word in Pelym dialect
+Словообразование : Word formation
+Современный язык : Modern language
+соликамский : Solikamsky
+Состав : Composition
+состояние : state
+сосьвинский (ляпинский говор) : Sosvinskiy (Lyapinsky dialect)
+сосьвинский (п.Хулимсунт) : Sosvinskiy (Khulimount)
+социальный статус : social status
+Способ образования : Formation method
+Среднемонгольский, лексема : Middle Mongolian, lexeme
+среднеобский : Sredneobsky
+Стандартный вариант : Standard variant
+Старобаргутский : Old Bargut
+Старописьменный, монгольский : Old Written Mongolian
+Страница : Page
+Сунитский : Sunite
+сургут. XXI в. : Surgut. 21st century
+Сысольский : Sysolsky
+Тег : Tag
+текст : text
+тип топонима : type of toponym
+Тип топонима : Type of toponym
+Том : Volume
+Топоним : Toponym
+Топоним на якутском языке : Toponym in Yakut
+Торгутский : Torgut
+Транскрипция : Transcription
+Туметский : Tumet
+Уланцабский : Ulantsab
+Уратский : Uratsky
+Уровень владения : Language proficiency level
+Финский : Finnish
+Фитоним на алтайском : Plant name in Altai
+Фитоним на латинском : Plant name in Latin
+Фитоним на якутском : Plant name in Yakut
+Фоноструктурный разбор долганской лексемы : Phonostructural analysis of Dolgan lexeme
+Формально-семантическая структура : Formal-semantic structure
+Формула значения : Formula of meaning
+Фото диктора : Photo of speaker
+Фото рукописи : Photo of manuscript
+функции : functions
+халхаский : Khalkha
+Халхаский, лексема : Khalkha, lexeme
+Халхаский, перевод : Khalkha, translation
+Хангинский : Hanguinsk
+Характер гласного : Vowel quality
+Харчинский : Harchin
+Хешиктэнский : Heshikten
+Хорчинский : Horqin
+Хошутский : Khoshut
+Хэцзинский : Hejing
+часть речи : part of speech
+Часть речи : Part of speech
+Чахарский : Chahar
+чердынский : Cherdynsky
+Чусовой мансийский : Chusovoy Mansi
+Шандский : Shandsky
+Шилингольский : Shilingleol
+Шира-Югурский, лексема : Shira-Yugur, lexeme
+Шулуун хөх хошун : Shulun Huh Khoshun
+Шёгрен-Паллас : Sjögren-Pallas
+Эрзянский : Erzya
+Эстонский : Estonian
+Этимология : Etymology
+Этн. ком. зн. 2 : Ethn. comm. mean. 2
+Этн. ком. зн. 3 : Ethn. comm. mean. 3
+Этнокультурный комментарий : Ethnocultural commentary
+Южноюкагир. : South Yukaghir
+юкондинский : Yukondinsk
+я : I
+Явление : Phenomenon
+Язык-источник : Source language
+Японский : Japanese
