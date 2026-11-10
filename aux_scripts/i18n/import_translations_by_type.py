@@ -221,7 +221,7 @@ def main(argv=sys.argv):
     print(f'Skipped (target already exists): {len(skipped_exists)}')
     for lineno, src in skipped_exists:
         print(f'  line {lineno}: {src!r}')
-    print(f'Skipped (no English match): {len(skipped_no_match)}')
+    print(f'Skipped (no source phrase match): {len(skipped_no_match)}')
     for lineno, src in skipped_no_match:
         print(f'  line {lineno}: {src!r}')
     print(f'Errors: {len(errors)}')
