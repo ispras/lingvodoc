@@ -15,9 +15,11 @@ the target locale and content == <target phrase> is created via
 create_gists_with_atoms, attached to the same translation gist
 (parent_client_id / parent_object_id) with the given gist_type.
 
-With the optional 'force' argument, when no English atom matching the
-source phrase exists, a new TranslationGist is created together with both
-the English atom and the target-locale atom.
+With the optional 'force' argument:
+- when no English atom matching the source phrase exists, a new TranslationGist
+  is created together with both the English atom and the target-locale atom;
+- when a target-locale translation already exists, it is updated with the new
+  content instead of being skipped.
 
 Usage:
     python import_translations_by_type.py <config_uri> <i18n_txt_path> [force]
@@ -114,12 +116,13 @@ def main(argv=sys.argv):
 
     created = 0
     created_forced = 0
+    updated = 0
     skipped_no_match = []
     skipped_exists = []
     errors = []
 
     for lineno, src, dst in parse_i18n_file(i18n_path):
-        atom = (
+        atoms = (
             DBSession.query(TranslationAtom)
             .filter(
                 TranslationAtom.content == src,
@@ -128,10 +131,10 @@ def main(argv=sys.argv):
                 TranslationAtom.parent_object_id == TranslationGist.object_id,
                 TranslationGist.type == gist_type
             )
-            .first()
+            .all()
         )
 
-        if atom is None:
+        if not atoms:
             if not force:
                 skipped_no_match.append((lineno, src))
                 continue
@@ -151,35 +154,42 @@ def main(argv=sys.argv):
                 errors.append((lineno, src, str(e)))
             continue
 
-        gist_id = (atom.parent_client_id, atom.parent_object_id)
+        for atom in atoms:
+            gist_id = (atom.parent_client_id, atom.parent_object_id)
 
-        existing = (
-            DBSession.query(TranslationAtom)
-            .filter(
-                TranslationAtom.parent_client_id == atom.parent_client_id,
-                TranslationAtom.parent_object_id == atom.parent_object_id,
-                TranslationAtom.locale_id == target_locale_id,
-                TranslationAtom.parent_client_id == TranslationGist.client_id,
-                TranslationAtom.parent_object_id == TranslationGist.object_id,
-                TranslationGist.type == gist_type
+            existing = (
+                DBSession.query(TranslationAtom)
+                .filter(
+                    TranslationAtom.parent_client_id == atom.parent_client_id,
+                    TranslationAtom.parent_object_id == atom.parent_object_id,
+                    TranslationAtom.locale_id == target_locale_id,
+                    TranslationAtom.parent_client_id == TranslationGist.client_id,
+                    TranslationAtom.parent_object_id == TranslationGist.object_id,
+                    TranslationGist.type == gist_type
+                )
+                .first()
             )
-            .first()
-        )
-        if existing is not None:
-            skipped_exists.append((lineno, src))
-            continue
-
-        try:
-            create_gists_with_atoms(
-                [{'locale_id': target_locale_id, 'content': dst}],
-                list(gist_id),
-                [CLIENT_ID, None],
-                gist_type=gist_type,
-                DBSession=DBSession,
-            )
-            created += 1
-        except Exception as e:  # noqa: BLE001
-            errors.append((lineno, src, str(e)))
+            if existing is not None:
+                if force:
+                    try:
+                        existing.content = dst
+                        updated += 1
+                    except Exception as e:  # noqa: BLE001
+                        errors.append((lineno, src, str(e)))
+                else:
+                    skipped_exists.append((lineno, src))
+            else:
+                try:
+                    create_gists_with_atoms(
+                        [{'locale_id': target_locale_id, 'content': dst}],
+                        list(gist_id),
+                        [CLIENT_ID, None],
+                        gist_type=gist_type,
+                        DBSession=DBSession,
+                    )
+                    created += 1
+                except Exception as e:  # noqa: BLE001
+                    errors.append((lineno, src, str(e)))
 
     transaction.commit()
 
@@ -194,6 +204,7 @@ def main(argv=sys.argv):
         print(f'  line {lineno}: {src!r} -> {msg}')
     print(f'Created: {created}')
     print(f'Created (forced, new gist): {created_forced}')
+    print(f'Updated: {updated}')
 
 
 if __name__ == '__main__':
