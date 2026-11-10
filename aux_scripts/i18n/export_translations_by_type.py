@@ -52,7 +52,7 @@ def _parse_output_name(output_path):
 
 def main(argv=sys.argv):
     if len(argv) < 3:
-        print('usage: %s <config_uri> <output_path>'
+        print('usage: %s <config_uri> <output_path> [xlsx]'
               % os.path.basename(argv[0]))
         sys.exit(1)
 
